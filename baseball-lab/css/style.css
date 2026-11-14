@@ -335,3 +335,4 @@ ul.plain li { margin: 6px 0; }
   .stk-legend { margin-left: 0; }
   .rep-title { font-size: 1.7rem; }
 }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; }

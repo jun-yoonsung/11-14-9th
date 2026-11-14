@@ -29,8 +29,8 @@
     D("HRR", "홈런 비율", "HR/AB", "장타력", "high", "rate", pc, s => div(s.hr, s.ab), "홈런 ÷ 타수", "타수 중 홈런이 된 비율입니다."),
     D("OBP", "출루율", "OBP", "출루·종합", "high", "rate", f3, obp, "(안타 + 볼넷 + 사구) ÷ (타수 + 볼넷 + 사구 + 희생플라이)", "타석에서 베이스에 나간 비율입니다."),
     D("OPS", "OPS", "OPS", "출루·종합", "high", "rate", f3, s => { const o = obp(s), l = slg(s); return o == null || l == null ? null : o + l; }, "출루율 + 장타율", "출루와 장타를 합친 대표 종합 지표입니다. .800 이상이면 좋은 타자로 봅니다."),
-    D("RBI", "타점", "RBI", "득점 생산·주루", "high", "count", f0, s => s.rbi, "시즌 타점 수", "주자를 홈으로 불러들인 횟수입니다."),
-    D("SB", "도루", "SB", "득점 생산·주루", "high", "count", f0, s => s.sb, "시즌 도루 수", "다음 루를 훔친 횟수입니다."),
+    D("RBI", "타점", "RBI", "득점 생산", "high", "count", f0, s => s.rbi, "시즌 타점 수", "주자를 홈으로 불러들인 횟수입니다."),
+    D("R", "득점", "R", "득점 생산", "high", "count", f0, s => s.r, "시즌 득점 수", "직접 홈을 밟아 올린 점수입니다."),
   ];
 
   const ip = s => s.outs / 3;
@@ -40,6 +40,7 @@
     D("FIP", "수비 무관 평균자책(약식)", "FIP", "실점 억제", "low", "rate", f2, s => (s.outs ? (13 * s.hr + 3 * s.bb - 2 * s.so) / ip(s) + 3.1 : null), "(13×피홈런 + 3×볼넷 − 2×삼진) ÷ 이닝 + 3.10", "수비 도움과 운을 빼고 투수 본인의 결과만으로 본 평균자책입니다. 약식 상수 3.10을 썼습니다."),
     D("K9", "9이닝당 삼진", "K/9", "탈삼진", "high", "rate", f1, s => div(s.so * 27, s.outs), "삼진 × 9 ÷ 이닝", "9이닝 동안 잡는 삼진 수입니다."),
     D("SO", "삼진", "SO", "탈삼진", "high", "count", f0, s => s.so, "시즌 삼진 수", "시즌 전체 삼진 수입니다."),
+    D("FB", "직구 평균 구속", "FB km/h", "구위", "high", "count", f1, s => (s.fb > 0 ? s.fb : null), "직구 투구의 평균 구속(km/h)", "직구의 평균 속도입니다. 빠를수록 구위가 좋은 편입니다."),
     D("BB9", "9이닝당 볼넷", "BB/9", "제구", "low", "rate", f1, s => div(s.bb * 27, s.outs), "볼넷 × 9 ÷ 이닝", "9이닝 동안 내주는 볼넷 수입니다. 낮을수록 제구가 좋습니다."),
     D("KBB", "볼넷 대비 삼진", "K/BB", "제구", "high", "rate", f2, s => div(s.so, s.bb), "삼진 ÷ 볼넷", "볼넷 하나에 삼진을 몇 개 잡는지입니다. 높을수록 좋습니다."),
     D("H9", "9이닝당 피안타", "H/9", "피안타 억제", "low", "rate", f1, s => div(s.h * 27, s.outs), "피안타 × 9 ÷ 이닝", "9이닝 동안 맞는 안타 수입니다."),
@@ -50,21 +51,22 @@
 
   const CFG = {
     batter: {
-      defs: BAT, noun: "타자", qualify: (s, q) => s.ab >= q.batterAb, qualText: "타수 100 이상", sumKeys: null,
+      defs: BAT, noun: "타자", qualify: (s, q) => s.pa >= q.batterPa, qualText: q => `타석 ${q.batterPa} 이상`,
       groups: {
         "정확성": { desc: "공을 얼마나 정확하게 맞히는지", type: "정확하게 맞히는 교타형" },
         "선구안": { desc: "볼과 스트라이크를 얼마나 잘 가리는지", type: "공을 잘 고르는 선구안형" },
         "장타력": { desc: "장타를 얼마나 만들어 내는지", type: "장타로 승부하는 거포형" },
         "출루·종합": { desc: "출루와 생산을 합친 종합 능력", type: "출루와 생산을 겸비한 종합형" },
-        "득점 생산·주루": { desc: "타점과 도루로 점수에 기여하는 정도", type: "타점과 주루로 기여하는 해결사형" },
+        "득점 생산": { desc: "타점과 득점으로 점수에 기여하는 정도", type: "타점과 득점으로 기여하는 해결사형" },
       },
       similarKeys: ["AVG", "K", "BBP", "SLG", "ISO", "OBP", "OPS"],
     },
     pitcher: {
-      defs: PIT, noun: "투수", qualify: (s, q) => s.outs >= q.pitcherOuts, qualText: "30이닝 이상",
+      defs: PIT, noun: "투수", qualify: (s, q) => s.outs >= q.pitcherOuts, qualText: q => `${Math.round(q.pitcherOuts / 3)}이닝 이상`,
       groups: {
         "실점 억제": { desc: "점수를 얼마나 덜 주는지", type: "실점을 잘 막는 안정형" },
         "탈삼진": { desc: "타자를 삼진으로 얼마나 잡는지", type: "삼진으로 잡는 구위형" },
+        "구위": { desc: "직구가 얼마나 빠른지", type: "빠른 공으로 압도하는 강속구형" },
         "제구": { desc: "볼넷 없이 스트라이크를 던지는지", type: "볼넷이 적은 제구형" },
         "피안타 억제": { desc: "안타와 홈런을 얼마나 덜 맞는지", type: "장타를 잘 막는 억제형" },
         "이닝 소화": { desc: "한 경기에 얼마나 오래 던지는지", type: "이닝을 길게 책임지는 이닝이터형" },
@@ -116,7 +118,7 @@
   const top = p => (p == null ? "-" : `상위 ${100 - p}%`);
 
   // ---------- 보고서 만들기 ----------
-  function build(type, rows, pid, q, meta, prevRows) {
+  function build(type, rows, pid, q, meta, monthly, mix) {
     const C = CFG[type];
     const line = rows.find(r => r.pid === pid);
     const isQ = C.qualify(line, q);
@@ -157,20 +159,32 @@
       composition = { kind: "per9", title: "9이닝 기준 결과", note: "9이닝을 던질 때 평균 몇 개씩 나오는지입니다. 삼진은 많을수록, 나머지는 적을수록 좋습니다.", player: per9(line), league: per9(L) };
     }
 
-    // 지난 시즌 비교
+    // 월별 추이: 월마다 같은 지표를 다시 계산한다. 표본(타석·이닝)이 충분한 달만 좋고 나쁨을 표시한다
     let trend = null;
-    const prevLine = prevRows && prevRows.find(r => r.pid === pid);
-    if (prevLine) {
-      const prev = measure(C, prevRows, prevLine, q);
+    if (monthly && monthly.length) {
+      const keys = type === "batter" ? ["AVG", "OBP", "SLG", "OPS", "ISO"] : ["ERA", "WHIP", "K9", "BB9", "SO"];
+      const ms = monthly.slice().sort((x, y) => (x.month < y.month ? -1 : 1));
+      const enough = m => (type === "batter" ? m.pa >= 50 : m.outs >= 30);
       trend = {
-        season: prevLine.season,
-        rows: items.map((cur, k) => {
-          const p = prev[k], def = C.defs[k];
-          const d = cur.value != null && p.value != null ? cur.value - p.value : null;
-          const better = d == null || d === 0 ? "even" : (def.better === "high" ? d > 0 : d < 0) ? "good" : "bad";
-          return { key: cur.key, label: cur.label, prev: p.display, cur: cur.display, change: fmtDiff(def, d), tone: better, prevPct: p.pct, curPct: cur.pct };
+        months: ms.map(m => ({ label: Number(m.month.slice(5)) + "월", size: type === "batter" ? `${m.pa}타석` : `${(m.outs / 3).toFixed(1)}이닝`, ok: enough(m) })),
+        rows: keys.map(k => {
+          const def = C.defs.find(d => d.key === k), vals = ms.map(m => def.calc(m));
+          const okv = vals.filter((v, i) => v != null && enough(ms[i]));
+          const best = okv.length > 1 ? (def.better === "high" ? Math.max(...okv) : Math.min(...okv)) : null;
+          const worst = okv.length > 1 ? (def.better === "high" ? Math.min(...okv) : Math.max(...okv)) : null;
+          return {
+            label: def.label,
+            cells: vals.map((v, i) => ({ display: fmtV(def, v), tone: !enough(ms[i]) || v == null ? "" : v === best ? "good" : v === worst ? "bad" : "" })),
+          };
         }),
       };
+    }
+
+    // 구종 구성 (투수)
+    let pitchMix = null;
+    if (type === "pitcher" && mix && mix.length) {
+      const tot = mix.reduce((a, m) => a + m.n, 0);
+      pitchMix = mix.slice().sort((x, y) => y.n - x.n).map(m => ({ pitch: m.pitch, n: m.n, pct: (m.n / tot) * 100, kmh: m.kmh }));
     }
 
     // 비슷한 선수: 주요 지표 백분위 거리가 가까운 순서
@@ -188,16 +202,16 @@
     }));
 
     const notes = [];
-    if (!isQ) notes.push(`이 선수는 규정(${C.qualText})을 채우지 못해 순위는 매기지 않았고, 백분위는 규정을 채운 ${C.noun} ${items[0].n}명과 비교한 참고용 값입니다.`);
+    if (!isQ) notes.push(`이 선수는 규정(${C.qualText(q)})을 채우지 못해 순위는 매기지 않았고, 백분위는 규정을 채운 ${C.noun} ${items[0].n}명과 비교한 참고용 값입니다.`);
     notes.push(`리그 평균과 백분위는 규정을 채운 ${C.noun} ${items[0].n}명을 기준으로 계산했습니다. 백분위 91은 리그 ${C.noun}의 91%보다 좋은 기록이라는 뜻이고, ${type === "pitcher" ? "ERA·WHIP처럼 낮을수록 좋은 지표도 같은 방향으로 맞췄습니다." : "삼진 비율처럼 낮을수록 좋은 지표도 같은 방향으로 맞췄습니다."}`);
     notes.push("한 시즌의 기록은 운과 표본 크기의 영향을 받습니다. 타자는 타석, 투수는 이닝이 적을수록 수치가 크게 흔들립니다.");
-    notes.push("모든 선수와 팀 기록은 실습용 가상 데이터입니다.");
+    notes.push(`${meta.note || "KBO 정규시즌 경기 기록입니다."} 2루타·3루타·사구·희생플라이는 투구별 기록의 타석 결과에서 집계해 공식 기록과 소폭 다를 수 있습니다.`);
     if (type === "pitcher") notes.push("수비 무관 평균자책(FIP)은 약식 상수 3.10을 사용한 값이라 공식 기록과 다를 수 있습니다.");
 
     return {
-      version: 1, type, season: line.season, qualified: isQ, qualText: C.qualText, leagueN: items[0].n,
+      version: 1, type, season: line.season, qualified: isQ, qualText: C.qualText(q), leagueN: items[0].n,
       subject: { name: line.name, team: teamName(line.team), pos: line.pos },
-      headline, profile, items, strengths, weaknesses, composition, trend, similar, notes,
+      headline, profile, items, strengths, weaknesses, composition, trend, pitchMix, similar, notes,
     };
   }
 
@@ -237,10 +251,17 @@
       return `<tr class="gh"><td colspan="6">${esc(g)}</td></tr>${rows}`;
     }).join("");
 
-    const trend = rep.trend ? `<section class="sec rep" id="r-trend"><h2>${rep.trend.season} 시즌과 비교</h2>
-      <p class="sub">같은 선수의 지난 시즌 기록과 비교했습니다. 초록색은 좋아진 지표, 빨간색은 나빠진 지표입니다.</p>
-      <div class="table-wrap"><table><thead><tr><th>지표</th><th>${rep.trend.season}</th><th>${rep.season}</th><th>변화</th><th>백분위 변화</th></tr></thead><tbody>${rep.trend.rows.map(r =>
-        `<tr><td>${esc(r.label)}</td><td>${esc(r.prev)}</td><td>${esc(r.cur)}</td><td class="${tone(r.tone)}">${esc(r.change)}</td><td>${r.prevPct == null || r.curPct == null ? "-" : `${r.prevPct} → ${r.curPct}`}</td></tr>`).join("")}</tbody></table></div></section>` : "";
+    const trend = rep.trend ? `<section class="sec rep" id="r-trend"><h2>월별 추이</h2>
+      <p class="sub">시즌 중 컨디션이 어떻게 변했는지 월별로 다시 계산했습니다. 표본이 충분한 달(${isBat ? "50타석" : "10이닝"} 이상)만 가장 좋은 달은 초록색, 가장 나쁜 달은 빨간색으로 표시합니다.</p>
+      <div class="table-wrap"><table><thead><tr><th>지표</th>${rep.trend.months.map(m => `<th>${m.label}<br><small class="muted">${m.size}</small></th>`).join("")}</tr></thead><tbody>${rep.trend.rows.map(r =>
+        `<tr><td>${esc(r.label)}</td>${r.cells.map(c => `<td class="${tone(c.tone)}">${esc(c.display)}</td>`).join("")}</tr>`).join("")}</tbody></table></div></section>` : "";
+
+    const mixColors = ["#2146c7", "#d0312d", "#17734f", "#8d9ab8", "#c9892b", "#7a4fc2", "#2f9bb0", "#555"];
+    const pitchMix = rep.pitchMix ? `<section class="sec rep" id="r-mix"><h2>구종 구성</h2>
+      <p class="sub">던진 공의 종류별 비율과 평균 구속입니다. 구속은 투구 추적 기록 기준입니다.</p>
+      <div class="stk"><b>구종</b><div class="stk-bar">${rep.pitchMix.map((m, i) => `<span style="width:${m.pct}%;background:${mixColors[i % 8]}" title="${esc(m.pitch)} ${m.pct.toFixed(0)}%">${m.pct >= 9 ? esc(m.pitch) + " " + m.pct.toFixed(0) + "%" : ""}</span>`).join("")}</div></div>
+      <div class="table-wrap"><table><thead><tr><th>구종</th><th>투구 수</th><th>비율</th><th>평균 구속</th></tr></thead><tbody>${rep.pitchMix.map((m, i) =>
+        `<tr><td><i class="dot" style="background:${mixColors[i % 8]}"></i>${esc(m.pitch)}</td><td>${m.n}</td><td>${m.pct.toFixed(1)}%</td><td>${m.kmh.toFixed(1)}km/h</td></tr>`).join("")}</tbody></table></div></section>` : "";
 
     const similar = rep.similar.length ? `<section class="sec rep" id="r-similar"><h2>비슷한 유형의 ${isBat ? "타자" : "투수"}</h2>
       <p class="sub">주요 지표의 리그 위치가 가장 비슷한 선수입니다. 비슷한 정도가 100에 가까울수록 닮았습니다.</p>
@@ -250,12 +271,12 @@
       `<tr><td>${esc(i.label)} <small class="muted">${esc(i.en)}</small></td><td class="l">${esc(i.how)}</td><td class="l">${esc(i.desc)}</td></tr>`).join("")}</tbody></table></div></details>`;
 
     return `
-      <nav class="rep-nav" aria-label="보고서 목차"><a href="#r-sum">종합 평가</a><a href="#r-prof">능력 프로필</a><a href="#r-all">전체 지표</a><a href="#r-comp">${rep.composition.title}</a>${rep.trend ? '<a href="#r-trend">지난 시즌 비교</a>' : ""}${rep.similar.length ? '<a href="#r-similar">비슷한 선수</a>' : ""}<a href="#r-note">읽는 법</a></nav>
+      <nav class="rep-nav" aria-label="보고서 목차"><a href="#r-sum">종합 평가</a><a href="#r-prof">능력 프로필</a><a href="#r-all">전체 지표</a><a href="#r-comp">${rep.composition.title}</a>${rep.trend ? '<a href="#r-trend">월별 추이</a>' : ""}${rep.pitchMix ? '<a href="#r-mix">구종 구성</a>' : ""}${rep.similar.length ? '<a href="#r-similar">비슷한 선수</a>' : ""}<a href="#r-note">읽는 법</a></nav>
       <section class="sec rep" id="r-sum"><h2>종합 평가</h2>
         <p class="headline">${rep.headline}</p>
         <div class="two-cards">${listCards("강점", "pos", rep.strengths, "백분위를 계산할 수 있는 지표가 없습니다.")}${listCards("보완할 점", "neg", rep.weaknesses, "백분위를 계산할 수 있는 지표가 없습니다.")}</div></section>
       <section class="sec rep" id="r-prof"><h2>능력 프로필</h2>
-        <p class="sub">${isBat ? "타격" : "투구"} 능력을 다섯 영역으로 나눠, 영역별 지표의 리그 백분위 평균을 보여 줍니다. 높을수록 리그에서 앞선 영역입니다.</p>
+        <p class="sub">${isBat ? "타격" : "투구"} 능력을 영역으로 나눠, 영역별 지표의 리그 백분위 평균을 보여 줍니다. 높을수록 리그에서 앞선 영역입니다.</p>
         <div class="groups">${profile}</div></section>
       <section class="sec rep" id="r-all"><h2>전체 지표</h2>
         <p class="sub">${isBat ? "타자" : "투수"}에게 필요한 지표 ${rep.items.length}개를 영역별로 정리했습니다. 위 분석에서 고른 지표만이 아니라 전부 계산했습니다.</p>
@@ -263,7 +284,7 @@
         ${glossary}</section>
       <section class="sec rep" id="r-comp"><h2>${rep.composition.title}</h2><p class="sub">${esc(rep.composition.note)}</p>
         ${rep.composition.kind === "stack" ? renderStack(rep.composition) : renderPer9(rep.composition)}</section>
-      ${trend}${similar}
+      ${trend}${pitchMix}${similar}
       <section class="sec rep" id="r-note"><h2>읽을 때 알아둘 점</h2><ul class="plain">${rep.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul></section>`;
   }
 

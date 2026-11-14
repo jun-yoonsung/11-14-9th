@@ -15,7 +15,7 @@
   let meta;
   try { meta = await Api.meta(); }
   catch (e) {
-    view.innerHTML = '<div class="err-box" role="alert"><b>샘플 데이터를 불러오지 못했습니다.</b><br />파일을 더블클릭해서 열면 데이터를 읽을 수 없어요. README.md의 "실행 방법"대로 로컬 서버를 켜고 주소(localhost)로 열어 주세요.</div>';
+    view.innerHTML = '<div class="err-box" role="alert"><b>KBO 데이터를 불러오지 못했습니다.</b><br />data 폴더가 없다면 README.md의 "데이터 만들기"대로 build_data.py를 먼저 실행해 주세요. 파일을 더블클릭해서 열었다면 로컬 서버(localhost)로 열어야 합니다.</div>';
     return;
   }
   const teamName = id => (meta.teams.find(t => t.id === id) || {}).name || id;
@@ -60,7 +60,7 @@
   function viewStep2() {
     return `${stepsBar(2)}<div class="panel">
       <h1>어떤 데이터로 분석할까요?</h1>
-      <button class="option ${w.source === "site" ? "sel" : ""}" type="button" data-act="src-site"><span class="ic">${icData}</span><span><b>사이트 데이터</b><small>가상 ${meta.teams.length}개 팀, ${meta.seasons.slice().sort().join("·")} 시즌의 타자·투수·팀 기록</small></span></button>
+      <button class="option ${w.source === "site" ? "sel" : ""}" type="button" data-act="src-site"><span class="ic">${icData}</span><span><b>사이트 데이터</b><small>${meta.league} ${meta.seasons.slice().sort().join("·")} 정규시즌 ${meta.teams.length}개 팀의 타자·투수·팀 기록 (${meta.range[0]} ~ ${meta.range[1]})</small></span></button>
       <button class="option off" type="button" disabled aria-describedby="upHint"><span class="ic">${icUpload}</span><span><b>내 데이터 업로드 <span class="pill">다음 버전</span></b><small id="upHint">가지고 있는 기록 파일로 분석하는 기능은 다음 버전에서 제공됩니다</small></span></button>
       <div class="err-msg" id="err" role="alert">${esc(errors.source || "")}</div>
       <div class="actions"><button class="btn" type="button" data-act="back">이전</button><button class="btn pri grow" type="button" data-act="next2">다음</button></div></div>`;
@@ -75,9 +75,14 @@
         <div class="chips" role="group" aria-labelledby="tl">${rows.map(t => `<button class="chip" type="button" data-act="team" data-v="${t.id}" aria-pressed="${w.teams.includes(t.id)}">${esc(t.name)}</button>`).join("")}</div>
         <div class="err-msg" id="errTarget" role="alert">${esc(errors.target || "")}</div></div>`;
     } else {
-      const sorted = rows.slice().sort((a, b) => a.team.localeCompare(b.team) || a.name.localeCompare(b.name, "ko"));
+      // 팀별로 묶고, 팀 안에서는 많이 뛴 선수(타석·아웃 수)가 위로 오게 한다
+      const q = meta.qualify, T = Stats.TYPES[w.type];
+      const size = p => (w.type === "batter" ? p.pa : p.outs);
+      const teams = [...new Set(rows.map(p => p.team))].sort((a, b) => a.localeCompare(b, "ko"));
+      const opt = p => `<option value="${p.pid}" ${p.pid === w.target ? "selected" : ""}>${esc(p.name)} · ${esc(p.pos)}${T.qualify(p, q) ? "" : " · 규정 미달"}</option>`;
       target = `<div><label class="label" for="player">${ty.short === "타자" ? "타자" : "투수"}</label>
-        <select class="field ${errors.target ? "err" : ""}" id="player" data-act="player"><option value="">${ty.short}를 고르세요</option>${sorted.map(p => `<option value="${p.pid}" ${p.pid === w.target ? "selected" : ""}>${esc(p.name)} (${esc(teamName(p.team))})</option>`).join("")}</select>
+        <select class="field ${errors.target ? "err" : ""}" id="player" data-act="player"><option value="">${ty.short}를 고르세요</option>${teams.map(t => `<optgroup label="${esc(teamName(t))}">${rows.filter(p => p.team === t).sort((a, b) => size(b) - size(a)).map(opt).join("")}</optgroup>`).join("")}</select>
+        <p class="hint">타석이나 이닝이 많은 선수가 위에 있습니다. 규정 미달 선수는 순위 없이 참고용으로 분석됩니다.</p>
         <div class="err-msg" id="errTarget" role="alert">${esc(errors.target || "")}</div></div>`;
     }
     const chips = ty.defs.map(d => `<button class="chip" type="button" data-act="metric" data-v="${d.key}" aria-pressed="${w.metrics.includes(d.key)}" title="${esc(d.how)}">${esc(d.label)}${d.label !== d.en ? " " + esc(d.en) : ""}</button>`).join("");
@@ -122,10 +127,9 @@
       result = Stats.analyzePlayer(w.type, rows, w.target, w.metrics, meta.qualify);
       result.teamName = teamName(result.subject.team);
       try {   // 상세 보고서: 유형(타자·투수)에 맞는 항목을 만들어 함께 저장
-        const prevSeason = (meta.seasons || []).includes(w.season - 1) ? w.season - 1 : null;
-        let prevRows = null;
-        if (prevSeason) prevRows = await (w.type === "batter" ? Api.batters(prevSeason) : Api.pitchers(prevSeason));
-        result.report = Detail.build(w.type, rows, w.target, meta.qualify, meta, prevRows);
+        const monthly = await Api.monthly(w.type, w.target);
+        const mix = w.type === "pitcher" ? await Api.pitchmix(w.target) : null;
+        result.report = Detail.build(w.type, rows, w.target, meta.qualify, meta, monthly, mix);
       } catch (err) { console.warn("상세 보고서를 만들지 못했습니다", err); }
       title = `${result.subject.name} ${w.season} ${ty.label}`;
     }

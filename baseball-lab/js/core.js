@@ -34,8 +34,8 @@
 
   // ---------- 분석 기록 (이 브라우저에 저장) ----------
   const Store = {
-    KEY: "bl_history",
-    WIZ: "bl_wizard",
+    KEY: "bl_history_kbo",   // 가상 샘플 시절 기록과 섞이지 않게 키를 바꿨다
+    WIZ: "bl_wizard_kbo",
     list() { const l = Safe.getJSON(this.KEY, []); return Array.isArray(l) ? l : []; },
     add(rec) { const l = this.list(); l.push(rec); Safe.setJSON(this.KEY, l); return rec; },
     get(id) { return this.list().find(r => r.id === id) || null; },
@@ -46,7 +46,7 @@
     clearWizard() { Safe.del(this.WIZ); },
   };
 
-  // ---------- 샘플 데이터 읽기 (data/*.json이 백엔드·DB 역할) ----------
+  // ---------- 실제 KBO 데이터 읽기 (data/ 폴더의 CSV·JSON이 백엔드·DB 역할, build_data.py가 만든다) ----------
   const cache = {};
   const Api = {
     async json(name) {
@@ -58,10 +58,31 @@
       }
       return cache[name];
     },
+    // CSV 한 파일을 읽어 행 목록으로 바꾼다 (문자열 열만 지정하고 나머지는 숫자로)
+    csv(name) {
+      const key = name + ".csv";
+      if (!cache[key]) {
+        const STR = new Set(["pid", "id", "name", "team", "pos", "hand", "month", "pitch"]);
+        cache[key] = fetch("data/" + key).then(r => {
+          if (!r.ok) throw new Error(key + " " + r.status);
+          return r.text();
+        }).then(t => {
+          const lines = t.replace(/^\uFEFF/, "").trim().split(/\r?\n/), head = lines[0].split(",");
+          return lines.slice(1).map(l => {
+            const c = l.split(","), o = {};
+            head.forEach((h, i) => { o[h] = STR.has(h) ? c[i] : c[i] === "" || c[i] == null ? null : Number(c[i]); });
+            return o;
+          });
+        });
+      }
+      return cache[key];
+    },
     meta() { return this.json("meta"); },
-    batters(season) { return this.json("batters").then(l => l.filter(x => x.season === season)); },
-    pitchers(season) { return this.json("pitchers").then(l => l.filter(x => x.season === season)); },
-    teams(season) { return this.json("teams").then(l => l.filter(x => x.season === season)); },
+    batters(season) { return this.csv("batters").then(l => l.filter(x => x.season === season)); },
+    pitchers(season) { return this.csv("pitchers").then(l => l.filter(x => x.season === season)); },
+    teams(season) { return this.csv("teams").then(l => l.filter(x => x.season === season)); },
+    monthly(type, pid) { return this.csv(type === "batter" ? "batters_monthly" : "pitchers_monthly").then(l => l.filter(x => x.pid === pid)); },
+    pitchmix(pid) { return this.csv("pitchmix").then(l => l.filter(x => x.pid === pid)); },
   };
 
   // ---------- 화면 조각 ----------
@@ -95,7 +116,7 @@
     const out = document.getElementById("logoutBtn");
     if (out) out.addEventListener("click", () => { Auth.logout(); location.href = "index.html"; });
     const foot = document.getElementById("siteFoot");
-    if (foot) foot.innerHTML = '<div class="wrap">화면의 선수와 팀 기록은 실습용 가상 샘플 데이터입니다. 분석 기록은 이 브라우저에만 저장됩니다.</div>';
+    if (foot) foot.innerHTML = '<div class="wrap">화면의 선수와 팀 기록은 KBO 2026 정규시즌 경기 기록을 집계한 값입니다. 분석 기록은 이 브라우저에만 저장됩니다.</div>';
     // 로그아웃 뒤 뒤로 가기로 돌아왔을 때 보호 화면이 남아 보이지 않게 한다
     window.addEventListener("pageshow", e => {
       if (e.persisted && document.body.dataset.protected === "1" && !Auth.isIn()) Auth.require();

@@ -59,7 +59,7 @@
   const pageWrap = (inner, n, total, rec) => `<section class="rp-page">
     <div class="rp-top"><b>야구 분석 랩</b><span>분석 보고서, ${esc(View.dateKo(rec.createdAt))}</span></div>
     ${inner}
-    <div class="rp-foot"><span>화면과 보고서의 선수와 팀 기록은 실습용 가상 샘플 데이터입니다.</span><span>${n} / ${total}</span></div></section>`;
+    <div class="rp-foot"><span>화면과 보고서의 선수와 팀 기록은 KBO 2026 정규시즌 경기 기록을 집계한 값입니다.</span><span>${n} / ${total}</span></div></section>`;
 
   function playerPages(rec) {
     const r = rec.result, ty = T()[rec.type], s = r.subject;
@@ -74,15 +74,15 @@
       <td class="${l.tone === "even" ? "" : l.tone}">${l.value == null ? "-" : esc(l.diffDisplay)}</td>
       <td>${l.pct == null ? "-" : `${View.topText(l)}${l.rank ? `, ${l.rank}위` : ""}`}</td></tr>`).join("");
     const rawCols = rec.type === "batter"
-      ? [["g", "경기"], ["ab", "타수"], ["h", "안타"], ["d2", "2루타"], ["d3", "3루타"], ["hr", "홈런"], ["rbi", "타점"], ["bb", "볼넷"], ["hbp", "사구"], ["so", "삼진"], ["sf", "희생플라이"], ["sb", "도루"]]
-      : [["g", "경기"], ["ip", "이닝"], ["h", "피안타"], ["hr", "피홈런"], ["bb", "볼넷"], ["so", "삼진"], ["er", "자책점"], ["w", "승"], ["l", "패"], ["sv", "세이브"]];
+      ? [["g", "경기"], ["pa", "타석"], ["ab", "타수"], ["h", "안타"], ["d2", "2루타"], ["d3", "3루타"], ["hr", "홈런"], ["rbi", "타점"], ["r", "득점"], ["bb", "볼넷"], ["hbp", "사구"], ["so", "삼진"], ["sf", "희생플라이"]]
+      : [["g", "경기"], ["gs", "선발"], ["ip", "이닝"], ["h", "피안타"], ["hr", "피홈런"], ["bb", "볼넷"], ["so", "삼진"], ["er", "자책점"], ["r", "실점"], ["pitches", "투구 수"]];
     const raw = Object.assign({}, r.raw, { ip: ipText(r.raw.outs) });
     const rawTable = `<table><thead><tr>${rawCols.map(c => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody><tr>${rawCols.map(c => `<td>${esc(raw[c[0]])}</td>`).join("")}</tr></tbody></table>`;
     const how = r.lines.map(l => `<li><b>${esc(l.label)}</b>: ${esc(l.how)}${l.better === "low" ? " (낮을수록 좋음)" : ""}</li>`).join("");
     const unq = r.qualified ? "" : `<li>이 선수는 규정(${esc(r.qualText)})을 채우지 못해 순위는 매기지 않고 백분위만 참고용으로 계산했습니다.</li>`;
 
     const p1 = `<h1 class="rp-title">${esc(rec.title)}</h1>
-      <p class="rp-meta">${esc(teamName)} 소속, ${esc(s.pos)} 포지션, ${rec.season} 시즌. 사이트 데이터(가상 샘플)로 분석했습니다.</p>
+      <p class="rp-meta">${esc(teamName)} 소속, ${esc(s.pos)} 포지션, ${rec.season} 시즌. KBO 2026 정규시즌 실제 기록으로 분석했습니다.</p>
       <div class="rp-sec"><h2>핵심 요약</h2><div class="rp-kpis" style="--cols:${r.lines.length === 4 ? 4 : Math.min(r.lines.length, 3)}">${kpis}</div></div>
       <div class="rp-sec"><h2>리그 안에서의 위치</h2><div class="rp-pcts">${bars}
         <div class="rp-scale"><div></div><div><span>하위</span><span>평균</span><span>상위</span></div><div></div></div></div>
@@ -107,7 +107,7 @@
     const best = r.metrics.map(m => `<li><b>${esc(m.label)}</b>: ${esc(m.bestName)} ${esc(m.bestDisplay)}${m.better === "low" ? " (낮을수록 좋음)" : ""}</li>`).join("");
     const how = r.metrics.map(m => `<li><b>${esc(m.label)}</b>: ${esc(m.how)}</li>`).join("");
     const p1 = `<h1 class="rp-title">${esc(rec.title)}</h1>
-      <p class="rp-meta">${r.teams.map(t => esc(t.name)).join(", ")}. 사이트 데이터(가상 샘플)로 분석했습니다.</p>
+      <p class="rp-meta">${r.teams.map(t => esc(t.name)).join(", ")}. KBO 2026 정규시즌 실제 기록으로 분석했습니다.</p>
       <div class="rp-sec"><h2>팀별 기록 요약</h2><table><thead><tr><th>팀</th>${head}</tr></thead><tbody>${body}${lg}</tbody></table>
         <p class="rp-pv" style="margin-top:2.5mm">초록색 굵은 글씨는 선택한 팀 중 가장 좋은 기록입니다.</p></div>
       <div class="rp-sec"><h2>지표별 1위</h2><ul>${best}</ul></div>

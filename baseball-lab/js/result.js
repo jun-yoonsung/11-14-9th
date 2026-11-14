@@ -25,8 +25,8 @@
       <td class="${l.tone === "even" || l.value == null ? "" : l.tone}">${l.value == null ? "-" : esc(l.diffDisplay)}</td>
       <td>${l.pct == null ? "-" : `${View.topText(l)}${l.rank ? `, ${l.rank}위` : ""}`}</td></tr>`).join("");
     const rawCols = rec.type === "batter"
-      ? [["g", "경기"], ["ab", "타수"], ["h", "안타"], ["d2", "2루타"], ["d3", "3루타"], ["hr", "홈런"], ["rbi", "타점"], ["bb", "볼넷"], ["hbp", "사구"], ["so", "삼진"], ["sf", "희생플라이"], ["sb", "도루"]]
-      : [["g", "경기"], ["ip", "이닝"], ["h", "피안타"], ["hr", "피홈런"], ["bb", "볼넷"], ["so", "삼진"], ["er", "자책점"], ["w", "승"], ["l", "패"], ["sv", "세이브"]];
+      ? [["g", "경기"], ["pa", "타석"], ["ab", "타수"], ["h", "안타"], ["d2", "2루타"], ["d3", "3루타"], ["hr", "홈런"], ["rbi", "타점"], ["r", "득점"], ["bb", "볼넷"], ["hbp", "사구"], ["so", "삼진"], ["sf", "희생플라이"]]
+      : [["g", "경기"], ["gs", "선발"], ["ip", "이닝"], ["h", "피안타"], ["hr", "피홈런"], ["bb", "볼넷"], ["so", "삼진"], ["er", "자책점"], ["r", "실점"], ["pitches", "투구 수"]];
     const raw = Object.assign({}, r.raw, { ip: Report.ipText(r.raw.outs) });
     const unq = r.qualified ? "" : `<p class="note">이 선수는 규정(${esc(r.qualText)})을 채우지 못해 순위는 매기지 않고 백분위만 참고용으로 보여 줍니다.</p>`;
     return `<div class="kpis">${kpis}</div>
@@ -69,7 +69,7 @@
   view.innerHTML = `
     <div class="result-head">
       <h1>${esc(rec.title)}</h1>
-      <p class="sub">${sub}. ${esc(View.dateKo(rec.createdAt))} 분석, 사이트 데이터(가상 샘플)</p>
+      <p class="sub">${sub}. ${esc(View.dateKo(rec.createdAt))} 분석, KBO 2026 정규시즌 실제 기록</p>
     </div>
     ${r.kind === "team" ? teamView() : playerView()}
     <div class="act-row">
@@ -87,8 +87,9 @@
         try {
           const meta = await BL.Api.meta();
           const rows = await (rec.type === "batter" ? BL.Api.batters(rec.season) : BL.Api.pitchers(rec.season));
-          const prev = (meta.seasons || []).includes(rec.season - 1) ? await (rec.type === "batter" ? BL.Api.batters(rec.season - 1) : BL.Api.pitchers(rec.season - 1)) : null;
-          rep = Detail.build(rec.type, rows, rec.params.target, meta.qualify, meta, prev);
+          const monthly = await BL.Api.monthly(rec.type, rec.params.target);
+          const mix = rec.type === "pitcher" ? await BL.Api.pitchmix(rec.params.target) : null;
+          rep = Detail.build(rec.type, rows, rec.params.target, meta.qualify, meta, monthly, mix);
         } catch (e) { rep = null; }
       }
       if (rep) repBox.innerHTML = `<div class="rep-head"><h2 class="rep-title">${rec.type === "batter" ? "타자" : "투수"} 상세 분석 보고서</h2></div>` + Detail.render(rep);
