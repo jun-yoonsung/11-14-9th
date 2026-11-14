@@ -336,3 +336,13 @@ ul.plain li { margin: 6px 0; }
   .rep-title { font-size: 1.7rem; }
 }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; }
+
+/* 선수 검색 입력칸 */
+.combo { position: relative; }
+.combo-list { position: absolute; z-index: 20; left: 0; right: 0; top: 76px; max-height: 320px; overflow-y: auto; margin: 0; padding: 4px; list-style: none; background: var(--white); border: 1.5px solid var(--blue); border-radius: 8px; box-shadow: 0 10px 30px rgba(13, 26, 56, 0.18); }
+.combo-list li { display: flex; align-items: baseline; gap: 10px; padding: 9px 10px; border-radius: 6px; cursor: pointer; }
+.combo-list li b { font-weight: 700; }
+.combo-list li span { color: var(--muted); font-size: 0.88rem; flex: 1; }
+.combo-list li em { font-style: normal; font-size: 0.75rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; white-space: nowrap; }
+.combo-list li[aria-selected="true"], .combo-list li:hover { background: var(--blue-soft); }
+.combo-list li.combo-more { cursor: default; color: var(--muted); font-size: 0.85rem; background: none; }
