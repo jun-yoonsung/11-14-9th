@@ -3,7 +3,7 @@
 PRD.md, ACCEPTANCE.md, storyboard.html 기준으로 만든 야구 데이터 분석 사이트입니다.
 
 ## 데이터 만들기 (처음 한 번)
-이 사이트는 실제 KBO 2026 정규시즌 기록을 사용합니다. 원본 CSV는 용량이 크고 저장소에 올리지 않아서, 내 컴퓨터에서 요약 CSV를 만들어야 합니다.
+이 사이트는 실제 KBO 2026 정규시즌 기록을 사용합니다. 요약 CSV는 `data/`에 들어 있고, 원본 CSV는 저장소 맨 위 `kbo_2026_data/`에 있습니다. 원본이 바뀌면 아래 명령으로 요약 CSV를 다시 만드세요.
 
 ```
 pip install pandas
@@ -29,7 +29,7 @@ python3 -m http.server 8000
 
 ## 구성
 - `build_data.py` 원본 CSV를 요약 CSV로 바꾸는 스크립트
-- `data/` 만들어진 요약 CSV와 meta.json (GitHub에는 올리지 않음)
+- `data/` 만들어진 요약 CSV와 meta.json (GitHub에도 함께 올려 둠)
 - `js/core.js` 체험 로그인, 분석 기록 저장(브라우저), CSV 읽기
 - `js/stats.js` 지표 계산과 리그 내 위치(백분위)
 - `js/report.js` PDF 보고서 디자인과 파일 생성
