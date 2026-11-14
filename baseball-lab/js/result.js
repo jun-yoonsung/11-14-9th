@@ -34,7 +34,8 @@
         ${r.lines.some(l => l.pct != null) ? `<p class="sub">구슬 안 숫자는 백분위예요. 91이면 규정을 채운 리그 ${TY.noun} ${r.leagueN}명 중 91%보다 좋은 기록이라는 뜻입니다. 높을수록 좋은 성적이고, ERA처럼 낮을수록 좋은 지표도 같은 방향으로 맞췄어요.</p>` : ""}
         ${View.pctBlock(r.lines)}
         <div class="insight">${esc(r.insight)}</div>${unq}</div></section>
-      <section class="sec"><h2>지표별 상세</h2>
+      <div id="repBox"></div>
+      <section class="sec"><h2>선택한 지표 상세</h2>
         <div class="table-wrap"><table><thead><tr><th>지표</th><th>선수 기록</th><th>리그 평균</th><th>차이</th><th>리그 위치</th></tr></thead><tbody>${rows}</tbody></table></div></section>
       <section class="sec"><h2>기록 원자료</h2>
         <div class="table-wrap"><table><thead><tr>${rawCols.map(c => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody><tr>${rawCols.map(c => `<td>${esc(raw[c[0]])}</td>`).join("")}</tr></tbody></table></div></section>`;
@@ -76,6 +77,23 @@
       <button class="btn" id="againBtn" type="button">조건 바꿔 다시 분석</button>
       <a class="btn" href="history.html">분석 기록 보기</a>
     </div>`;
+
+  // 상세 보고서: 저장된 것이 있으면 그대로, 이전에 만든 기록이면 지금 만든다
+  const repBox = document.getElementById("repBox");
+  if (repBox) {
+    (async () => {
+      let rep = r.report;
+      if (!rep) {
+        try {
+          const meta = await BL.Api.meta();
+          const rows = await (rec.type === "batter" ? BL.Api.batters(rec.season) : BL.Api.pitchers(rec.season));
+          const prev = (meta.seasons || []).includes(rec.season - 1) ? await (rec.type === "batter" ? BL.Api.batters(rec.season - 1) : BL.Api.pitchers(rec.season - 1)) : null;
+          rep = Detail.build(rec.type, rows, rec.params.target, meta.qualify, meta, prev);
+        } catch (e) { rep = null; }
+      }
+      if (rep) repBox.innerHTML = `<div class="rep-head"><h2 class="rep-title">${rec.type === "batter" ? "타자" : "투수"} 상세 분석 보고서</h2></div>` + Detail.render(rep);
+    })();
+  }
 
   document.getElementById("pdfBtn").addEventListener("click", async e => {
     const btn = e.currentTarget, label = btn.textContent;

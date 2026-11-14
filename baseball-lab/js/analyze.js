@@ -121,6 +121,12 @@
     } else {
       result = Stats.analyzePlayer(w.type, rows, w.target, w.metrics, meta.qualify);
       result.teamName = teamName(result.subject.team);
+      try {   // 상세 보고서: 유형(타자·투수)에 맞는 항목을 만들어 함께 저장
+        const prevSeason = (meta.seasons || []).includes(w.season - 1) ? w.season - 1 : null;
+        let prevRows = null;
+        if (prevSeason) prevRows = await (w.type === "batter" ? Api.batters(prevSeason) : Api.pitchers(prevSeason));
+        result.report = Detail.build(w.type, rows, w.target, meta.qualify, meta, prevRows);
+      } catch (err) { console.warn("상세 보고서를 만들지 못했습니다", err); }
       title = `${result.subject.name} ${w.season} ${ty.label}`;
     }
     const rec = {
