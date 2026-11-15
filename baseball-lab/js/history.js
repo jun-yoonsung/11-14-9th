@@ -25,7 +25,7 @@
     }
     view.innerHTML = `
       <div class="list-top">
-        <div><h1>분석 기록</h1><p class="sub">${list.length}개, 이 브라우저에만 저장됩니다.</p></div>
+        <div><h1>분석 기록</h1><p class="sub">${list.length}개, ${BL.Cloud && BL.Cloud.enabled && BL.Cloud.uid() ? "내 계정에 저장됩니다." : "이 브라우저에만 저장됩니다."}</p></div>
         <div class="seg2" role="group" aria-label="정렬">
           <button type="button" data-order="new" aria-pressed="${order === "new"}">최신순</button>
           <button type="button" data-order="old" aria-pressed="${order === "old"}">오래된순</button>
@@ -52,4 +52,6 @@
   });
 
   render();
+  // 다른 기기에서 만든 기록을 가져와 합친다 (실제 로그인일 때만)
+  if (BL.Cloud && BL.Cloud.enabled) BL.Cloud.pullRecords().then(ch => { if (ch) render(); });
 })();

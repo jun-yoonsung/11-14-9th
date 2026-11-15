@@ -8,6 +8,7 @@
   const f0 = v => (v == null ? "-" : String(Math.round(v)));
   const fSigned0 = v => (v == null ? "-" : (v > 0 ? "+" : "") + Math.round(v));
 
+  const pc = v => (v == null ? "-" : (v * 100).toFixed(1) + "%");
   const div = (a, b) => (b ? a / b : null);
 
   // ---------- 타자 ----------
@@ -18,6 +19,8 @@
     { key: "OBP", label: "출루율", en: "OBP", fmt: f3, kind: "rate", better: "high", calc: obp, how: "(안타 + 볼넷 + 사구) ÷ (타수 + 볼넷 + 사구 + 희생플라이)" },
     { key: "SLG", label: "장타율", en: "SLG", fmt: f3, kind: "rate", better: "high", calc: slg, how: "루타 ÷ 타수" },
     { key: "OPS", label: "OPS", en: "OPS", fmt: f3, kind: "rate", better: "high", calc: s => { const o = obp(s), l = slg(s); return o == null || l == null ? null : o + l; }, how: "출루율 + 장타율" },
+    { key: "CON", label: "컨택 비율", en: "Contact%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.sw - s.wh, s.sw), how: "(스윙 − 헛스윙) ÷ 스윙" },
+    { key: "CHS", label: "존 밖 스윙 비율", en: "Chase%", fmt: pc, kind: "rate", better: "low", calc: s => div(s.ozsw, s.oz), how: "존 밖 공에 스윙 ÷ 존 밖 공 (낮을수록 선구안이 좋음)" },
     { key: "HR", label: "홈런", en: "HR", fmt: f0, kind: "count", better: "high", calc: s => s.hr, how: "시즌 홈런 수" },
     { key: "RBI", label: "타점", en: "RBI", fmt: f0, kind: "count", better: "high", calc: s => s.rbi, how: "시즌 타점 수" },
     { key: "R", label: "득점", en: "R", fmt: f0, kind: "count", better: "high", calc: s => s.r, how: "시즌 득점 수" },
@@ -31,6 +34,7 @@
     { key: "WHIP", label: "WHIP", en: "WHIP", fmt: f2, kind: "rate", better: "low", calc: s => div((s.bb + s.h) * 3, s.outs), how: "(볼넷 + 피안타) ÷ 이닝" },
     { key: "K9", label: "9이닝당 삼진", en: "K/9", fmt: f1, kind: "rate", better: "high", calc: s => div(s.so * 27, s.outs), how: "삼진 × 9 ÷ 이닝" },
     { key: "BB9", label: "9이닝당 볼넷", en: "BB/9", fmt: f1, kind: "rate", better: "low", calc: s => div(s.bb * 27, s.outs), how: "볼넷 × 9 ÷ 이닝" },
+    { key: "WHF", label: "헛스윙 유도 비율", en: "Whiff%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.wh, s.sw), how: "헛스윙 ÷ 타자가 스윙한 수" },
     { key: "SO", label: "삼진", en: "SO", fmt: f0, kind: "count", better: "high", calc: s => s.so, how: "시즌 삼진 수" },
     { key: "IP", label: "이닝", en: "IP", fmt: f1, kind: "count", better: "high", calc: s => s.outs / 3, how: "잡은 아웃 수 ÷ 3" },
     { key: "FB", label: "직구 평균 구속", en: "FB km/h", fmt: f1, kind: "count", better: "high", calc: s => (s.fb > 0 ? s.fb : null), how: "직구 투구의 평균 구속(km/h)" },
@@ -68,6 +72,7 @@
     if (def.kind === "count" && def.fmt === f0) body = Number.isInteger(abs) ? String(abs) : abs.toFixed(1);
     else if (def.fmt === fSigned0) body = String(Math.round(abs));
     else body = def.fmt(abs);
+    if (body.endsWith("%")) body += "p";   // 비율 지표의 차이는 %p
     if (abs === 0 || body === "0" || body === ".000" || body === "0.00") return body;
     return (d > 0 ? "+" : "−") + body;
   }

@@ -17,7 +17,7 @@
     KEY: "bl_auth",
     isIn() { const a = Safe.getJSON(this.KEY, null); return !!(a && a.loggedIn === true); },
     login() { Safe.setJSON(this.KEY, { loggedIn: true, name: "체험 사용자" }); },
-    logout() { Safe.del(this.KEY); },
+    logout() { Safe.del(this.KEY); if (window.BL && BL.Cloud) BL.Cloud.signOut(); },
     name() { const a = Safe.getJSON(this.KEY, null); return (a && a.name) || "체험 사용자"; },
     // 로그인이 필요한 화면에서 호출. 로그인 전이면 로그인 화면으로 보내고, 로그인 후 원래 화면으로 돌아오게 한다.
     require() {
@@ -37,9 +37,9 @@
     KEY: "bl_history_kbo",   // 가상 샘플 시절 기록과 섞이지 않게 키를 바꿨다
     WIZ: "bl_wizard_kbo",
     list() { const l = Safe.getJSON(this.KEY, []); return Array.isArray(l) ? l : []; },
-    add(rec) { const l = this.list(); l.push(rec); Safe.setJSON(this.KEY, l); return rec; },
+    add(rec) { const l = this.list(); l.push(rec); Safe.setJSON(this.KEY, l); if (BL.Cloud) BL.Cloud.saveRecord(rec); return rec; },
     get(id) { return this.list().find(r => r.id === id) || null; },
-    remove(id) { Safe.setJSON(this.KEY, this.list().filter(r => r.id !== id)); },
+    remove(id) { Safe.setJSON(this.KEY, this.list().filter(r => r.id !== id)); if (BL.Cloud) BL.Cloud.deleteRecord(id); },
     newId() { return "a" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); },
     wizard() { return Safe.getJSON(this.WIZ, {}) || {}; },
     saveWizard(w) { Safe.setJSON(this.WIZ, w); },
@@ -49,12 +49,11 @@
   // ---------- 실제 KBO 데이터 읽기 (data/ 폴더의 CSV·JSON이 백엔드·DB 역할, build_data.py가 만든다) ----------
   const cache = {};
   const Api = {
+    fromDb() { return !!(BL.Cloud && BL.Cloud.enabled && (window.BL_CONFIG || {}).dataFromDb); },
     async json(name) {
       if (!cache[name]) {
-        cache[name] = fetch("data/" + name + ".json").then(r => {
-          if (!r.ok) throw new Error(name + " " + r.status);
-          return r.json();
-        });
+        const file = () => fetch("data/" + name + ".json").then(r => { if (!r.ok) throw new Error(name + " " + r.status); return r.json(); });
+        cache[name] = this.fromDb() && name === "meta" ? BL.Cloud.readMeta().catch(file) : file();
       }
       return cache[name];
     },
@@ -63,10 +62,8 @@
       const key = name + ".csv";
       if (!cache[key]) {
         const STR = new Set(["pid", "id", "name", "team", "pos", "hand", "month", "pitch"]);
-        cache[key] = fetch("data/" + key).then(r => {
-          if (!r.ok) throw new Error(key + " " + r.status);
-          return r.text();
-        }).then(t => {
+        const file = () => fetch("data/" + key).then(r => { if (!r.ok) throw new Error(key + " " + r.status); return r.text(); });
+        cache[key] = (this.fromDb() ? BL.Cloud.readCsvText(name).catch(file) : file()).then(t => {
           const lines = t.replace(/^\uFEFF/, "").trim().split(/\r?\n/), head = lines[0].split(",");
           return lines.slice(1).map(l => {
             const c = l.split(","), o = {};
@@ -106,6 +103,8 @@
       <header class="site-head"><div class="wrap head-in">
         <a class="logo" href="index.html">${BALL}<span>야구 분석 랩</span></a>
         <nav class="tabs" aria-label="주 메뉴">
+          <a href="rank.html"${cur("rank")}>선수 순위</a>
+          <a href="guide.html"${cur("guide")}>지표 설명</a>
           <a href="analyze.html"${cur("analyze")}>데이터 분석</a>
           <a href="history.html"${cur("history")}>분석 기록</a>
         </nav>
@@ -116,7 +115,7 @@
     const out = document.getElementById("logoutBtn");
     if (out) out.addEventListener("click", () => { Auth.logout(); location.href = "index.html"; });
     const foot = document.getElementById("siteFoot");
-    if (foot) foot.innerHTML = '<div class="wrap">화면의 선수와 팀 기록은 KBO 2026 정규시즌 경기 기록을 집계한 값입니다. 분석 기록은 이 브라우저에만 저장됩니다.</div>';
+    if (foot) foot.innerHTML = '<div class="wrap">화면의 선수와 팀 기록은 KBO 2026 정규시즌 경기 기록을 집계한 값입니다. 분석 기록은 체험 로그인이면 이 브라우저에, 실제 계정이면 내 계정에 저장됩니다.</div>';
     // 로그아웃 뒤 뒤로 가기로 돌아왔을 때 보호 화면이 남아 보이지 않게 한다
     window.addEventListener("pageshow", e => {
       if (e.persisted && document.body.dataset.protected === "1" && !Auth.isIn()) Auth.require();

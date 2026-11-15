@@ -346,3 +346,29 @@ ul.plain li { margin: 6px 0; }
 .combo-list li em { font-style: normal; font-size: 0.75rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; white-space: nowrap; }
 .combo-list li[aria-selected="true"], .combo-list li:hover { background: var(--blue-soft); }
 .combo-list li.combo-more { cursor: default; color: var(--muted); font-size: 0.85rem; background: none; }
+
+/* 선수 순위·지표 설명 */
+.rk-tabs { display: flex; gap: 6px; margin: 22px 0 14px; }
+.rk-tabs button { font: inherit; font-weight: 700; padding: 9px 20px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--white); cursor: pointer; }
+.rk-tabs button[aria-selected="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.rk-filter { background: var(--white); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.rk-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.rk-row label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); font-weight: 700; }
+.rk-row select, .rk-row input { font: inherit; font-weight: 400; color: var(--ink); padding: 8px 10px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--white); min-width: 120px; max-width: 100%; }
+.rk-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.chip.on { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 700; }
+.chip.cl { border-color: var(--blue); background: var(--blue-soft); }
+.chip.cl.on { background: var(--blue); color: #fff; }
+.chip.clr { border-style: dashed; color: var(--muted); }
+.rk-cl { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.rk th.srt button { font: inherit; font-weight: 700; background: none; border: none; cursor: pointer; color: inherit; white-space: nowrap; padding: 0; }
+.rk td, .rk th { white-space: nowrap; }
+.rk td:nth-child(2), .rk th:nth-child(2) { text-align: left; }
+.rk td.hl { background: var(--blue-soft); font-weight: 700; }
+.nm-btn { font: inherit; font-weight: 700; background: none; border: none; cursor: pointer; color: var(--blue); padding: 0; }
+.nm-btn:hover { text-decoration: underline; }
+.muted { color: var(--muted); }
+.gd-card { background: var(--white); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-top: 12px; }
+.gd-card h3 { margin-bottom: 4px; }
+.gd-card code { background: var(--chalk); padding: 1px 6px; border-radius: 4px; font-size: 0.9em; word-break: break-all; }
+@media (max-width: 640px) { .rk-row label, .rk-row select, .rk-row input { width: 100%; } }

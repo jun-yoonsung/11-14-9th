@@ -1,0 +1,15 @@
+rules_version = '2';
+// Firebase 콘솔 > Firestore > 규칙 에 붙여 넣거나 `firebase deploy --only firestore:rules`로 올립니다.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // KBO 데이터는 누구나 읽을 수 있고, 쓰기는 서비스 계정(관리자 SDK)만 가능합니다 (규칙의 영향을 받지 않음)
+    match /datasets/{doc=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+    // 분석 기록은 본인 것만 읽고 쓸 수 있습니다
+    match /users/{uid}/records/{id} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

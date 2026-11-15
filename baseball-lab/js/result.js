@@ -1,5 +1,5 @@
 /* 분석 결과: 저장된 결과 요약으로 그린다 (분석 당시와 같은 값이 나오게 하려고 다시 계산하지 않는다) */
-(function () {
+(async function () {
   "use strict";
   if (!BL.Auth.require()) return;
   BL.renderShell("analyze");
@@ -7,7 +7,8 @@
   const view = document.getElementById("view");
 
   const id = new URLSearchParams(location.search).get("id");
-  const rec = id ? Store.get(id) : null;
+  let rec = id ? Store.get(id) : null;
+  if (!rec && id && BL.Cloud && BL.Cloud.enabled) { await BL.Cloud.pullRecords(); rec = Store.get(id); }   // 다른 기기에서 만든 기록
   if (!rec) {
     view.innerHTML = `<div class="err-box" role="alert"><b>이 분석 결과를 찾을 수 없습니다.</b><br />삭제되었거나 다른 브라우저에서 만든 분석일 수 있어요.</div>
       <div class="act-row"><a class="btn" href="history.html">분석 기록 보기</a><a class="btn pri" href="analyze.html">새 분석 시작하기</a></div>`;
