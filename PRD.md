@@ -1,6 +1,6 @@
 # PRD — 야구 데이터 분석 사이트
 
-- 상태: 초안 (2026-11-14), **v1.1 갱신 (2026-11-15)**: 실제 KBO 2026 데이터, 선수 순위, 지표 설명, 선구안 지표, 실제 로그인·DB 연결 추가. 바뀐 내용은 아래 "11. 변경 이력"에 모아 두었습니다.
+- 상태: 초안 (2026-11-14), **v1.2 갱신 (2026-11-15)**: 프론트엔드를 React + Tailwind CSS로 전환. **v1.1 (2026-11-15)**: 실제 KBO 2026 데이터, 선수 순위, 지표 설명, 선구안 지표, 실제 로그인·DB 연결 추가. 바뀐 내용은 아래 "11. 변경 이력"에 모아 두었습니다.
 - 표기: **[확정]** = 서비스 메모(ex.md)에 있었거나 사용자가 고른 것 / **[제안]** = Claude 제안, 사용자 확정 전
 
 ## 0. 기획 질문과 답 [확정]
@@ -11,7 +11,7 @@
 | 영상 분석 | 선택지는 보이지만 "준비 중" 안내만 |
 | 분석 항목 지정 | 사용자가 지표까지 직접 선택 |
 | 사이트 데이터 | ~~가상 샘플 데이터~~ → **v1.1: 실제 KBO 2026 정규시즌 기록**(720경기). 원본 CSV를 요약 CSV로 바꿔 사용 [확정] |
-| 기술 선택 | 정적 사이트(HTML/CSS/JS) + GitHub Pages로 확정. **v1.1: 실제 로그인과 DB는 Firebase(Authentication + Firestore)로 붙이기로 함** [확정: 실제 로그인·DB 도입 / 제안: Firebase] |
+| 기술 선택 | 정적 사이트 + GitHub Pages로 확정. **v1.2: 프론트엔드는 React 19 + Vite + Tailwind CSS v4 (JavaScript), GitHub Actions가 자동 빌드·배포** [확정: React·Tailwind·Actions 자동 빌드·JS] **v1.1: 실제 로그인과 DB는 Firebase(Authentication + Firestore)로 붙이기로 함** [확정: 실제 로그인·DB 도입 / 제안: Firebase] |
 | 외부 사이트(BallCombination) 기능 도입 | 적용 가능한 기능을 모두 적용: 선수 순위(유형 버튼·자동 군집), 지표 설명, 선구안 지표, 실제 로그인, CSV의 DB 저장 [확정] |
 
 ## 1. 대상 사용자와 문제 [확정]
@@ -174,7 +174,7 @@
 | 모든 화면에 "KBO 2026 정규시즌 실제 기록" 표시 (v1.1, 기존 "가상 샘플 데이터" 표시를 바꿈) | [제안] |
 
 ## 7. 다음 버전
-- ~~진짜 계정 회원가입·로그인과 서버 기록 저장~~ → v1.1에서 코드 구현 완료. **남은 일(사용자가 직접)**: Firebase 프로젝트 만들기, `js/config.js`에 연결 값 넣기, 보안 규칙 올리기, 서비스 계정 키로 `tools/upload_firestore.py` 실행 [확정]
+- ~~진짜 계정 회원가입·로그인과 서버 기록 저장~~ → v1.1에서 코드 구현 완료. **남은 일(사용자가 직접)**: Firebase 프로젝트 만들기, `src/config.js`에 연결 값 넣기, 보안 규칙 올리기, 서비스 계정 키로 `tools/upload_firestore.py` 실행 [확정]
 - 데이터 업로드(기록·영상), 영상 분석 [확정]
 - 비밀번호 찾기 [제안]
 - 투구 단위 데이터 기능(투구 위치·궤적, 다음 공 예측, 타석 시뮬레이션, 게임, 불펜 피로도) — 큰 데이터를 DB로 옮긴 뒤 검토 [제안]
@@ -187,26 +187,27 @@
 
 | 영역 | 추천 | 추천 이유 | 대안 | 비용 | 이번 버전 |
 |---|---|---|---|---|---|
-| 화면 | HTML + CSS + JavaScript를 직접 작성. 차트는 **Chart.js**, PDF는 **html2pdf.js** (둘 다 인터넷 주소로 불러오기만 하면 됨) | 9회차 ex.html과 같은 방식이라 익숙하고, 따로 설치하거나 빌드(코드를 변환하는 과정)할 필요가 없음. html2pdf.js는 화면을 그림처럼 찍어 PDF로 만들어서 한글 글꼴을 따로 넣지 않아도 됨. Chart.js는 막대·선 차트만 필요한 이 서비스에 충분함 | React + Vite (화면이 많아지면 관리가 쉬우나 설치·빌드 과정이 추가됨), PDF는 브라우저 인쇄 기능 | 무료 | 필요 |
+| 화면 (v1.2 갱신) | **React 19 + Vite + Tailwind CSS v4 + React Router(HashRouter)**, PDF는 npm 패키지 html2pdf.js(필요할 때만 로드). 이전 메모: HTML + CSS + JavaScript를 직접 작성. 차트는 **Chart.js**, PDF는 **html2pdf.js** (둘 다 인터넷 주소로 불러오기만 하면 됨) | 9회차 ex.html과 같은 방식이라 익숙하고, 따로 설치하거나 빌드(코드를 변환하는 과정)할 필요가 없음. html2pdf.js는 화면을 그림처럼 찍어 PDF로 만들어서 한글 글꼴을 따로 넣지 않아도 됨. Chart.js는 막대·선 차트만 필요한 이 서비스에 충분함 | React + Vite (화면이 많아지면 관리가 쉬우나 설치·빌드 과정이 추가됨), PDF는 브라우저 인쇄 기능 | 무료 | 필요 |
 | 서버·API | **따로 만들지 않음** (v1.1에도 동일. 로그인·DB는 Firebase를 브라우저에서 직접 호출) | 지표 계산은 브라우저에서 하고, 체험 로그인과 기록 저장도 브라우저에서 처리하므로 서버가 할 일이 없음 | Node.js(Express) 서버 직접 작성 | 무료 | 불필요 |
 | 데이터 저장 | **브라우저 저장소(localStorage)** + 샘플 야구 데이터는 사이트 안 JSON 파일 | 체험 로그인([확정])이라 사용자 구분이 필요 없고, "새로고침 후에도 기록 유지"는 브라우저 저장소로 충분함. 샘플 데이터는 바뀌지 않으므로 파일로 두는 게 가장 단순함 | 다음 버전 진짜 계정 도입 시: Supabase 데이터베이스 (또는 Firebase Firestore) | 무료 | 필요 (브라우저 저장소만) |
-| 외부 서비스 (v1.1 갱신) | **Firebase Authentication + Firestore** (선택, `js/config.js`가 비어 있으면 꺼짐). 이전 메모: 없음 | 체험 로그인이라 인증 서비스가 필요 없음. 다음 버전에서 진짜 계정을 붙일 때 Supabase 인증(이메일+비밀번호)을 우선 검토 | Firebase Authentication | 무료 | 불필요 |
-| 배포 | **GitHub Pages** | 이미 GitHub 저장소(jun-yoonsung/example)를 쓰고 있어 설정 화면에서 켜기만 하면 됨. 이 사이트는 서버가 없는 정적 사이트라 그대로 올라감 | Netlify, Vercel (드래그 앤 드롭 배포) | 무료 | 필요 (마지막 단계) |
+| 외부 서비스 (v1.1 갱신) | **Firebase Authentication + Firestore** (선택, `src/config.js`가 비어 있으면 꺼짐). 이전 메모: 없음 | 체험 로그인이라 인증 서비스가 필요 없음. 다음 버전에서 진짜 계정을 붙일 때 Supabase 인증(이메일+비밀번호)을 우선 검토 | Firebase Authentication | 무료 | 불필요 |
+| 배포 (v1.2 갱신) | **GitHub Actions가 `npm run build` 후 GitHub Pages에 배포** (Pages Source = GitHub Actions). 이전: | 이미 GitHub 저장소(jun-yoonsung/example)를 쓰고 있어 설정 화면에서 켜기만 하면 됨. 이 사이트는 서버가 없는 정적 사이트라 그대로 올라감 | Netlify, Vercel (드래그 앤 드롭 배포) | 무료 | 필요 (마지막 단계) |
 
 ## 9. 구현 계획 (기술 확정 후 진행)
 작업 위치 [제안]: `9회차/baseball-lab/` 새 폴더. 기존 `ex.html`은 건드리지 않는다.
-샘플 데이터를 파일로 읽기 때문에, 파일을 더블클릭해서 열지 않고 로컬 서버로 연다(`python3 -m http.server`, 브라우저에서 `localhost:8000`).
+샘플 데이터를 파일로 읽기 때문에, 파일을 더블클릭해서 열지 않고 `baseball-lab/`에서 `npm install` 후 `npm run dev`(브라우저 `localhost:5173`)로 연다. 화면 주소는 `#/rank`처럼 해시 방식이다.
 
 예상 파일 구성 [제안]
 ```
 baseball-lab/
-  index.html  login.html  signup.html  analyze.html  result.html  history.html
-  css/style.css
-  js/auth.js (체험 로그인 상태, 접근 제한)  js/store.js (분석 기록 저장·불러오기)
-  js/stats.js (지표 계산)  js/analyze.js  js/result.js (차트·PDF)  js/history.js
-  data/teams.json  data/batters.json  data/pitchers.json
+  index.html  vite.config.js  package.json
+  src/main.jsx App.jsx config.js index.css(Tailwind)
+  src/pages/ Home Login Signup Analyze Result History Rank Guide (.jsx)
+  src/components/ Layout Scene PlayerCombo DetailReport ...
+  src/lib/ stats detail rank report api storage cloud sceneSvg
+  public/data/*.csv  public/sw.js  public/docs/프로젝트구조도.html
 ```
-> `js/auth.js`와 `js/store.js`만 바꾸면 다음 버전에서 진짜 계정·서버 저장으로 옮길 수 있게 나눠 둔다.
+> `src/lib/storage.js`와 `src/lib/cloud.js`만 바꾸면 다음 버전에서 진짜 계정·서버 저장으로 옮길 수 있게 나눠 둔다.
 
 | 단계 | 내용 | 브라우저에서 확인할 것 (ACCEPTANCE 번호) |
 |---|---|---|
@@ -237,3 +238,12 @@ baseball-lab/
 | 도입 안 함 | 투구 위치·궤적, 터널링, 다음 공 예측, 타석 시뮬레이션, 게임, 불펜 피로도, 지표 설명의 RE24 계산 | 투구 단위 데이터(약 10MB+)와 별도 모델이 필요해 제외 |
 
 바뀐 규칙: 로그인 없이 볼 수 있는 화면이 늘어남(순위, 지표 설명), 데이터는 가상이 아닌 실제 KBO 2026 기록, 계정 기능은 Firebase 연결 여부에 따라 체험 로그인 또는 실제 로그인으로 동작.
+
+### v1.2 (2026-11-15) 프론트엔드 React + Tailwind 전환
+
+| 구분 | 내용 | 관련 파일 |
+|---|---|---|
+| 바꿈 | HTML 여러 장 → React 앱(화면은 컴포넌트, 주소는 `#/analyze` 등 해시 방식). 기능·화면은 그대로 | `src/` 전체 |
+| 바꿈 | CSS → Tailwind CSS v4 (색·글꼴은 `@theme`, 기존 스타일은 `@layer components`로 이식) | `src/index.css` |
+| 바꿈 | 배포: GitHub Actions가 자동 빌드 후 Pages에 올림 | `.github/workflows/pages.yml` |
+| 바꿈 | CSV 위치 `data/` → `public/data/`, 이전 `.html` 주소는 사라짐 | `public/data/` |

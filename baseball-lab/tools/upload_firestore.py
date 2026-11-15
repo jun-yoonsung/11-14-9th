@@ -1,4 +1,4 @@
-"""data/ 폴더의 KBO CSV·meta.json을 Firestore에 올린다. (한 번 실행하면 되고, build_data.py로 데이터를 새로 만들 때마다 다시 실행)
+"""public/data/ 폴더의 KBO CSV·meta.json을 Firestore에 올린다. (한 번 실행하면 되고, build_data.py로 데이터를 새로 만들 때마다 다시 실행)
 
 사용:  python3 tools/upload_firestore.py 서비스계정키.json
 필요:  pip install firebase-admin
@@ -15,7 +15,7 @@ if len(sys.argv) < 2:
     sys.exit("서비스 계정 키 파일 경로를 넣어 주세요.  예) python3 tools/upload_firestore.py ~/keys/service-account.json")
 firebase_admin.initialize_app(credentials.Certificate(sys.argv[1]))
 db = firestore.client()
-DATA = pathlib.Path(__file__).resolve().parent.parent / "data"
+DATA = pathlib.Path(__file__).resolve().parent.parent / "public" / "data"
 LIMIT = 600_000
 
 for f in sorted(DATA.glob("*.csv")):

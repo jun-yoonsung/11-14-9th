@@ -13,43 +13,10 @@
   <title>야구 분석 랩</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Hahmlet:wght@700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <main><div class="wrap hero-wrap">
-    <section class="hero">
-      <h1>보고 싶은 지표만 고르면<br />계산과 정리는 사이트가 합니다</h1>
-      <div class="hero-side">
-        <p class="lede">선수와 팀의 기록으로 리그 안에서의 위치를 보여 주고, 결과를 보고서 PDF로 저장해 드려요.</p>
-        <div class="cta"><a class="btn pri" href="analyze.html">분석 시작하기</a></div>
-      </div>
-    </section>
-  </div>
-  <div class="wrap">
-    <section class="board" id="preview" aria-live="polite">
-      <div class="board-top"><h2 id="pvTitle">예시 결과를 불러오는 중</h2><span class="pill">예시</span></div>
-      <div id="pvBars"></div>
-      <p class="sample-note" style="margin-top:18px">구슬 안 숫자가 클수록 리그에서 좋은 기록입니다. 선수와 기록은 KBO 2026 정규시즌 실제 기록이에요.</p>
-    </section>
-
-    <section class="lineup">
-      <h2>어떤 분석을 할 수 있나요</h2>
-      <ul class="lineup-list">
-        <li><a href="analyze.html?type=batter"><span class="pos bat">타</span><span class="nm">타자 분석</span><span class="ds">타율, OPS, 홈런 같은 타격 지표를 리그와 비교합니다.</span><span class="go">분석하기</span></a></li>
-        <li><a href="analyze.html?type=pitcher"><span class="pos pit">투</span><span class="nm">투수 분석</span><span class="ds">평균자책점, WHIP, 9이닝당 삼진을 리그와 비교합니다.</span><span class="go">분석하기</span></a></li>
-        <li><a href="analyze.html?type=team"><span class="pos team">팀</span><span class="nm">팀 비교</span><span class="ds">2~4개 팀의 승률과 득점, 실점을 나란히 봅니다.</span><span class="go">비교하기</span></a></li>
-        <li class="off"><div class="row"><span class="pos off">영</span><span class="nm">영상 분석 <span class="pill">준비 중</span></span><span class="ds">투구 폼과 타구 궤적 분석은 다음 버전에서 제공됩니다.</span><span></span></div></li>
-      </ul>
-    </section>
-  </div></main>
-  <footer class="foot" id="siteFoot"></footer>
-  <script src="js/core.js"></script>
-  <script src="js/config.js"></script>
-  <script src="js/cloud.js"></script>
-  <script src="js/scene.js"></script>
-  <script src="js/stats.js"></script>
-  <script src="js/view.js"></script>
-  <script src="js/index.js"></script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

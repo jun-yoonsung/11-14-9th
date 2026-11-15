@@ -1,8 +1,7 @@
-data/
-__pycache__/
+node_modules
+dist
 .DS_Store
 ._*
-
 # Firebase 서비스 계정 키는 올리지 않는다
 *service-account*.json
 *-adminsdk-*.json

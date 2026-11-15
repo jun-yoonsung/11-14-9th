@@ -2,7 +2,7 @@
 
 사용:  python3 build_data.py [원본_폴더]
        (원본 폴더 기본값: ~/Downloads/kbo_2026_data, 안에 kbo_games/ 와 kbo_pitches/ 가 있어야 함)
-결과:  data/ 폴더에 meta.json, batters.csv, pitchers.csv, teams.csv, *_monthly.csv, pitchmix.csv
+결과:  public/data/ 폴더에 meta.json, batters.csv, pitchers.csv, teams.csv, *_monthly.csv, pitchmix.csv
 필요:  pandas  (pip install pandas)
 
 기준
@@ -15,8 +15,8 @@ import glob, json, pathlib, sys
 import pandas as pd
 
 SRC = pathlib.Path(sys.argv[1]).expanduser() if len(sys.argv) > 1 else pathlib.Path("~/Downloads/kbo_2026_data").expanduser()
-OUT = pathlib.Path(__file__).resolve().parent / "data"
-OUT.mkdir(exist_ok=True)
+OUT = pathlib.Path(__file__).resolve().parent / "public" / "data"
+OUT.mkdir(parents=True, exist_ok=True)
 SEASON = 2026
 rd = lambda f, **k: pd.read_csv(f, encoding="utf-8-sig", **k)
 
