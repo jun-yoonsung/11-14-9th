@@ -185,11 +185,11 @@ h3 { font-size: 1.2rem; }
 
 /* ---------- 분석 설정 ---------- */
 .steps { max-width: 640px; margin-inline: auto; display: grid; grid-template-columns: repeat(3, 1fr); margin-bottom: 30px; }
-.steps span { font-size: var(--t-md); color: var(--muted); padding: 10px 14px; background: var(--white); border: 1px solid var(--line); margin-left: -1.5px; }
-.steps span:first-child { margin-left: 0; border-radius: 8px 0 0 8px; }
-.steps span:last-child { border-radius: 0 8px 8px 0; }
-.steps span.done { color: var(--blue); border-color: var(--blue); }
-.steps span.on { background: var(--ink); border-color: var(--ink); color: var(--white); font-weight: 700; position: relative; z-index: 1; }
+.steps > * { font-size: var(--t-md); color: var(--muted); padding: 10px 14px; background: var(--white); border: 1px solid var(--line); margin-left: -1.5px; }
+.steps > :first-child { margin-left: 0; border-radius: 8px 0 0 8px; }
+.steps > :last-child { border-radius: 0 8px 8px 0; }
+.steps > .done { color: var(--blue); border-color: var(--blue); }
+.steps > .on { background: var(--ink); border-color: var(--ink); color: var(--white); font-weight: 700; position: relative; z-index: 1; }
 .panel { max-width: 640px; margin-inline: auto; display: flex; flex-direction: column; gap: 18px; }
 .option { display: flex; gap: 14px; align-items: flex-start; padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md); width: 100%; font: inherit; text-align: left; background: var(--white); color: var(--ink); cursor: pointer; }
 .option:hover:not([disabled]) { border-color: var(--ink); }
@@ -515,3 +515,7 @@ body.has-scene main { transition: padding-top .7s ease; }
 .metric-group { margin-bottom: 14px; }
 .metric-group-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: var(--t-md); margin-bottom: 6px; }
 .metric-group-head .linkbtn { font-weight: 500; font-size: var(--t-sm); }
+/* 분석 설정: 이전/분석하기 버튼을 화면 아래에 붙여 두어 스크롤 없이 누를 수 있게 한다 */
+.panel .actions { position: sticky; bottom: 0; z-index: 6; margin: 0 -20px; padding: 12px 20px; background: rgba(246, 247, 249, .96); border-top: 1px solid var(--line); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-radius: 0 0 var(--r-md) var(--r-md); }
+.steps > button { font: inherit; text-align: left; cursor: pointer; }
+.steps > button:hover { background: var(--blue-soft); }

@@ -14,9 +14,15 @@ const icVideo = <Ic stroke="#5c667d"><rect x="3" y="6" width="13" height="12" rx
 const icData = <Ic><ellipse cx="12" cy="6" rx="7.5" ry="2.8" /><path d="M4.5 6v12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8V6M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8" /></Ic>;
 const icUpload = <Ic stroke="#5c667d"><path d="M12 15V4M7.5 8.5L12 4l4.5 4.5M4.5 15v3.5a1.5 1.5 0 001.5 1.5h12a1.5 1.5 0 001.5-1.5V15" /></Ic>;
 
-const Steps = ({ n }) => (
+const Steps = ({ n, onGo }) => (
   <div className="steps" aria-label="진행 단계">
-    {["분석 방식", "데이터 출처", "분석 설정"].map((s, i) => <span key={s} className={i + 1 < n ? "done" : i + 1 === n ? "on" : ""} aria-current={i + 1 === n ? "step" : undefined}>{i + 1}. {s}</span>)}
+    {["분석 방식", "데이터 출처", "분석 설정"].map((t, i) => {
+      const cls = i + 1 < n ? "done" : i + 1 === n ? "on" : "";
+      // 이미 지나온 단계는 눌러서 바로 돌아갈 수 있다 (스크롤 없이 이전 단계로 이동)
+      return i + 1 < n
+        ? <button key={t} type="button" className={cls} onClick={() => onGo(i + 1)}>{i + 1}. {t}</button>
+        : <span key={t} className={cls} aria-current={i + 1 === n ? "step" : undefined}>{i + 1}. {t}</span>;
+    })}
   </div>
 );
 
@@ -117,7 +123,7 @@ export default function Analyze() {
   if (step === 1) {
     return (
       <div className="wrap">
-        <Steps n={1} />
+        <Steps n={1} onGo={go} />
         <div className="panel">
           <h1>어떤 데이터를 분석할까요?</h1>
           <button className={"option" + (w.mode === "record" ? " sel" : "")} type="button" onClick={() => { update({ mode: "record" }); go(2); }}>
@@ -133,7 +139,7 @@ export default function Analyze() {
   if (step === 2) {
     return (
       <div className="wrap">
-        <Steps n={2} />
+        <Steps n={2} onGo={go} />
         <div className="panel">
           <h1>어떤 데이터로 분석할까요?</h1>
           <button className={"option" + (w.source === "site" ? " sel" : "")} type="button" onClick={() => { update({ source: "site" }); go(3); }}>
@@ -151,7 +157,7 @@ export default function Analyze() {
   }
   return (
     <div className="wrap">
-      <Steps n={3} />
+      <Steps n={3} onGo={go} />
       <div className="panel">
         <h1>무엇을 분석할까요?</h1>
         <div className="seg" role="group" aria-label="분석 종류">
