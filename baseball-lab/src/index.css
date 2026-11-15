@@ -73,7 +73,7 @@ a { color: inherit; }
 .linkbtn:hover { text-decoration: underline; }
 
 main { flex: 1; padding: 48px 0 80px; }
-.foot { border-top: 1px solid var(--line); color: var(--muted); font-size: var(--t-sm); padding: 20px 0 28px; background: var(--white); }
+.foot { text-align: center; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--t-sm); padding: 20px 0 28px; background: var(--white); }
 
 /* ---------- 글자 ---------- */
 h1, h2, h3 { font-family: var(--sans); font-weight: 700; letter-spacing: -0.03em; line-height: 1.2; }
@@ -184,13 +184,13 @@ h3 { font-size: 1.2rem; }
 .notice { background: var(--blue-soft); color: var(--blue); padding: 12px 14px; border-radius: var(--r-md); font-size: var(--t-md); width: 100%; text-align: left; }
 
 /* ---------- 분석 설정 ---------- */
-.steps { max-width: 640px; display: grid; grid-template-columns: repeat(3, 1fr); margin-bottom: 30px; }
+.steps { max-width: 640px; margin-inline: auto; display: grid; grid-template-columns: repeat(3, 1fr); margin-bottom: 30px; }
 .steps span { font-size: var(--t-md); color: var(--muted); padding: 10px 14px; background: var(--white); border: 1px solid var(--line); margin-left: -1.5px; }
 .steps span:first-child { margin-left: 0; border-radius: 8px 0 0 8px; }
 .steps span:last-child { border-radius: 0 8px 8px 0; }
 .steps span.done { color: var(--blue); border-color: var(--blue); }
 .steps span.on { background: var(--ink); border-color: var(--ink); color: var(--white); font-weight: 700; position: relative; z-index: 1; }
-.panel { max-width: 640px; display: flex; flex-direction: column; gap: 18px; }
+.panel { max-width: 640px; margin-inline: auto; display: flex; flex-direction: column; gap: 18px; }
 .option { display: flex; gap: 14px; align-items: flex-start; padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md); width: 100%; font: inherit; text-align: left; background: var(--white); color: var(--ink); cursor: pointer; }
 .option:hover:not([disabled]) { border-color: var(--ink); }
 .option.sel { border-color: var(--ink); box-shadow: inset 5px 0 0 var(--blue); }
@@ -234,7 +234,7 @@ th:first-child, td:first-child { text-align: left; }
 tbody tr:last-child td { border-bottom: none; }
 td.good { color: var(--green); font-weight: 700; }
 td.bad { color: var(--red); font-weight: 700; }
-.act-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 40px; }
+.act-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 40px; }
 .note { color: var(--muted); font-size: var(--t-sm); margin-top: 10px; }
 
 .team-metric { margin-top: 28px; }
@@ -269,7 +269,7 @@ td.bad { color: var(--red); font-weight: 700; }
 .confirm { color: var(--red); font-size: var(--t-md); font-weight: 700; }
 .empty { text-align: center; padding: 64px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 
-.err-box { border: 1px solid var(--red); background: var(--red-soft); color: var(--red); padding: 14px 16px; border-radius: var(--r-md); max-width: 640px; }
+.err-box { border: 1px solid var(--red); background: var(--red-soft); color: var(--red); padding: 14px 16px; border-radius: var(--r-md); max-width: 640px; margin-inline: auto; }
 
 /* ---------- 작은 화면 ---------- */
 @media (max-width: 860px) {
@@ -506,3 +506,6 @@ body.has-scene main { transition: padding-top .7s ease; }
 
 .stadium3d { position: absolute; inset: 0; }
 .stadium3d canvas { display: block; width: 100%; height: 100%; }
+/* 가운데 맞춤: 불러오는 중 문구, 분석 단계 버튼 */
+.wrap > .sub:only-child { text-align: center; padding: 40px 0; }
+.actions { justify-content: center; }
