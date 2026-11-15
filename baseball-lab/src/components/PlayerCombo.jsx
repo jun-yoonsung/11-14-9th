@@ -4,6 +4,7 @@ const CHO = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
 const initials = str => [...str].map(ch => { const c = ch.charCodeAt(0) - 44032; return c >= 0 && c < 11172 ? CHO[Math.floor(c / 588)] : ch; }).join("");
 
 /** 검색해서 고르는 선수 입력칸: 이름, 팀, 포지션, 초성으로 찾고 방향키·Enter·Esc를 지원한다 */
+import { pitcherQual } from "../lib/role.js";
 export default function PlayerCombo({ rows, type, value, qualify, teamName, hasError, label, onPick }) {
   const cur = rows.find(p => p.pid === value);
   const curLabel = cur ? `${cur.name} · ${teamName(cur.team)} · ${cur.pos}` : "";
@@ -30,7 +31,7 @@ export default function PlayerCombo({ rows, type, value, qualify, teamName, hasE
 
   const pick = p => { setOpen(false); typed.current = false; onPick(p.pid); };
   const close = () => { setOpen(false); typed.current = false; setText(curLabel); };   // 고르지 않고 닫으면 원래 선택으로 되돌린다
-  const isQ = p => (type === "batter" ? p.pa >= qualify.batterPa : p.outs >= qualify.pitcherOuts);
+  const isQ = p => (type === "batter" ? p.pa >= qualify.batterPa : pitcherQual(p, qualify));
 
   return (
     <div className="combo">

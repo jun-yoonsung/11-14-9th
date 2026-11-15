@@ -28,7 +28,7 @@ function PlayerView({ rec, r }) {
         <div className="kpi" key={l.key}><small>{l.label}{l.label !== l.en ? " " + l.en : ""}</small><strong>{l.display}</strong><em className={l.value == null ? "" : l.tone}>{kpiNote(l)}</em></div>
       ))}</div>
       <section className="sec"><div className="board"><h2>리그 안에서의 위치</h2>
-        {r.lines.some(l => l.pct != null) && <p className="sub">구슬 안 숫자는 백분위예요. 91이면 규정을 채운 리그 {TY.noun} {r.leagueN}명 중 91%보다 좋은 기록이라는 뜻입니다. 높을수록 좋은 성적이고, ERA처럼 낮을수록 좋은 지표도 같은 방향으로 맞췄어요.</p>}
+        {r.lines.some(l => l.pct != null) && <p className="sub">구슬 안 숫자는 백분위예요. 91이면 규정을 채운 리그 {r.noun || TY.noun} {r.leagueN}명 중 91%보다 좋은 기록이라는 뜻입니다. 높을수록 좋은 성적이고, ERA처럼 낮을수록 좋은 지표도 같은 방향으로 맞췄어요.</p>}
         <PctBlock lines={r.lines} />
         <div className="insight">{r.insight}</div>
         {!r.qualified && <p className="note">이 선수는 규정({r.qualText})을 채우지 못해 순위는 매기지 않고 백분위만 참고용으로 보여 줍니다.</p>}

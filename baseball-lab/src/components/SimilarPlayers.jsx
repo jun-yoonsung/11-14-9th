@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Api } from "../lib/api.js";
 import { Store } from "../lib/storage.js";
 import { similar, fmtFeat } from "../lib/rank.js";
+import { ROLE_MIN_OUTS, roleLabel } from "../lib/role.js";
 
 /** 분석한 선수와 스타일이 비슷한 선수 5명. 성적의 좋고 나쁨이 아니라 타격·투구 스타일을 비교한다. */
 export default function SimilarPlayers({ rec }) {
@@ -14,9 +15,10 @@ export default function SimilarPlayers({ rec }) {
       try {
         const [meta, rows] = await Promise.all([Api.meta(), rec.type === "batter" ? Api.batters(rec.season) : Api.pitchers(rec.season)]);
         const q = meta.qualify, pid = rec.params.target;
-        const pool = rows.filter(s => s.pid === pid || (rec.type === "batter" ? s.pa >= q.batterPa : s.outs >= q.pitcherOuts));
+        const me = rows.find(s => s.pid === pid), role = rec.type === "pitcher" && me ? me.pos : null;   // 투수는 같은 역할(선발/불펜)끼리만 비교
+        const pool = rows.filter(s => s.pid === pid || (rec.type === "batter" ? s.pa >= q.batterPa : s.pos === role && s.outs >= ROLE_MIN_OUTS[role]));
         const r = similar(rec.type, pool, pid, 5);
-        if (live) setRes(r ? { ...r, teams: Object.fromEntries(meta.teams.map(t => [t.id, t.name])) } : null);
+        if (live) setRes(r ? { ...r, role, teams: Object.fromEntries(meta.teams.map(t => [t.id, t.name])) } : null);
       } catch (e) { if (live) setRes(null); }
     })();
     return () => { live = false; };
@@ -29,8 +31,8 @@ export default function SimilarPlayers({ rec }) {
   };
   return (
     <section className="sec">
-      <h2>스타일이 비슷한 선수</h2>
-      <p className="sub">{res.feats.join(", ")}를 비교해 규정을 채운 선수 {res.n}명 중 가장 가까운 선수를 찾았어요. 성적이 좋은지가 아니라 <b>어떤 스타일인지</b>를 비교한 결과입니다. 이름을 누르면 그 선수 분석을 시작합니다.</p>
+      <h2>{res.role ? `스타일이 비슷한 ${roleLabel(res.role)}` : "스타일이 비슷한 선수"}</h2>
+      <p className="sub">{res.feats.join(", ")}를 비교해 {res.role ? `${roleLabel(res.role)} ${res.n}명(${Math.round(ROLE_MIN_OUTS[res.role] / 3)}이닝 이상) 중` : `규정을 채운 선수 ${res.n}명 중`} 가장 가까운 선수를 찾았어요. 성적이 좋은지가 아니라 <b>어떤 스타일인지</b>를 비교한 결과입니다. 이름을 누르면 그 선수 분석을 시작합니다.</p>
       <div className="table-wrap"><table>
         <thead><tr><th>선수</th><th>팀</th>{res.feats.map(f => <th key={f}>{f}</th>)}<th>닮은 정도</th><th>특히 닮은 점</th></tr></thead>
         <tbody>

@@ -1,4 +1,5 @@
 /* 상세 분석 보고서 데이터 만들기 (화면은 components/DetailReport.jsx) */
+import { ROLE_MIN_OUTS, roleLabel, pitcherQual, pitcherQualText } from "./role.js";
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   const div = (a, b) => (b ? a / b : null);
@@ -63,7 +64,7 @@
       similarKeys: ["AVG", "K", "BBP", "SLG", "ISO", "OBP", "OPS"],
     },
     pitcher: {
-      defs: PIT, noun: "투수", qualify: (s, q) => s.outs >= q.pitcherOuts, qualText: q => `${Math.round(q.pitcherOuts / 3)}이닝 이상`,
+      defs: PIT, noun: "투수", qualify: pitcherQual, qualText: pitcherQualText, peers: (rows, line) => rows.filter(r => r.pos === line.pos),
       groups: {
         "실점 억제": { desc: "점수를 얼마나 덜 주는지", type: "실점을 잘 막는 안정형" },
         "탈삼진": { desc: "타자를 삼진으로 얼마나 잡는지", type: "삼진으로 잡는 구위형" },
@@ -99,7 +100,7 @@
 
   // 한 선수의 모든 지표를 리그와 비교해 계산한다
   function measure(C, rows, line, q) {
-    const qual = rows.filter(r => C.qualify(r, q));
+    const qual = (C.peers ? C.peers(rows, line) : rows).filter(r => C.qualify(r, q));
     const isQ = C.qualify(line, q);
     const league = sumLine(qual);
     return C.defs.map(def => {
@@ -150,7 +151,7 @@
 
     // 구성: 타자는 안타 구성, 투수는 9이닝 결과
     let composition;
-    const qual = rows.filter(r => C.qualify(r, q)), L = sumLine(qual);
+    const qual = (C.peers ? C.peers(rows, line) : rows).filter(r => C.qualify(r, q)), L = sumLine(qual);
     if (type === "batter") {
       const parts = s => [["단타", s.h - s.d2 - s.d3 - s.hr], ["2루타", s.d2], ["3루타", s.d3], ["홈런", s.hr]];
       const share = s => { const t = s.h || 0; return parts(s).map(([label, n]) => ({ label, n, pct: t ? (n / t) * 100 : 0 })); };
@@ -190,11 +191,13 @@
 
     // 비슷한 선수: 주요 지표 백분위 거리가 가까운 순서
     const sims = C.similarKeys.map(k => C.defs.find(d => d.key === k));
-    const valsOf = d => qual.map(d.calc).filter(x => x != null);
+    const role = type === "pitcher" ? line.pos : null;
+    const simPool = role ? rows.filter(r => r.pos === role && r.outs >= ROLE_MIN_OUTS[role]) : qual;
+    const valsOf = d => simPool.map(d.calc).filter(x => x != null);
     const allVals = sims.map(valsOf);
     const vec = s => sims.map((d, k) => pctOf(d, d.calc(s), allVals[k], false));
     const me = vec(line);
-    const similar = qual.filter(r => r.pid !== pid).map(r => {
+    const similar = (simPool.length < 6 ? [] : simPool).filter(r => r.pid !== pid).map(r => {
       const v = vec(r), pairs = v.map((x, k) => (x == null || me[k] == null ? null : Math.abs(x - me[k]))).filter(x => x != null);
       return { r, dist: pairs.length ? mean(pairs) : 999 };
     }).sort((a, b) => a.dist - b.dist).slice(0, 3).map(({ r, dist }) => ({
@@ -203,16 +206,16 @@
     }));
 
     const notes = [];
-    if (!isQ) notes.push(`이 선수는 규정(${C.qualText(q)})을 채우지 못해 순위는 매기지 않았고, 백분위는 규정을 채운 ${C.noun} ${items[0].n}명과 비교한 참고용 값입니다.`);
+    if (!isQ) notes.push(`이 선수는 규정(${C.qualText(q, line.pos)})을 채우지 못해 순위는 매기지 않았고, 백분위는 규정을 채운 ${type === "pitcher" ? roleLabel(line.pos) : C.noun} ${items[0].n}명과 비교한 참고용 값입니다.`);
     notes.push(`리그 평균과 백분위는 규정을 채운 ${C.noun} ${items[0].n}명을 기준으로 계산했습니다. 백분위 91은 리그 ${C.noun}의 91%보다 좋은 기록이라는 뜻이고, ${type === "pitcher" ? "ERA·WHIP처럼 낮을수록 좋은 지표도 같은 방향으로 맞췄습니다." : "삼진 비율처럼 낮을수록 좋은 지표도 같은 방향으로 맞췄습니다."}`);
     notes.push("한 시즌의 기록은 운과 표본 크기의 영향을 받습니다. 타자는 타석, 투수는 이닝이 적을수록 수치가 크게 흔들립니다.");
     notes.push(`${meta.note || "KBO 정규시즌 경기 기록입니다."} 2루타·3루타·사구·희생플라이는 투구별 기록의 타석 결과에서 집계해 공식 기록과 소폭 다를 수 있습니다.`);
     if (type === "pitcher") notes.push("수비 무관 평균자책(FIP)은 약식 상수 3.10을 사용한 값이라 공식 기록과 다를 수 있습니다.");
 
     return {
-      version: 1, type, season: line.season, qualified: isQ, qualText: C.qualText(q), leagueN: items[0].n,
+      version: 1, type, season: line.season, qualified: isQ, qualText: C.qualText(q, line.pos), noun: type === "pitcher" ? roleLabel(line.pos) : C.noun, leagueN: items[0].n,
       subject: { name: line.name, team: teamName(line.team), pos: line.pos },
-      headline, profile, items, strengths, weaknesses, composition, trend, pitchMix, similar, notes,
+      headline, profile, items, strengths, weaknesses, composition, trend, pitchMix, similar, similarTitle: role ? `비슷한 유형의 ${roleLabel(role)}` : `비슷한 유형의 타자`, notes,
     };
   }
 

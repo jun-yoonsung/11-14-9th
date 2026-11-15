@@ -117,12 +117,12 @@ import { esc, dateKo, dateIso, beadColor, topText } from "./format.js";
       <div class="rp-sec"><h2>핵심 요약</h2><div class="rp-kpis" style="--cols:${r.lines.length === 4 ? 4 : Math.min(r.lines.length, 3)}">${kpis}</div></div>
       <div class="rp-sec"><h2>리그 안에서의 위치</h2><div class="rp-pcts">${bars}
         <div class="rp-scale"><div></div><div><span>하위</span><span>평균</span><span>상위</span></div><div></div></div></div>
-        <p class="rp-pv" style="margin-top:3mm">구슬 안 숫자는 백분위입니다. 91이면 규정을 채운 리그 ${ty.noun} ${r.leagueN}명 중 91%보다 좋은 기록이라는 뜻입니다. 높을수록 좋은 성적이며, ERA처럼 낮을수록 좋은 지표는 방향을 뒤집어 계산했습니다.</p></div>
+        <p class="rp-pv" style="margin-top:3mm">구슬 안 숫자는 백분위입니다. 91이면 규정을 채운 리그 ${r.noun || ty.noun} ${r.leagueN}명 중 91%보다 좋은 기록이라는 뜻입니다. 높을수록 좋은 성적이며, ERA처럼 낮을수록 좋은 지표는 방향을 뒤집어 계산했습니다.</p></div>
       <div class="rp-sec"><h2>해설</h2><div class="rp-callout">${esc(r.insight)}</div></div>`;
     const pSel = `<div class="rp-sec" style="margin-top:9mm"><h2>선택한 지표 상세</h2><table><thead><tr><th>지표</th><th>선수 기록</th><th>리그 평균</th><th>차이</th><th>리그 위치</th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="rp-sec"><h2>기록 원자료</h2>${rawTable}</div>
       <div class="rp-sec"><h2>분석 방법과 유의사항</h2><ul class="rp-note">
-        <li>리그 평균은 규정(${esc(r.qualText)})을 채운 ${ty.noun} ${r.leagueN}명의 기록으로 계산했습니다. 타율 같은 비율 지표는 전체 합계로, 홈런 같은 횟수 지표는 1인당 평균으로 계산합니다.</li>
+        <li>리그 평균은 규정(${esc(r.qualText)})을 채운 ${r.noun || ty.noun} ${r.leagueN}명의 기록으로 계산했습니다. 타율 같은 비율 지표는 전체 합계로, 홈런 같은 횟수 지표는 1인당 평균으로 계산합니다.</li>
         ${unq}${d ? "" : how}
         ${(d ? d.notes.slice(1) : []).map(n => `<li>${esc(n)}</li>`).join("")}
         <li>분모가 0이어서 계산할 수 없는 값은 "-"로 표시했습니다.</li></ul></div>`;
@@ -180,7 +180,7 @@ import { esc, dateKo, dateIso, beadColor, topText } from "./format.js";
           `<tr><td><i style="display:inline-block;width:2.2mm;height:2.2mm;background:${MIXC[i % 8]};margin-right:2mm"></i>${esc(m.pitch)}</td><td>${m.n}</td><td>${m.pct.toFixed(1)}%</td><td>${m.kmh.toFixed(1)}km/h</td></tr>`).join("")}</tbody></table></div>`;
     }
     if (d.similar.length) {
-      p4 += `<div class="rp-sec"><h2>비슷한 유형의 ${isBat ? "타자" : "투수"}</h2><p class="rp-pv" style="margin-bottom:2mm">주요 지표의 리그 위치가 가장 비슷한 선수입니다. 100에 가까울수록 닮았습니다.</p>
+      p4 += `<div class="rp-sec"><h2>${esc(d.similarTitle || (isBat ? "비슷한 유형의 타자" : "비슷한 유형의 투수"))}</h2><p class="rp-pv" style="margin-bottom:2mm">주요 지표의 리그 위치가 가장 비슷한 선수입니다. 100에 가까울수록 닮았습니다.</p>
         <div class="rp-sim">${d.similar.map(x => `<div><b>${esc(x.name)}</b>${esc(x.team)} · ${esc(x.pos)}<br><em>비슷한 정도 ${x.similarity}</em><small>${esc(x.key)}</small></div>`).join("")}</div></div>`;
     }
     return [p2, p3, p4, formula];

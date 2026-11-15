@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Api } from "../lib/api.js";
 import { Store } from "../lib/storage.js";
 import { COLS, RULES, FIRST_SORT, LOW_FIRST, cluster, fmtFeat } from "../lib/rank.js";
+import { pitcherQual } from "../lib/role.js";
 import ClusterMap, { CL_COLORS } from "../components/ClusterMap.jsx";
 import { useScene } from "../context/SceneContext.jsx";
 
-const initialState = { type: "pitcher", team: "", scope: "q", min: 0, role: "", rule: "", grp: null, sort: null, dir: 1, q: "" };
+const initialState = { type: "pitcher", team: "", scope: "q", min: 0, role: "선발", rule: "", grp: null, sort: null, dir: 1, q: "" };
 
 /** 선수 순위: 한 표에서 정렬하고, 유형 버튼(규칙형)과 자동 군집(K-평균)으로 선수를 묶어 본다. 로그인 없이 볼 수 있다. */
 export default function Rank() {
@@ -22,14 +23,16 @@ export default function Rank() {
 
   const meta = data && data !== "error" ? data.meta : null;
   const all = data && data !== "error" ? (st.type === "batter" ? data.bat : data.pit) : [];
-  const qual = s => (st.type === "batter" ? s.pa >= meta.qualify.batterPa : s.outs >= meta.qualify.pitcherOuts);
+  const qual = s => (st.type === "batter" ? s.pa >= meta.qualify.batterPa : pitcherQual(s, meta.qualify));
 
   const cl = useMemo(() => {
     if (!meta) return null;
-    const pool = st.scope === "all" ? all.filter(s => (st.type === "batter" ? s.pa >= 100 : s.outs >= 90)) : all.filter(qual);
+    // 투수는 선발과 불펜을 따로 군집으로 나눈다 (역할이 다르면 같은 기준으로 비교하기 어렵다)
+    const byRole = s => st.type === "batter" || !st.role || s.pos === st.role;
+    const pool = (st.scope === "all" ? all.filter(s => (st.type === "batter" ? s.pa >= 100 : s.outs >= 90)) : all.filter(qual)).filter(byRole);
     return cluster(st.type, pool);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meta, st.type, st.scope, all]);
+  }, [meta, st.type, st.scope, st.role, all]);
 
   const grp = st.grp != null && cl && cl.groups[st.grp] ? st.grp : null;
   const cols = COLS[st.type], rules = RULES[st.type];
@@ -77,12 +80,12 @@ export default function Rank() {
             </select></label>
           <label>범위
             <select value={st.scope} onChange={e => upd({ scope: e.target.value, grp: null })}>
-              <option value="q">규정 채운 선수({st.type === "batter" ? `타석 ${meta.qualify.batterPa}↑` : `${Math.round(meta.qualify.pitcherOuts / 3)}이닝↑`})</option>
+              <option value="q">규정 채운 선수({st.type === "batter" ? `타석 ${meta.qualify.batterPa}↑` : `${Math.round(meta.qualify.pitcherOuts / 3)}이닝↑, 불펜 30이닝↑`})</option>
               <option value="all">전체 선수</option>
             </select></label>
           {st.type === "pitcher" && (
             <label>보직
-              <select value={st.role} onChange={e => upd({ role: e.target.value })}><option value="">전체</option><option>선발</option><option>구원</option></select></label>
+              <select value={st.role} onChange={e => upd({ role: e.target.value, grp: null })}><option value="">전체</option><option>선발</option><option>구원</option></select></label>
           )}
           <label>최소 {st.type === "batter" ? "타석" : "이닝"}
             <input type="number" min="0" step="10" value={st.min || ""} placeholder="0" onChange={e => upd({ min: Math.max(0, +e.target.value || 0) })} /></label>

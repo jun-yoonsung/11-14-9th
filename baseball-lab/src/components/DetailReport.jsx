@@ -116,8 +116,8 @@ export default function DetailReport({ rep }) {
       )}
 
       {rep.similar.length > 0 && (
-        <section className="sec rep" id="r-similar"><h2>비슷한 유형의 {isBat ? "타자" : "투수"}</h2>
-          <p className="sub">주요 지표의 리그 위치가 가장 비슷한 선수입니다. 비슷한 정도가 100에 가까울수록 닮았습니다.</p>
+        <section className="sec rep" id="r-similar"><h2>{rep.similarTitle || `비슷한 유형의 ${isBat ? "타자" : "투수"}`}</h2>
+          <p className="sub">{isBat ? "주요 지표의 리그 위치가 가장 비슷한 선수입니다." : "같은 역할(선발은 선발끼리, 불펜은 불펜끼리) 안에서 주요 지표의 위치가 가장 비슷한 선수입니다."} 비슷한 정도가 100에 가까울수록 닮았습니다.</p>
           <div className="sim">{rep.similar.map(s => <div className="sim-i" key={s.name}><b>{s.name}</b><span>{s.team} · {s.pos}</span><em>비슷한 정도 {s.similarity}</em><small>{s.key}</small></div>)}</div></section>
       )}
 

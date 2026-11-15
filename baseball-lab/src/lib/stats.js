@@ -1,4 +1,5 @@
 /* 지표 계산: 계산식은 PRD 6장 기준. 분모가 0이면 null(화면에는 "-") */
+import { roleLabel, pitcherQual, pitcherQualText } from "./role.js";
 
   const f3 = v => (v == null ? "-" : v < 1 ? v.toFixed(3).replace(/^0/, "") : v.toFixed(3));
   const f2 = v => (v == null ? "-" : v.toFixed(2));
@@ -112,7 +113,7 @@
 
   const TYPES = {
     batter: { label: "타자 분석", short: "타자", noun: "타자", defs: BAT, defaults: ["AVG", "OPS", "HR"], qualify: (s, q) => s.pa >= q.batterPa, qualText: q => `타석 ${q.batterPa} 이상` },
-    pitcher: { label: "투수 분석", short: "투수", noun: "투수", defs: PIT, defaults: ["ERA", "WHIP", "K9"], qualify: (s, q) => s.outs >= q.pitcherOuts, qualText: q => `${Math.round(q.pitcherOuts / 3)}이닝 이상` },
+    pitcher: { label: "투수 분석", short: "투수", noun: "투수", defs: PIT, defaults: ["ERA", "WHIP", "K9"], qualify: pitcherQual, qualText: pitcherQualText, peers: (rows, line) => rows.filter(r => r.pos === line.pos) },
     team: { label: "팀 비교", short: "팀", noun: "팀", defs: TEAM, defaults: ["WPCT", "RS", "RA"] },
   };
   const MAX_METRICS = 99;   // 제한 없음: 전체 지표를 한 번에 분석할 수 있다
@@ -148,8 +149,9 @@
   function analyzePlayer(type, rows, pid, keys, q) {
     const T = TYPES[type];
     const defs = keys.map(k => T.defs.find(d => d.key === k)).filter(Boolean);
-    const qual = rows.filter(r => T.qualify(r, q));
     const line = rows.find(r => r.pid === pid);
+    const qual = (T.peers ? T.peers(rows, line) : rows).filter(r => T.qualify(r, q));
+    const noun = type === "pitcher" ? roleLabel(line.pos) : T.noun;   // 투수는 같은 역할(선발/불펜)끼리 비교
     const isQ = T.qualify(line, q);
     const league = sumLine(qual);
     const lines = defs.map(def => {
@@ -178,7 +180,7 @@
       const dir = base.value > base.league ? "높고" : base.value < base.league ? "낮고" : "같고";
       const tail = base.better === "low" ? " (낮을수록 좋은 지표입니다)" : "";
       insight = `${base.label} 기준으로 리그 평균(${base.leagueDisplay})보다 ${base.diffDisplay.replace(/^[+−]/, "")} ${dir}, ` +
-        (base.rank ? `리그 ${T.noun} ${base.n}명 중 ${base.rank}위입니다.${tail}` : `규정(${T.qualText(q)})을 채우지 못해 순위는 매기지 않았습니다.${tail}`);
+        (base.rank ? `리그 ${noun} ${base.n}명 중 ${base.rank}위입니다.${tail}` : `규정(${T.qualText(q, line.pos)})을 채우지 못해 순위는 매기지 않았습니다.${tail}`);
     } else {
       insight = "기록이 없어 계산할 수 없는 지표입니다. 다른 선수나 시즌을 골라 보세요.";
     }
@@ -187,7 +189,7 @@
     return {
       kind: "player", type,
       subject: { id: line.pid, name: line.name, team: line.team, pos: line.pos, season: line.season },
-      qualified: isQ, qualText: T.qualText(q), leagueN: qual.length,
+      qualified: isQ, qualText: T.qualText(q, line.pos), noun, leagueN: qual.length,
       lines, insight, raw: line,
     };
   }
