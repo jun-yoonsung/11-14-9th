@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Api } from "../lib/api.js";
 import { Store } from "../lib/storage.js";
-import { TYPES, MAX_METRICS, analyzePlayer, analyzeTeams } from "../lib/stats.js";
+import { TYPES, analyzePlayer, analyzeTeams } from "../lib/stats.js";
 import { build } from "../lib/detail.js";
 import PlayerCombo from "../components/PlayerCombo.jsx";
 import { useScene } from "../context/SceneContext.jsx";
@@ -101,9 +101,12 @@ export default function Analyze() {
 
   const toggleMetric = k => {
     if (w.metrics.includes(k)) { update({ metrics: w.metrics.filter(x => x !== k) }); setErrors({}); }
-    else if (w.metrics.length >= MAX_METRICS) setErrors({ metric: `지표는 최대 ${MAX_METRICS}개까지 고를 수 있어요.` });
     else { update({ metrics: [...w.metrics, k] }); setErrors({}); }
   };
+  const allKeys = () => TYPES[w.type].defs.map(d => d.key);
+  const selectAll = () => { update({ metrics: allKeys() }); setErrors({}); };
+  const clearAll = () => { update({ metrics: [] }); };
+  const toggleGroup = (keys, on) => { update({ metrics: on ? w.metrics.filter(k => !keys.includes(k)) : [...w.metrics, ...keys.filter(k => !w.metrics.includes(k))] }); setErrors({}); };
   const toggleTeam = id => {
     if (w.teams.includes(id)) { update({ teams: w.teams.filter(x => x !== id) }); setErrors({}); }
     else if (w.teams.length >= 4) setErrors({ target: "팀은 최대 4개까지 고를 수 있어요." });
@@ -177,10 +180,23 @@ export default function Analyze() {
           )}
         </div>
         <div>
-          <span className="label" id="ml">볼 지표 <span className="count">{w.metrics.length} / {MAX_METRICS}개</span></span>
-          <div className="chips" role="group" aria-labelledby="ml">
-            {ty.defs.map(d => <button key={d.key} className="chip" type="button" aria-pressed={w.metrics.includes(d.key)} title={d.how} onClick={() => toggleMetric(d.key)}>{d.label}{d.label !== d.en ? " " + d.en : ""}</button>)}
+          <span className="label" id="ml">볼 지표 <span className="count">{w.metrics.length} / {ty.defs.length}개 선택</span></span>
+          <div className="metric-tools">
+            <button className={"btn small" + (w.metrics.length === ty.defs.length ? " pri" : "")} type="button" aria-pressed={w.metrics.length === ty.defs.length} onClick={selectAll}>전체 지표 분석 ({ty.defs.length}개)</button>
+            <button className="btn small ghost" type="button" onClick={() => update({ metrics: ty.defaults.slice() })}>기본 지표만</button>
+            <button className="btn small ghost" type="button" onClick={clearAll}>모두 해제</button>
           </div>
+          {[...new Set(ty.defs.map(d => d.group))].map(g => {
+            const list = ty.defs.filter(d => d.group === g), keys = list.map(d => d.key), on = keys.every(k => w.metrics.includes(k));
+            return (
+              <div className="metric-group" key={g} role="group" aria-label={g}>
+                <div className="metric-group-head"><span>{g}</span><button className="linkbtn quiet" type="button" onClick={() => toggleGroup(keys, on)}>{on ? "이 묶음 해제" : "이 묶음 전체 선택"}</button></div>
+                <div className="chips">
+                  {list.map(d => <button key={d.key} className="chip" type="button" aria-pressed={w.metrics.includes(d.key)} title={d.how} onClick={() => toggleMetric(d.key)}>{d.label}{d.label !== d.en ? " " + d.en : ""}</button>)}
+                </div>
+              </div>
+            );
+          })}
           <div className="err-msg" role="alert">{errors.metric}</div>
           <p className="hint">지표 이름에 마우스를 올리면 계산 방법이 보여요.</p>
         </div>

@@ -12,40 +12,102 @@
   // ---------- 타자 ----------
   const obp = s => div(s.h + s.bb + s.hbp, s.ab + s.bb + s.hbp + s.sf);
   const slg = s => div(s.h + s.d2 + 2 * s.d3 + 3 * s.hr, s.ab);
+  const avg = s => div(s.h, s.ab);
+  const singles = s => s.h - s.d2 - s.d3 - s.hr;
+  const seen = s => s.zn + s.oz;                      // 본 공(스트라이크존 안 + 밖)
+  const G1 = "타율·출루·장타", G2 = "장타·득점", G3 = "선구안·컨택", G4 = "누적 기록";
   const BAT = [
-    { key: "AVG", label: "타율", en: "AVG", fmt: f3, kind: "rate", better: "high", calc: s => div(s.h, s.ab), how: "안타 ÷ 타수" },
-    { key: "OBP", label: "출루율", en: "OBP", fmt: f3, kind: "rate", better: "high", calc: obp, how: "(안타 + 볼넷 + 사구) ÷ (타수 + 볼넷 + 사구 + 희생플라이)" },
-    { key: "SLG", label: "장타율", en: "SLG", fmt: f3, kind: "rate", better: "high", calc: slg, how: "루타 ÷ 타수" },
-    { key: "OPS", label: "OPS", en: "OPS", fmt: f3, kind: "rate", better: "high", calc: s => { const o = obp(s), l = slg(s); return o == null || l == null ? null : o + l; }, how: "출루율 + 장타율" },
-    { key: "CON", label: "컨택 비율", en: "Contact%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.sw - s.wh, s.sw), how: "(스윙 − 헛스윙) ÷ 스윙" },
-    { key: "CHS", label: "존 밖 스윙 비율", en: "Chase%", fmt: pc, kind: "rate", better: "low", calc: s => div(s.ozsw, s.oz), how: "존 밖 공에 스윙 ÷ 존 밖 공 (낮을수록 선구안이 좋음)" },
-    { key: "HR", label: "홈런", en: "HR", fmt: f0, kind: "count", better: "high", calc: s => s.hr, how: "시즌 홈런 수" },
-    { key: "RBI", label: "타점", en: "RBI", fmt: f0, kind: "count", better: "high", calc: s => s.rbi, how: "시즌 타점 수" },
-    { key: "R", label: "득점", en: "R", fmt: f0, kind: "count", better: "high", calc: s => s.r, how: "시즌 득점 수" },
-    { key: "H", label: "안타", en: "H", fmt: f0, kind: "count", better: "high", calc: s => s.h, how: "시즌 안타 수" },
-    { key: "BB", label: "볼넷", en: "BB", fmt: f0, kind: "count", better: "high", calc: s => s.bb, how: "시즌 볼넷 수" },
+    { key: "AVG", group: G1, label: "타율", en: "AVG", fmt: f3, kind: "rate", better: "high", calc: avg, how: "안타 ÷ 타수" },
+    { key: "OBP", group: G1, label: "출루율", en: "OBP", fmt: f3, kind: "rate", better: "high", calc: obp, how: "(안타 + 볼넷 + 사구) ÷ (타수 + 볼넷 + 사구 + 희생플라이)" },
+    { key: "SLG", group: G1, label: "장타율", en: "SLG", fmt: f3, kind: "rate", better: "high", calc: slg, how: "루타 ÷ 타수" },
+    { key: "OPS", group: G1, label: "OPS", en: "OPS", fmt: f3, kind: "rate", better: "high", calc: s => { const o = obp(s), l = slg(s); return o == null || l == null ? null : o + l; }, how: "출루율 + 장타율" },
+    { key: "ISO", group: G1, label: "순수 장타율", en: "ISO", fmt: f3, kind: "rate", better: "high", calc: s => { const l = slg(s), a = avg(s); return l == null || a == null ? null : l - a; }, how: "장타율 − 타율 (안타 중 장타의 힘)" },
+    { key: "BABIP", group: G1, label: "인플레이 타구 타율", en: "BABIP", fmt: f3, kind: "rate", better: "high", calc: s => div(s.h - s.hr, s.ab - s.so - s.hr + s.sf), how: "(안타 − 홈런) ÷ (타수 − 삼진 − 홈런 + 희생플라이)" },
+    { key: "WOBA", group: G1, label: "가중 출루율(약식)", en: "wOBA", fmt: f3, kind: "rate", better: "high", calc: s => div(0.69 * s.bb + 0.72 * s.hbp + 0.89 * singles(s) + 1.27 * s.d2 + 1.62 * s.d3 + 2.1 * s.hr, s.ab + s.bb + s.sf + s.hbp), how: "출루 방식마다 가중치(볼넷 .69, 사구 .72, 단타 .89, 2루타 1.27, 3루타 1.62, 홈런 2.10)를 곱한 약식 값" },
+    { key: "HR", group: G2, label: "홈런", en: "HR", fmt: f0, kind: "count", better: "high", calc: s => s.hr, how: "시즌 홈런 수" },
+    { key: "HRP", group: G2, label: "홈런 비율", en: "HR%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.hr, s.pa), how: "홈런 ÷ 타석" },
+    { key: "XBH", group: G2, label: "장타 수", en: "XBH", fmt: f0, kind: "count", better: "high", calc: s => s.d2 + s.d3 + s.hr, how: "2루타 + 3루타 + 홈런" },
+    { key: "TB", group: G2, label: "루타", en: "TB", fmt: f0, kind: "count", better: "high", calc: s => singles(s) + 2 * s.d2 + 3 * s.d3 + 4 * s.hr, how: "단타 + 2×2루타 + 3×3루타 + 4×홈런" },
+    { key: "RBI", group: G2, label: "타점", en: "RBI", fmt: f0, kind: "count", better: "high", calc: s => s.rbi, how: "시즌 타점 수" },
+    { key: "R", group: G2, label: "득점", en: "R", fmt: f0, kind: "count", better: "high", calc: s => s.r, how: "시즌 득점 수" },
+    { key: "BBP", group: G3, label: "볼넷 비율", en: "BB%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.bb, s.pa), how: "볼넷 ÷ 타석" },
+    { key: "KP", group: G3, label: "삼진 비율", en: "K%", fmt: pc, kind: "rate", better: "low", calc: s => div(s.so, s.pa), how: "삼진 ÷ 타석 (낮을수록 좋음)" },
+    { key: "BBK", group: G3, label: "볼넷 대 삼진", en: "BB/K", fmt: f2, kind: "rate", better: "high", calc: s => div(s.bb, s.so), how: "볼넷 ÷ 삼진" },
+    { key: "CON", group: G3, label: "컨택 비율", en: "Contact%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.sw - s.wh, s.sw), how: "(스윙 − 헛스윙) ÷ 스윙" },
+    { key: "WHFB", group: G3, label: "헛스윙 비율", en: "Whiff%", fmt: pc, kind: "rate", better: "low", calc: s => div(s.wh, s.sw), how: "헛스윙 ÷ 스윙 (낮을수록 좋음)" },
+    { key: "CHS", group: G3, label: "존 밖 스윙 비율", en: "Chase%", fmt: pc, kind: "rate", better: "low", calc: s => div(s.ozsw, s.oz), how: "존 밖 공에 스윙 ÷ 존 밖 공 (낮을수록 선구안이 좋음)" },
+    { key: "ZSW", group: G3, label: "존 안 스윙 비율", en: "Z-Swing%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.zsw, s.zn), how: "존 안 공에 스윙 ÷ 존 안 공" },
+    { key: "ZCON", group: G3, label: "존 안 컨택 비율", en: "Z-Contact%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.zsw - s.zwh, s.zsw), how: "(존 안 스윙 − 존 안 헛스윙) ÷ 존 안 스윙" },
+    { key: "OCON", group: G3, label: "존 밖 컨택 비율", en: "O-Contact%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.ozsw - (s.wh - s.zwh), s.ozsw), how: "(존 밖 스윙 − 존 밖 헛스윙) ÷ 존 밖 스윙" },
+    { key: "SWG", group: G3, label: "스윙 비율", en: "Swing%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.sw, seen(s)), how: "스윙 ÷ 본 공 (좋고 나쁨이 아닌 성향 지표)" },
+    { key: "PPA", group: G3, label: "타석당 본 공", en: "P/PA", fmt: f2, kind: "rate", better: "high", calc: s => div(seen(s), s.pa), how: "본 공 ÷ 타석 (끈질김)" },
+    { key: "G", group: G4, label: "경기", en: "G", fmt: f0, kind: "count", better: "high", calc: s => s.g, how: "출전 경기 수" },
+    { key: "PA", group: G4, label: "타석", en: "PA", fmt: f0, kind: "count", better: "high", calc: s => s.pa, how: "타석 수" },
+    { key: "AB", group: G4, label: "타수", en: "AB", fmt: f0, kind: "count", better: "high", calc: s => s.ab, how: "타수" },
+    { key: "H", group: G4, label: "안타", en: "H", fmt: f0, kind: "count", better: "high", calc: s => s.h, how: "시즌 안타 수" },
+    { key: "D2", group: G4, label: "2루타", en: "2B", fmt: f0, kind: "count", better: "high", calc: s => s.d2, how: "2루타 수" },
+    { key: "D3", group: G4, label: "3루타", en: "3B", fmt: f0, kind: "count", better: "high", calc: s => s.d3, how: "3루타 수" },
+    { key: "BB", group: G4, label: "볼넷", en: "BB", fmt: f0, kind: "count", better: "high", calc: s => s.bb, how: "시즌 볼넷 수" },
+    { key: "HBP", group: G4, label: "사구", en: "HBP", fmt: f0, kind: "count", better: "high", calc: s => s.hbp, how: "몸에 맞는 공" },
+    { key: "SOB", group: G4, label: "삼진", en: "SO", fmt: f0, kind: "count", better: "low", calc: s => s.so, how: "삼진 수 (적을수록 좋음)" },
+    { key: "SF", group: G4, label: "희생플라이", en: "SF", fmt: f0, kind: "count", better: "high", calc: s => s.sf, how: "희생플라이 수" },
   ];
 
   // ---------- 투수 (outs = 잡은 아웃 수, 이닝 = outs ÷ 3) ----------
+  const bf = s => s.outs + s.h + s.bb + s.hbp;        // 상대 타자 수 (실책·병살 등은 빼고 센 약식 값)
+  const abAg = s => bf(s) - s.bb - s.hbp;            // 상대 타수(약식)
+  const P1 = "실점 억제", P2 = "탈삼진·제구", P3 = "투구 내용", P4 = "누적 기록";
   const PIT = [
-    { key: "ERA", label: "평균자책점", en: "ERA", fmt: f2, kind: "rate", better: "low", calc: s => div(s.er * 27, s.outs), how: "자책점 × 9 ÷ 이닝" },
-    { key: "WHIP", label: "WHIP", en: "WHIP", fmt: f2, kind: "rate", better: "low", calc: s => div((s.bb + s.h) * 3, s.outs), how: "(볼넷 + 피안타) ÷ 이닝" },
-    { key: "K9", label: "9이닝당 삼진", en: "K/9", fmt: f1, kind: "rate", better: "high", calc: s => div(s.so * 27, s.outs), how: "삼진 × 9 ÷ 이닝" },
-    { key: "BB9", label: "9이닝당 볼넷", en: "BB/9", fmt: f1, kind: "rate", better: "low", calc: s => div(s.bb * 27, s.outs), how: "볼넷 × 9 ÷ 이닝" },
-    { key: "WHF", label: "헛스윙 유도 비율", en: "Whiff%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.wh, s.sw), how: "헛스윙 ÷ 타자가 스윙한 수" },
-    { key: "SO", label: "삼진", en: "SO", fmt: f0, kind: "count", better: "high", calc: s => s.so, how: "시즌 삼진 수" },
-    { key: "IP", label: "이닝", en: "IP", fmt: f1, kind: "count", better: "high", calc: s => s.outs / 3, how: "잡은 아웃 수 ÷ 3" },
-    { key: "FB", label: "직구 평균 구속", en: "FB km/h", fmt: f1, kind: "count", better: "high", calc: s => (s.fb > 0 ? s.fb : null), how: "직구 투구의 평균 구속(km/h)" },
+    { key: "ERA", group: P1, label: "평균자책점", en: "ERA", fmt: f2, kind: "rate", better: "low", calc: s => div(s.er * 27, s.outs), how: "자책점 × 9 ÷ 이닝" },
+    { key: "WHIP", group: P1, label: "WHIP", en: "WHIP", fmt: f2, kind: "rate", better: "low", calc: s => div((s.bb + s.h) * 3, s.outs), how: "(볼넷 + 피안타) ÷ 이닝" },
+    { key: "FIP", group: P1, label: "수비 무관 평균자책(약식)", en: "FIP", fmt: f2, kind: "rate", better: "low", calc: s => (s.outs ? (13 * s.hr + 3 * (s.bb + s.hbp) - 2 * s.so) / (s.outs / 3) + 3.1 : null), how: "(13×피홈런 + 3×(볼넷+사구) − 2×삼진) ÷ 이닝 + 3.10" },
+    { key: "RA9", group: P1, label: "9이닝당 실점", en: "RA/9", fmt: f2, kind: "rate", better: "low", calc: s => div(s.r * 27, s.outs), how: "실점 × 9 ÷ 이닝" },
+    { key: "H9", group: P1, label: "9이닝당 피안타", en: "H/9", fmt: f1, kind: "rate", better: "low", calc: s => div(s.h * 27, s.outs), how: "피안타 × 9 ÷ 이닝" },
+    { key: "HR9", group: P1, label: "9이닝당 피홈런", en: "HR/9", fmt: f2, kind: "rate", better: "low", calc: s => div(s.hr * 27, s.outs), how: "피홈런 × 9 ÷ 이닝" },
+    { key: "OAVG", group: P1, label: "피안타율(약식)", en: "AVG against", fmt: f3, kind: "rate", better: "low", calc: s => div(s.h, abAg(s)), how: "피안타 ÷ (상대 타자 수 − 볼넷 − 사구). 상대 타자 수는 아웃+피안타+볼넷+사구로 센 약식 값" },
+    { key: "OOBP", group: P1, label: "피출루율(약식)", en: "OBP against", fmt: f3, kind: "rate", better: "low", calc: s => div(s.h + s.bb + s.hbp, bf(s)), how: "(피안타 + 볼넷 + 사구) ÷ 상대 타자 수(약식)" },
+    { key: "K9", group: P2, label: "9이닝당 삼진", en: "K/9", fmt: f1, kind: "rate", better: "high", calc: s => div(s.so * 27, s.outs), how: "삼진 × 9 ÷ 이닝" },
+    { key: "BB9", group: P2, label: "9이닝당 볼넷", en: "BB/9", fmt: f1, kind: "rate", better: "low", calc: s => div(s.bb * 27, s.outs), how: "볼넷 × 9 ÷ 이닝" },
+    { key: "KP", group: P2, label: "삼진 비율", en: "K%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.so, bf(s)), how: "삼진 ÷ 상대 타자 수(약식)" },
+    { key: "BBP", group: P2, label: "볼넷 비율", en: "BB%", fmt: pc, kind: "rate", better: "low", calc: s => div(s.bb, bf(s)), how: "볼넷 ÷ 상대 타자 수(약식)" },
+    { key: "KBBP", group: P2, label: "삼진 − 볼넷 비율", en: "K-BB%", fmt: pc, kind: "rate", better: "high", calc: s => { const b = bf(s); return b ? (s.so - s.bb) / b : null; }, how: "삼진 비율 − 볼넷 비율" },
+    { key: "KBB", group: P2, label: "삼진 대 볼넷", en: "K/BB", fmt: f2, kind: "rate", better: "high", calc: s => div(s.so, s.bb), how: "삼진 ÷ 볼넷" },
+    { key: "WHF", group: P3, label: "헛스윙 유도 비율", en: "Whiff%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.wh, s.sw), how: "헛스윙 ÷ 타자가 스윙한 수" },
+    { key: "SWS", group: P3, label: "투구당 헛스윙", en: "SwStr%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.wh, s.pitches), how: "헛스윙 ÷ 전체 투구 수" },
+    { key: "CHSI", group: P3, label: "존 밖 스윙 유도", en: "Chase%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.ozsw, s.oz), how: "존 밖 공에 타자가 스윙한 비율" },
+    { key: "ZONE", group: P3, label: "존 안 투구 비율", en: "Zone%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.zn, s.zn + s.oz), how: "스트라이크존 안으로 던진 공 ÷ 전체 투구" },
+    { key: "SWGI", group: P3, label: "스윙 유도 비율", en: "Swing%", fmt: pc, kind: "rate", better: "high", calc: s => div(s.sw, s.zn + s.oz), how: "타자가 스윙한 수 ÷ 전체 투구" },
+    { key: "PIP", group: P3, label: "이닝당 투구 수", en: "P/IP", fmt: f1, kind: "rate", better: "low", calc: s => div(s.pitches * 3, s.outs), how: "투구 수 ÷ 이닝 (적을수록 효율적)" },
+    { key: "FB", group: P3, label: "직구 평균 구속", en: "FB km/h", fmt: f1, kind: "count", better: "high", calc: s => (s.fb > 0 ? s.fb : null), how: "직구 투구의 평균 구속(km/h)" },
+    { key: "G", group: P4, label: "등판", en: "G", fmt: f0, kind: "count", better: "high", calc: s => s.g, how: "등판 경기 수" },
+    { key: "GS", group: P4, label: "선발 등판", en: "GS", fmt: f0, kind: "count", better: "high", calc: s => s.gs, how: "선발로 나온 경기 수" },
+    { key: "IP", group: P4, label: "이닝", en: "IP", fmt: f1, kind: "count", better: "high", calc: s => s.outs / 3, how: "잡은 아웃 수 ÷ 3" },
+    { key: "PIT", group: P4, label: "투구 수", en: "NP", fmt: f0, kind: "count", better: "high", calc: s => s.pitches, how: "시즌 총 투구 수" },
+    { key: "SO", group: P4, label: "삼진", en: "SO", fmt: f0, kind: "count", better: "high", calc: s => s.so, how: "시즌 삼진 수" },
+    { key: "BBA", group: P4, label: "볼넷", en: "BB", fmt: f0, kind: "count", better: "low", calc: s => s.bb, how: "허용한 볼넷 (적을수록 좋음)" },
+    { key: "HA", group: P4, label: "피안타", en: "H", fmt: f0, kind: "count", better: "low", calc: s => s.h, how: "허용한 안타 (적을수록 좋음)" },
+    { key: "HRA", group: P4, label: "피홈런", en: "HR", fmt: f0, kind: "count", better: "low", calc: s => s.hr, how: "허용한 홈런 (적을수록 좋음)" },
+    { key: "HBPA", group: P4, label: "사구", en: "HBP", fmt: f0, kind: "count", better: "low", calc: s => s.hbp, how: "허용한 사구 (적을수록 좋음)" },
+    { key: "RA", group: P4, label: "실점", en: "R", fmt: f0, kind: "count", better: "low", calc: s => s.r, how: "허용한 실점 (적을수록 좋음)" },
+    { key: "ERN", group: P4, label: "자책점", en: "ER", fmt: f0, kind: "count", better: "low", calc: s => s.er, how: "자책점 (적을수록 좋음)" },
   ];
 
   // ---------- 팀 ----------
+  const pyth = s => { const a = Math.pow(s.rs, 1.83), b = Math.pow(s.ra, 1.83); return a + b ? a / (a + b) : null; };
+  const T1 = "승패", T2 = "득점·실점";
   const TEAM = [
-    { key: "WPCT", label: "승률", en: "WPCT", fmt: f3, kind: "rate", better: "high", calc: s => div(s.w, s.w + s.l), how: "승 ÷ (승 + 패), 무승부 제외" },
-    { key: "RS", label: "득점", en: "RS", fmt: f0, kind: "count", better: "high", calc: s => s.rs, how: "시즌 총 득점" },
-    { key: "RA", label: "실점", en: "RA", fmt: f0, kind: "count", better: "low", calc: s => s.ra, how: "시즌 총 실점 (낮을수록 좋음)" },
-    { key: "RD", label: "득실차", en: "RD", fmt: fSigned0, kind: "count", better: "high", calc: s => s.rs - s.ra, how: "득점 − 실점", diverge: true },
-    { key: "W", label: "승", en: "W", fmt: f0, kind: "count", better: "high", calc: s => s.w, how: "시즌 승리 수" },
-    { key: "L", label: "패", en: "L", fmt: f0, kind: "count", better: "low", calc: s => s.l, how: "시즌 패배 수 (낮을수록 좋음)" },
+    { key: "WPCT", group: T1, label: "승률", en: "WPCT", fmt: f3, kind: "rate", better: "high", calc: s => div(s.w, s.w + s.l), how: "승 ÷ (승 + 패), 무승부 제외" },
+    { key: "PYT", group: T1, label: "기대 승률(피타고라스)", en: "Pyth", fmt: f3, kind: "rate", better: "high", calc: pyth, how: "득점^1.83 ÷ (득점^1.83 + 실점^1.83). 득실점만으로 본 기대 승률" },
+    { key: "WL", group: T1, label: "승패 마진", en: "W−L", fmt: fSigned0, kind: "count", better: "high", calc: s => s.w - s.l, how: "승 − 패", diverge: true },
+    { key: "W", group: T1, label: "승", en: "W", fmt: f0, kind: "count", better: "high", calc: s => s.w, how: "시즌 승리 수" },
+    { key: "L", group: T1, label: "패", en: "L", fmt: f0, kind: "count", better: "low", calc: s => s.l, how: "시즌 패배 수 (낮을수록 좋음)" },
+    { key: "D", group: T1, label: "무", en: "D", fmt: f0, kind: "count", better: "high", calc: s => s.d, how: "무승부 수" },
+    { key: "G", group: T1, label: "경기", en: "G", fmt: f0, kind: "count", better: "high", calc: s => s.g, how: "치른 경기 수" },
+    { key: "RS", group: T2, label: "득점", en: "RS", fmt: f0, kind: "count", better: "high", calc: s => s.rs, how: "시즌 총 득점" },
+    { key: "RA", group: T2, label: "실점", en: "RA", fmt: f0, kind: "count", better: "low", calc: s => s.ra, how: "시즌 총 실점 (낮을수록 좋음)" },
+    { key: "RD", group: T2, label: "득실차", en: "RD", fmt: fSigned0, kind: "count", better: "high", calc: s => s.rs - s.ra, how: "득점 − 실점", diverge: true },
+    { key: "RSG", group: T2, label: "경기당 득점", en: "RS/G", fmt: f2, kind: "rate", better: "high", calc: s => div(s.rs, s.g), how: "득점 ÷ 경기" },
+    { key: "RAG", group: T2, label: "경기당 실점", en: "RA/G", fmt: f2, kind: "rate", better: "low", calc: s => div(s.ra, s.g), how: "실점 ÷ 경기 (낮을수록 좋음)" },
   ];
 
   const TYPES = {
@@ -53,7 +115,7 @@
     pitcher: { label: "투수 분석", short: "투수", noun: "투수", defs: PIT, defaults: ["ERA", "WHIP", "K9"], qualify: (s, q) => s.outs >= q.pitcherOuts, qualText: q => `${Math.round(q.pitcherOuts / 3)}이닝 이상` },
     team: { label: "팀 비교", short: "팀", noun: "팀", defs: TEAM, defaults: ["WPCT", "RS", "RA"] },
   };
-  const MAX_METRICS = 6;
+  const MAX_METRICS = 99;   // 제한 없음: 전체 지표를 한 번에 분석할 수 있다
 
   const sumLine = list => {
     const out = {};

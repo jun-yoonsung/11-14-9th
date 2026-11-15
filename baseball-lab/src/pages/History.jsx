@@ -9,7 +9,10 @@ import { dateKo } from "../lib/format.js";
 import { TYPES } from "../lib/stats.js";
 
 const TAG = { batter: "bat", pitcher: "pit", team: "team" };
-const metricLabels = rec => (rec.result.kind === "team" ? rec.result.metrics : rec.result.lines).map(x => x.label).join(", ");
+const metricLabels = rec => {
+  const list = (rec.result.kind === "team" ? rec.result.metrics : rec.result.lines).map(x => x.label);
+  return list.length > 8 ? `${list.slice(0, 6).join(", ")} 외 ${list.length - 6}개 (총 ${list.length}개 지표)` : list.join(", ");
+};
 
 /** 분석 기록: 목록, 정렬, 다시 열기, 삭제 */
 export default function History() {

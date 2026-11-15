@@ -118,19 +118,19 @@
         <h3>🖥️ 화면 (프론트엔드) <span class="tag pub">🌐 공개</span></h3>
         <p class="do">눈에 보이는 8개 화면을 그리고, 지표 계산, 순위·군집 계산, 상세 보고서 만들기, PDF 만들기까지 모두 처리합니다.</p>
         <dl class="kv">
-          <dt>쓰는 기술</dt><dd>React 19 (화면 부품), Tailwind CSS v4 (디자인), React Router (화면 이동), Vite (빌드 도구)</dd>
+          <dt>쓰는 기술</dt><dd>React 19 (화면 부품), Tailwind CSS v4 (디자인), React Router (화면 이동), Vite (빌드 도구), three.js (3D 야구장 배경)</dd>
           <dt>화면(주소)</dt><dd><code>#/</code> 메인 · <code>#/login</code> <code>#/signup</code> · <code>#/analyze</code> · <code>#/result/번호</code> · <code>#/history</code> · <code>#/rank</code> <code>#/guide</code> (<code>#/rank</code>, <code>#/guide</code>는 로그인 없이 열림)</dd>
           <dt>대표 파일</dt><dd><code>src/pages/*.jsx</code> (화면), <code>src/components/*.jsx</code> (공통 부품)</dd>
         </dl>
         <div class="subs">
-          <div class="sub"><b>lib/stats.js</b>타율·ERA 같은 지표 계산, 리그 순위(백분위)</div>
+          <div class="sub"><b>lib/stats.js</b>지표 계산(타자 34개·투수 32개·팀 12개, 묶음별로 정리), 리그 평균과 순위(백분위). “전체 지표 분석”이 이 목록 전체를 한 번에 계산</div>
           <div class="sub"><b>lib/detail.js</b>타자·투수별 상세 보고서 데이터 만들기</div>
           <div class="sub"><b>lib/rank.js</b>순위 표 열, 유형 버튼 규칙, K-평균 자동 군집</div>
           <div class="sub"><b>lib/report.js</b>PDF 보고서 만들기</div>
           <div class="sub"><b>lib/api.js · storage.js</b>CSV 읽기, 브라우저 저장·로그인 표시</div>
           <div class="sub"><b>lib/cloud.js · config.js</b>Firebase 연결 값, 로그인·DB 연결 (값이 비어 있으면 꺼짐)</div>
-          <div class="sub"><b>components/Scene.jsx</b>움직이는 배경(야구장·타격·투구 장면). 그림 파일 없이 코드로 그림</div>
-          <div class="sub"><b>index.css</b>Tailwind 테마(색·글꼴)와 스타일, 배경 애니메이션</div>
+          <div class="sub"><b>components/Scene.jsx · Stadium3D.jsx</b>모든 화면 뒤에 깔리는 3D 야구장 배경(three.js로 코드로 그림: 관중석, 조명탑, 천천히 도는 카메라). 3D를 쓸 수 없는 환경에서는 <b>lib/sceneSvg.js</b>의 2D 그림으로 대신 보여줌. 이미지 파일은 쓰지 않음</div>
+          <div class="sub"><b>index.css</b>Tailwind 테마(색·글꼴·글자 크기·모서리 토큰)와 버튼·카드 스타일. 규칙은 <b>DESIGN.md</b>(Linear 디자인 시스템 기준)에 정리</div>
           <div class="sub"><b>public/sw.js · manifest</b>폰에 앱처럼 설치, 오프라인 일부 지원</div>
         </div>
         <p class="term"><b>프론트엔드</b>: 사용자가 눈으로 보고 누르는 화면 쪽 부분. <b>React</b>: 화면을 “부품(컴포넌트)”으로 나눠 조립하는 자바스크립트 도구. <b>Tailwind CSS</b>: 글자 크기, 간격, 색을 짧은 이름표(클래스)로 붙여 디자인하는 도구.</p>
@@ -243,7 +243,7 @@
 <ol class="flow">
   <li><b class="who">사용자</b><b>분석 설정을 고릅니다.</b> 분석 방식과 데이터 출처를 고르고, 타자·투수 중 선택, 선수 검색, 볼 지표를 고른 뒤 “분석하기”를 누릅니다.<span class="f">파일: src/pages/Analyze.jsx, src/components/PlayerCombo.jsx (선수 검색, 초성 검색 포함)</span></li>
   <li><b class="who">화면 → 파일 배달</b><b>필요한 CSV 파일을 요청합니다.</b> 선수 목록(batters.csv 또는 pitchers.csv), 규정 기준(meta.json), 월별·구종 파일을 내려받습니다.<span class="f">파일: src/lib/api.js (fetch로 data/ 폴더 읽기. Firebase가 켜져 있으면 Firestore에서 먼저 읽음)</span></li>
-  <li><b class="who">화면 (브라우저 안)</b><b>지표를 계산합니다.</b> 선택한 지표(타율·OPS 같은 기록 지표와 컨택%·Chase% 같은 선구안 지표)를 계산하고, 규정을 채운 선수들과 비교해 리그 평균과 순위(백분위)를 구합니다.<span class="f">파일: src/lib/stats.js</span></li>
+  <li><b class="who">화면 (브라우저 안)</b><b>지표를 계산합니다.</b> 선택한 지표(타율·OPS 같은 기록 지표, 컨택%·Chase% 같은 선구안 지표, FIP·K/BB 같은 투수 지표. “전체 지표 분석”을 누르면 전부)를 계산하고, 규정을 채운 선수들과 비교해 리그 평균과 순위(백분위)를 구합니다.<span class="f">파일: src/lib/stats.js</span></li>
   <li><b class="who">화면 (브라우저 안)</b><b>상세 보고서를 만듭니다.</b> 타자는 타격 5개 영역과 안타 구성, 투수는 투구 5개 영역·9이닝 결과·구종 구성을 계산합니다. 강점·보완점, 월별 추이, 비슷한 선수도 함께 만듭니다.<span class="f">파일: src/lib/detail.js</span></li>
   <li><b class="who">브라우저 저장소</b><b>결과를 분석 기록에 저장합니다.</b> 계산된 값을 그대로 저장해서, 나중에 열어도 같은 결과가 나옵니다.<span class="f">저장 위치: localStorage의 bl_history_kbo (src/lib/storage.js). 실제 로그인이면 Firestore의 내 계정 아래에도 저장 (src/lib/cloud.js)</span></li>
   <li><b class="who">화면 → 사용자</b><b>결과 화면을 보여 줍니다.</b> 핵심 수치, 리그 안에서의 위치, 상세 분석 보고서를 한 화면에 그립니다.<span class="f">파일: src/pages/Result.jsx, src/components/DetailReport.jsx, PctBlock.jsx</span></li>
@@ -254,13 +254,13 @@
 <table>
   <thead><tr><th>하고 싶은 일</th><th>고칠 곳</th></tr></thead>
   <tbody>
-    <tr><td>지표 계산식을 바꾸고 싶다</td><td class="tw"><code>src/lib/stats.js</code> (기본 지표), <code>src/lib/detail.js</code> (상세 보고서 지표)</td></tr>
+    <tr><td>지표 계산식을 바꾸고 싶다</td><td class="tw"><code>src/lib/stats.js</code> (분석에서 고르는 지표 전체: 새 지표는 목록에 한 줄 추가), <code>src/lib/detail.js</code> (상세 보고서 지표)</td></tr>
     <tr><td>상세 보고서 내용을 바꾸고 싶다</td><td class="tw"><code>src/components/DetailReport.jsx</code> (화면용), <code>src/lib/report.js</code> (PDF용)</td></tr>
     <tr><td>순위 표의 유형 버튼·기준 숫자를 바꾸고 싶다</td><td class="tw"><code>src/lib/rank.js</code> (RULES, FEAT)</td></tr>
     <tr><td>지표 설명 글을 바꾸고 싶다</td><td class="tw"><code>src/lib/detail.js</code> (지표 정의의 설명 문장), <code>src/pages/Guide.jsx</code> (용어 설명)</td></tr>
     <tr><td>실제 로그인과 DB를 켜고 싶다</td><td class="tw"><code>src/config.js</code>에 Firebase 연결 값 넣기 → <code>firestore.rules</code> 올리기 → <code>python3 tools/upload_firestore.py 키파일.json</code></td></tr>
-    <tr><td>움직이는 배경(장면)을 바꾸고 싶다</td><td class="tw"><code>src/lib/sceneSvg.js</code> (장면 그림), <code>src/index.css</code> 아래쪽 (움직임 속도·타이밍)</td></tr>
-    <tr><td>디자인(색, 글꼴)을 바꾸고 싶다</td><td class="tw"><code>src/index.css</code> (색·글꼴 테마와 스타일), 각 화면 파일의 className(Tailwind 이름표)</td></tr>
+    <tr><td>움직이는 배경(장면)을 바꾸고 싶다</td><td class="tw"><code>src/components/Stadium3D.jsx</code> (3D 구장: 관중석·조명·카메라 움직임), <code>src/lib/sceneSvg.js</code> (3D를 못 쓸 때 보이는 2D 그림)</td></tr>
+    <tr><td>디자인(색, 글꼴)을 바꾸고 싶다</td><td class="tw"><code>src/index.css</code> 맨 위 토큰(색·글자 크기·모서리), 각 화면 파일의 className(Tailwind 이름표). 규칙 설명은 <code>DESIGN.md</code></td></tr>
     <tr><td>데이터를 새로 만들고 싶다</td><td class="tw"><code>build_data.py</code> 실행 → <code>public/data/</code> 폴더가 새로 만들어짐</td></tr>
     <tr><td>사이트를 인터넷에 반영하고 싶다</td><td class="tw">GitHub에 push하면 GitHub Actions가 자동으로 빌드해 GitHub Pages에 올림 (1~3분)</td></tr>
   </tbody>

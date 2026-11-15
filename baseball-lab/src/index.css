@@ -509,3 +509,8 @@ body.has-scene main { transition: padding-top .7s ease; }
 /* 가운데 맞춤: 불러오는 중 문구, 분석 단계 버튼 */
 .wrap > .sub:only-child { text-align: center; padding: 40px 0; }
 .actions { justify-content: center; }
+/* 지표 선택: 묶음별 칩과 전체 선택 도구 */
+.metric-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
+.metric-group { margin-bottom: 14px; }
+.metric-group-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: var(--t-md); margin-bottom: 6px; }
+.metric-group-head .linkbtn { font-weight: 500; font-size: var(--t-sm); }
