@@ -43,7 +43,7 @@ export const RULES = {
 };
 
 // ---------- K-평균 군집 (브라우저에서 즉석 계산) ----------
-const FEAT = {
+export const FEAT = {
   batter: [["K%", COLS.batter[7].v], ["BB%", COLS.batter[6].v], ["컨택%", COLS.batter[8].v], ["Chase%", COLS.batter[9].v], ["ISO", s => (slg(s) == null ? null : slg(s) - s.h / s.ab)]],
   pitcher: [["K%", COLS.pitcher[3].v], ["BB%", COLS.pitcher[4].v], ["헛스윙%", COLS.pitcher[6].v], ["구속", COLS.pitcher[8].v]],
 };
@@ -80,6 +80,44 @@ function silhouette(X, lab, k) {
   });
   return tot / X.length;
 }
+// ---------- 2차원 지도(PCA): 스타일 지표 여러 개를 가장 많이 퍼진 두 방향으로 압축 ----------
+function pca2(X) {
+  const n = X.length, d = X[0].length;
+  const C = Array.from({ length: d }, (_, a) => Array.from({ length: d }, (_, b) => X.reduce((t, x) => t + x[a] * x[b], 0) / n));
+  const power = M => {
+    let v = Array.from({ length: d }, (_, i) => 1 / (i + 1)), lam = 0;
+    for (let it = 0; it < 200; it++) {
+      const w = M.map(row => row.reduce((t, c, j) => t + c * v[j], 0)), nr = Math.sqrt(w.reduce((t, c) => t + c * c, 0)) || 1;
+      v = w.map(c => c / nr); lam = nr;
+    }
+    return { v, lam };
+  };
+  const a = power(C);
+  const D = C.map((row, i) => row.map((c, j) => c - a.lam * a.v[i] * a.v[j]));   // 첫 방향을 빼고 두 번째 방향 찾기
+  const b = power(D);
+  const tr = C.reduce((t, row, i) => t + row[i], 0) || 1;
+  return { xy: X.map(x => [x.reduce((t, c, i) => t + c * a.v[i], 0), x.reduce((t, c, i) => t + c * b.v[i], 0)]), ratio: (a.lam + b.lam) / tr };
+}
+
+// ---------- 비슷한 선수 찾기: 스타일 지표를 z-점수로 맞춘 뒤 거리가 가까운 순서 ----------
+export function similar(type, pool, pid, count = 5) {
+  const fs = FEAT[type], ok = pool.filter(s => fs.every(f => f[1](s) != null));
+  const me = ok.find(s => s.pid === pid);
+  if (!me || ok.length < 12) return null;
+  const raw = ok.map(s => fs.map(f => f[1](s)));
+  const mu = fs.map((_, q) => raw.reduce((t, x) => t + x[q], 0) / raw.length);
+  const sd = fs.map((_, q) => Math.sqrt(raw.reduce((t, x) => t + (x[q] - mu[q]) ** 2, 0) / raw.length) || 1);
+  const Z = raw.map(x => x.map((v, q) => (v - mu[q]) / sd[q]));
+  const mi = ok.indexOf(me);
+  const list = ok.map((s, i) => {
+    if (i === mi) return null;
+    const diff = Z[i].map((v, q) => Math.abs(v - Z[mi][q])), d2 = diff.reduce((t, v) => t + v * v, 0);
+    const order = diff.map((v, q) => [v, q]).sort((a, b) => a[0] - b[0]);
+    return { s, vals: raw[i], d: Math.sqrt(d2), sim: Math.round(100 * Math.exp(-d2 / (2 * fs.length))), close: order.slice(0, 2).map(o => fs[o[1]][0]) };
+  }).filter(Boolean).sort((a, b) => a.d - b.d).slice(0, count);
+  return { feats: fs.map(f => f[0]), me, meVals: raw[mi], list, n: ok.length };
+}
+
 export function cluster(type, rows) {
   const fs = FEAT[type], ok = rows.filter(s => fs.every(f => f[1](s) != null));
   if (ok.length < 12) return null;
@@ -101,5 +139,7 @@ export function cluster(type, rows) {
     z.forEach((v, q) => { if (v > 0.4) hi.push(fs[q][0] + "↑"); else if (v < -0.4) lo.push(fs[q][0] + "↓"); });
     return { j, n: idx.length, name: hi.concat(lo).join(" · ") || "평균형", avg, ids: new Set(idx.map(i => ok[i].pid)) };
   });
-  return { k: best.k, sil: best.sil, groups, feats: fs.map(f => f[0]), n: ok.length };
+  const map = pca2(X);
+  const pts = ok.map((s, i) => ({ pid: s.pid, name: s.name, team: s.team, x: map.xy[i][0], y: map.xy[i][1], g: best.lab[i] }));
+  return { k: best.k, sil: best.sil, groups, feats: fs.map(f => f[0]), n: ok.length, pts, mapRatio: map.ratio };
 }

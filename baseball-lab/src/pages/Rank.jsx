@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Api } from "../lib/api.js";
 import { Store } from "../lib/storage.js";
 import { COLS, RULES, FIRST_SORT, LOW_FIRST, cluster, fmtFeat } from "../lib/rank.js";
+import ClusterMap, { CL_COLORS } from "../components/ClusterMap.jsx";
 import { useScene } from "../context/SceneContext.jsx";
 
 const initialState = { type: "pitcher", team: "", scope: "q", min: 0, role: "", rule: "", grp: null, sort: null, dir: 1, q: "" };
@@ -99,9 +100,10 @@ export default function Rank() {
           <div className="rk-cl">
             <b>자동 유형(군집)</b> <small>{cl.n}명을 {cl.feats.join("·")}만으로 {cl.k}개로 나눈 결과예요.</small>
             <div className="rk-chips">
-              {cl.groups.map(g => <button key={g.j} type="button" className={"chip cl" + (grp === g.j ? " on" : "")} onClick={() => upd({ grp: grp === g.j ? null : g.j })}>{g.name} <small>{g.n}명</small></button>)}
+              {cl.groups.map(g => <button key={g.j} type="button" className={"chip cl" + (grp === g.j ? " on" : "")} onClick={() => upd({ grp: grp === g.j ? null : g.j })}><i className="dot" style={{ background: CL_COLORS[g.j % CL_COLORS.length] }} />{g.name} <small>{g.n}명</small></button>)}
               {grp != null && <button type="button" className="chip clr" onClick={() => upd({ grp: null })}>군집 해제</button>}
             </div>
+            <ClusterMap cl={cl} grp={grp} onPick={g => upd({ grp: grp === g ? null : g })} />
             {grp != null && <p className="note">이 군집의 평균: {cl.feats.map((f, q) => `${f} ${fmtFeat(f, cl.groups[grp].avg[q])}`).join(", ")}</p>}
             <p className="note">군집 이름은 평균보다 뚜렷이 높거나(↑) 낮은(↓) 지표를 나열한 것이고, 고정된 유형명이 아닙니다. 군집이 얼마나 뚜렷한지 나타내는 실루엣 점수는 <b>{cl.sil.toFixed(2)}</b>입니다(0.5 이상이면 뚜렷, 0.25 아래면 억지로 나눈 구조일 수 있음).</p>
           </div>

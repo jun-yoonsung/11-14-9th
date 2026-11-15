@@ -8,6 +8,7 @@ import { generate, fileName, ipText } from "../lib/report.js";
 import { dateKo, topText } from "../lib/format.js";
 import PctBlock from "../components/PctBlock.jsx";
 import DetailReport from "../components/DetailReport.jsx";
+import SimilarPlayers from "../components/SimilarPlayers.jsx";
 import { useScene } from "../context/SceneContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 
@@ -33,6 +34,7 @@ function PlayerView({ rec, r }) {
         {!r.qualified && <p className="note">이 선수는 규정({r.qualText})을 채우지 못해 순위는 매기지 않고 백분위만 참고용으로 보여 줍니다.</p>}
       </div></section>
       <DetailBox rec={rec} />
+      <SimilarPlayers rec={rec} />
       <section className="sec"><h2>선택한 지표 상세</h2>
         <div className="table-wrap"><table>
           <thead><tr><th>지표</th><th>선수 기록</th><th>리그 평균</th><th>차이</th><th>리그 위치</th></tr></thead>

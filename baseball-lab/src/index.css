@@ -519,3 +519,9 @@ body.has-scene main { transition: padding-top .7s ease; }
 .panel .actions { position: sticky; bottom: 0; z-index: 6; margin: 0 -20px; padding: 12px 20px; background: rgba(246, 247, 249, .96); border-top: 1px solid var(--line); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-radius: 0 0 var(--r-md) var(--r-md); }
 .steps > button { font: inherit; text-align: left; cursor: pointer; }
 .steps > button:hover { background: var(--blue-soft); }
+/* 선수 스타일 지도(PCA)와 비슷한 선수 표 */
+.cmap { margin: 12px 0 4px; }
+.cmap svg { width: 100%; height: auto; display: block; }
+.cmap figcaption { color: var(--muted); font-size: var(--t-sm); margin-top: 8px; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+tr.me td { background: var(--blue-soft); font-weight: 700; }
