@@ -38,7 +38,7 @@ export default function Home() {
           <h1>보고 싶은 지표만 고르면<br />계산과 정리는 사이트가 합니다</h1>
           <div className="hero-side">
             <p className="lede">선수와 팀의 기록으로 리그 안에서의 위치를 보여 주고, 결과를 보고서 PDF로 저장해 드려요.</p>
-            <div className="cta"><Link className="btn pri" to="/analyze">분석 시작하기</Link></div>
+            <div className="cta"><Link className="btn pri lg" to="/analyze">분석 시작하기</Link></div>
           </div>
         </section>
       </div>

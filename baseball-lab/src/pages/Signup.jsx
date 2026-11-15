@@ -36,7 +36,7 @@ export default function Signup() {
         <div><label className="label" htmlFor="email">이메일</label><input className="field" id="email" type="email" placeholder="name@example.com" autoComplete="off" value={f.email} onChange={set("email")} /></div>
         <div><label className="label" htmlFor="nick">닉네임</label><input className="field" id="nick" type="text" placeholder="2~12자" autoComplete="off" value={f.nick} onChange={set("nick")} /></div>
         <div><label className="label" htmlFor="pw">비밀번호</label><input className="field" id="pw" type="password" placeholder={on ? "6자 이상" : "8자 이상"} autoComplete="off" value={f.pw} onChange={set("pw")} /></div>
-        <button className="btn pri" type="submit" style={{ width: "100%" }}>회원가입</button>
+        <button className="btn pri block" type="submit">회원가입</button>
       </form>
       {msg && <div className="notice" role="alert">{msg}</div>}
       {on ? <p className="sub">이미 계정이 있나요? <Link className="linkbtn" to="/login" state={{ next }}>로그인</Link></p> : <Link className="btn" to="/login">체험 로그인으로 시작</Link>}

@@ -148,9 +148,9 @@ export default function Result() {
       <div className="result-head"><h1>{rec.title}</h1><p className="sub">{sub}. {dateKo(rec.createdAt)} 분석, KBO 2026 정규시즌 실제 기록</p></div>
       {r.kind === "team" ? <TeamView r={r} /> : <PlayerView rec={rec} r={r} />}
       <div className="act-row">
-        <button className="btn pri" type="button" disabled={busy} onClick={savePdf}>{busy ? "보고서를 만드는 중..." : "PDF로 저장"}</button>
-        <button className="btn" type="button" onClick={again}>조건 바꿔 다시 분석</button>
-        <Link className="btn" to="/history">분석 기록 보기</Link>
+        <button className="btn pri" type="button" disabled={busy} aria-busy={busy} onClick={savePdf}>{busy ? "보고서를 만드는 중" : "PDF로 저장"}</button>
+        <button className="btn ghost" type="button" onClick={again}>조건 바꿔 다시 분석</button>
+        <Link className="btn ghost" to="/history">분석 기록 보기</Link>
       </div>
     </div>
   );

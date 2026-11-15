@@ -139,7 +139,7 @@ export default function Analyze() {
             <span className="ic">{icUpload}</span><span><b>내 데이터 업로드 <span className="pill">다음 버전</span></b><small id="upHint">가지고 있는 기록 파일로 분석하는 기능은 다음 버전에서 제공됩니다</small></span></button>
           <div className="err-msg" role="alert">{errors.source}</div>
           <div className="actions">
-            <button className="btn" type="button" onClick={() => go(1)}>이전</button>
+            <button className="btn ghost" type="button" onClick={() => go(1)}>이전</button>
             <button className="btn pri grow" type="button" onClick={() => (w.source === "site" ? go(3) : setErrors({ source: "데이터 출처를 선택해 주세요." }))}>다음</button>
           </div>
         </div>
@@ -185,8 +185,8 @@ export default function Analyze() {
           <p className="hint">지표 이름에 마우스를 올리면 계산 방법이 보여요.</p>
         </div>
         <div className="actions">
-          <button className="btn" type="button" onClick={() => go(2)}>이전</button>
-          <button className="btn pri grow" type="button" disabled={busy} onClick={run}>{busy ? "분석하는 중..." : "분석하기"}</button>
+          <button className="btn ghost" type="button" onClick={() => go(2)}>이전</button>
+          <button className="btn pri grow" type="button" disabled={busy} aria-busy={busy} onClick={run}>{busy ? "분석하는 중" : "분석하기"}</button>
         </div>
       </div>
     </div>

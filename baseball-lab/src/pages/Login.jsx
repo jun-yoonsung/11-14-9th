@@ -42,7 +42,7 @@ export default function Login() {
         <div><label className="label" htmlFor="email">이메일</label><input className="field" id="email" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
         <div><label className="label" htmlFor="pw">비밀번호</label><input className="field" id="pw" type="password" autoComplete="current-password" value={pw} onChange={e => setPw(e.target.value)} /></div>
         {err && <div className="err-msg" role="alert">{err}</div>}
-        <button className="btn pri" type="submit" disabled={busy}>로그인</button>
+        <button className="btn pri" type="submit" disabled={busy} aria-busy={busy}>로그인</button>
       </form>
       <button className="btn" type="button" disabled={busy} onClick={() => run(() => cloud.google())}>Google 계정으로 로그인</button>
       <p className="sub">계정이 없나요? <Link className="linkbtn" to="/signup" state={{ next }}>회원가입</Link></p>

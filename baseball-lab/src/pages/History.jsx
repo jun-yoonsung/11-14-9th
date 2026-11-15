@@ -52,11 +52,11 @@ export default function History() {
               {confirmId === rec.id ? (
                 <>
                   <span className="confirm">이 기록을 삭제할까요?</span>
-                  <button className="btn small" type="button" style={{ color: "#c8302a", borderColor: "#c8302a" }} onClick={() => del(rec.id)}>삭제</button>
-                  <button className="btn small" type="button" onClick={() => setConfirmId(null)}>취소</button>
+                  <button className="btn small danger" type="button" onClick={() => del(rec.id)}>삭제</button>
+                  <button className="btn small ghost" type="button" onClick={() => setConfirmId(null)}>취소</button>
                 </>
               ) : (
-                <button className="linkbtn" type="button" style={{ color: "#5c667d" }} aria-label={`${rec.title} 삭제`} onClick={() => setConfirmId(rec.id)}>삭제</button>
+                <button className="linkbtn quiet" type="button" aria-label={`${rec.title} 삭제`} onClick={() => setConfirmId(rec.id)}>삭제</button>
               )}
             </div>
             <div className="meta"><span className={"tag " + TAG[rec.type]}>{TYPES[rec.type].short}</span>{dateKo(rec.createdAt)}, {metricLabels(rec)}</div>
