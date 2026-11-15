@@ -143,6 +143,7 @@
     if (step === 3) await loadRows();
     view.innerHTML = step === 1 ? viewStep1() : step === 2 ? viewStep2() : viewStep3();
     document.title = `데이터 분석 ${step}/3 | 야구 분석 랩`;
+    BL.Scene.set(step === 3 && (w.type === "batter" || w.type === "pitcher") ? w.type : "stadium");   // 타자·투수를 고르면 그 장면으로
   }
 
   // ---------- 분석 실행 ----------

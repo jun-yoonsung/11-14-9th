@@ -1,7 +1,7 @@
 /* 오프라인에서도 열리도록 화면 파일과 샘플 데이터를 저장해 둔다 */
-const CACHE = "bl-v5";
+const CACHE = "bl-v6";
 const FILES = ["./", "index.html", "login.html", "signup.html", "analyze.html", "history.html", "result.html", "rank.html", "guide.html",
-  "css/style.css", "js/core.js", "js/stats.js", "js/view.js", "js/detail.js", "js/report.js", "js/analyze.js", "js/result.js", "js/history.js", "js/index.js", "js/login.js", "js/signup.js", "js/rank.js", "js/guide.js", "js/config.js", "js/cloud.js",
+  "css/style.css", "js/core.js", "js/stats.js", "js/view.js", "js/detail.js", "js/report.js", "js/analyze.js", "js/result.js", "js/history.js", "js/index.js", "js/login.js", "js/signup.js", "js/rank.js", "js/guide.js", "js/config.js", "js/cloud.js", "js/scene.js",
   "manifest.webmanifest", "icons/icon-192.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {

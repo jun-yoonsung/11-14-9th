@@ -34,6 +34,7 @@ python3 -m http.server 8000
 - `js/stats.js` 지표 계산과 리그 내 위치(백분위)
 - `js/report.js` PDF 보고서 디자인과 파일 생성
 - `js/rank.js` `js/guide.js` 선수 순위(유형·군집), 지표 설명
+- `js/scene.js` 움직이는 야구장 배경(메인=야구장, 타자 분석·순위=타격 장면, 투수 분석·순위=투구 장면). SVG+CSS 애니메이션이라 이미지 파일이 없고, 움직임 줄이기 설정이면 멈춤
 - `js/config.js` `js/cloud.js` Firebase 연결(로그인, 기록 저장, DB에서 CSV 읽기)
 - `tools/upload_firestore.py` `firestore.rules` CSV를 Firestore에 올리는 스크립트, 보안 규칙
 

@@ -14,6 +14,7 @@
       <div class="act-row"><a class="btn" href="history.html">분석 기록 보기</a><a class="btn pri" href="analyze.html">새 분석 시작하기</a></div>`;
     return;
   }
+  BL.Scene.set(rec.type === "batter" || rec.type === "pitcher" ? rec.type : "stadium");
   document.title = rec.title + " | 야구 분석 랩";
   const r = rec.result;
   const TY = Stats.TYPES[rec.type];

@@ -127,6 +127,7 @@
   }
 
   function draw() {
+    BL.Scene.set(st.type);
     const cols = C[st.type], types = TYPES[st.type], list = filtered();
     const cl = cluster(st.type, st.scope === "all" ? rows().filter(s => (st.type === "batter" ? s.pa >= 100 : s.outs >= 90)) : rows().filter(qual));
     if (st.grp != null && !(cl && cl.groups[st.grp])) st.grp = null;

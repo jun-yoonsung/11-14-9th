@@ -229,6 +229,7 @@ baseball-lab/
 |---|---|---|
 | 도입함 | 선수 순위(투수·타자), 정렬, 필터, 규칙형 유형 버튼 | `rank.html`, `js/rank.js` |
 | 도입함 | 자동 군집(K-평균 + 실루엣 점수) | `js/rank.js` |
+| 추가함 | **움직이는 야구장 배경**: 메인은 야구장 전경(조명, 관중석, 날아가는 타구), 타자 분석·타자 순위는 타자가 타격하는 장면, 투수 분석·투수 순위는 투수가 투구하는 장면으로 바뀜. 팀 비교와 그 밖의 화면은 야구장 전경. 이미지 파일 없이 SVG+CSS로 만들고 움직임 줄이기 설정을 따름 | `js/scene.js`, `css/style.css` |
 | 도입함 | 지표 설명 페이지 | `guide.html`, `js/guide.js` |
 | 도입함 | 선구안 지표(컨택%, Chase%, 헛스윙 유도%): 분석 지표·상세 보고서·순위에 반영 | `build_data.py`, `js/stats.js`, `js/detail.js` |
 | 도입함 | 실제 로그인(이메일·Google)과 분석 기록 계정별 저장 | `js/cloud.js`, `js/login.js`, `js/signup.js`, `js/config.js` |
