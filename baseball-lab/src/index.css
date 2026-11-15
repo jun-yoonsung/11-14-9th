@@ -473,8 +473,6 @@ body.has-scene.home main { padding-top: 0; }
 .sc-batter svg, .sc-pitcher svg { transform: translateY(-30vh); }
 .scene { background: #0b3a2a; }
 body.has-scene main { transition: padding-top .7s ease; }
-body.has-scene[data-scene="batter"] main, body.has-scene[data-scene="pitcher"] main { padding-top: 50vh; }
-@media (max-width: 640px) { body.has-scene[data-scene="batter"] main, body.has-scene[data-scene="pitcher"] main { padding-top: 38vh; } }
 
 }
 

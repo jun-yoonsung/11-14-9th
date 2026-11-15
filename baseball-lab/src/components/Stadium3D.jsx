@@ -9,10 +9,8 @@ function stripeTexture() {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 
-export default function Stadium3D({ onFail, mode = "stadium" }) {
+export default function Stadium3D({ onFail }) {
   const host = useRef(null);
-  const modeRef = useRef(mode);
-  modeRef.current = mode;
   useEffect(() => {
     const el = host.current;
     let renderer;
@@ -110,70 +108,7 @@ export default function Stadium3D({ onFail, mode = "stadium" }) {
     scene.add(pts);
 
 
-    // ---------- 선수 (단순한 입체 도형으로 만든 사람) ----------
-    const lamb = c => track(new THREE.MeshLambertMaterial({ color: c }));
-    scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x2a3a2a, 1.15));
-    const sun = new THREE.DirectionalLight(0xfff1d6, 1.6); sun.position.set(-30, 60, 40); scene.add(sun);
-    function makePlayer(jersey, pants, cap) {
-      const root = new THREE.Group(), body = new THREE.Group(); root.add(body);
-      const box = (w, h, d, c, x, y, z) => { const o = new THREE.Mesh(track(new THREE.BoxGeometry(w, h, d)), lamb(c)); o.position.set(x, y, z); return o; };
-      const legs = [-1, 1].map(sx => { const g = new THREE.Group(); g.position.set(sx * 0.24, 1.0, 0); g.add(box(0.32, 1.0, 0.34, pants, 0, -0.5, 0)); g.add(box(0.34, 0.16, 0.5, 0x15172a, 0, -1.0, 0.08)); body.add(g); return g; });
-      const torso = new THREE.Group(); torso.position.y = 1.0; body.add(torso);
-      torso.add(box(0.86, 0.95, 0.46, jersey, 0, 0.48, 0));
-      const head = new THREE.Mesh(track(new THREE.SphereGeometry(0.26, 16, 12)), lamb(0xf0c9a8)); head.position.y = 1.25; torso.add(head);
-      const capM = new THREE.Mesh(track(new THREE.SphereGeometry(0.285, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2)), lamb(cap)); capM.position.y = 1.28; torso.add(capM);
-      torso.add(box(0.3, 0.05, 0.3, cap, 0, 1.3, 0.26));
-      const arms = [-1, 1].map(sx => { const g = new THREE.Group(); g.position.set(sx * 0.56, 0.86, 0); g.add(box(0.22, 0.9, 0.24, jersey, 0, -0.42, 0)); g.add(box(0.2, 0.2, 0.2, 0xf0c9a8, 0, -0.92, 0)); torso.add(g); return g; });
-      root.scale.setScalar(1.0);
-      return { root, body, legs, torso, arms, head };
-    }
-    // 키프레임 보간
-    const kf = (t, pts) => { for (let i = 1; i < pts.length; i++) if (t <= pts[i][0]) { const a = pts[i - 1], b = pts[i], u = (t - a[0]) / (b[0] - a[0] || 1); const e = u * u * (3 - 2 * u); return a[1] + (b[1] - a[1]) * (0.5 * u + 0.5 * e); } return pts[pts.length - 1][1]; };
-    const ballMesh = () => { const g = new THREE.Group(); g.add(new THREE.Mesh(track(new THREE.SphereGeometry(0.3, 14, 10)), track(new THREE.MeshBasicMaterial({ color: 0xffffff }))));
-      const sp = new THREE.Sprite(track(new THREE.SpriteMaterial({ map: glow, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, color: 0xaed0ff }))); sp.scale.set(3.4, 3.4, 1); g.add(sp); g.visible = false; scene.add(g); return g; };
-
-    // 타자 장면: 왼쪽 타석에 선 타자와 방망이
-    const bat = makePlayer(0x1f3fbf, 0xeaeef8, 0x142a8a); bat.root.position.set(-2.3, 0, 0.1); bat.root.rotation.y = Math.PI / 2; scene.add(bat.root);
-    const yaw = new THREE.Group(), tilt = new THREE.Group(); yaw.position.set(0, 0.7, 0.42); bat.torso.add(yaw); yaw.add(tilt);
-    const club = new THREE.Mesh(track(new THREE.CylinderGeometry(0.09, 0.05, 2.1, 10)), lamb(0xc89455)); club.position.y = 0.85; tilt.add(club);
-    const grip = new THREE.Mesh(track(new THREE.CylinderGeometry(0.06, 0.06, 0.4, 8)), lamb(0x222222)); grip.position.y = -0.05; tilt.add(grip);
-    bat.arms.forEach((a, i) => { a.rotation.set(-1.25, 0, i ? -0.35 : 0.35); });
-    const helmet = new THREE.Mesh(track(new THREE.SphereGeometry(0.3, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2)), lamb(0x142a8a)); helmet.position.y = 1.27; bat.torso.add(helmet);
-    const bBall = ballMesh();
-    // 투수 장면: 마운드의 투수
-    const pit = makePlayer(0xf2f4fb, 0xdfe3f0, 0xc2263a); pit.root.position.set(0, 0.35, -15); scene.add(pit.root);
-    const pBall = ballMesh();
-    // 타자 장면에서도 마운드에 서 있는 먼 투수
-    const farPit = makePlayer(0xf2f4fb, 0xdfe3f0, 0xc2263a); farPit.root.position.set(0, 0.35, -15); farPit.root.scale.setScalar(1.0); scene.add(farPit.root);
-
-    const T = 3.6, cur = { pos: new THREE.Vector3(60, 40, 60), look: new THREE.Vector3(0, 4, -26), offY: 0, offX: 0.12 };
-    function animateActors(t, md) {
-      const c = t % T;
-      bat.root.visible = md === "batter"; farPit.root.visible = md === "batter"; pit.root.visible = md === "pitcher";
-      bBall.visible = false; pBall.visible = false;
-      if (md === "batter") {
-        const psi = kf(c, [[0, 0], [1.2, -0.2], [1.65, Math.PI / 2], [2.0, 3.0], [2.8, 3.1], [3.3, 0], [3.6, 0]]);
-        const th = kf(c, [[0, 0.55], [1.3, 0.5], [1.65, 1.5], [2.0, 1.5], [2.8, 1.35], [3.3, 0.55], [3.6, 0.55]]) + (c < 1.3 ? Math.sin(c * 6) * 0.07 : 0);
-        yaw.rotation.y = psi; tilt.rotation.z = th; bat.torso.rotation.y = psi * 0.3; bat.torso.rotation.x = c > 1.3 && c < 2.6 ? 0.12 : 0;
-        bat.legs[0].rotation.x = -0.12; bat.legs[1].rotation.x = 0.12; bat.body.position.y = -0.04;
-        // 먼 투수도 같은 박자로 던진다
-        pitchPose(farPit, c - 0.3);
-        if (c > 1.0 && c < 1.65) { const u = (c - 1.0) / 0.65; bBall.visible = true; bBall.position.set(-0.55 * u, 2.7 - 1.3 * u * u + 0 * u, -15 + 15.1 * u); }
-        else if (c >= 1.65 && c < 3.0) { const u = c - 1.65; bBall.visible = true; bBall.position.set(-0.55 + 5 * u, 1.4 + 15 * u - 7 * u * u, 0.1 - 34 * u); }
-      } else if (md === "pitcher") {
-        pitchPose(pit, c);
-        if (c > 1.7 && c < 2.15) { const u = (c - 1.7) / 0.45; pBall.visible = true; pBall.position.set(-0.5 + 0.5 * u, 2.7 - 1.3 * u, -13.2 + 13.6 * u); }
-      }
-    }
-    function pitchPose(P, c) {
-      if (c < 0) c += T;
-      P.legs[1].rotation.x = kf(c, [[0, 0], [0.6, 0], [1.0, -1.35], [1.3, -0.55], [2.6, -0.4], [3.2, 0], [3.6, 0]]);
-      P.legs[0].rotation.x = kf(c, [[0, 0], [1.1, 0], [1.4, 0.35], [2.6, 0.3], [3.2, 0], [3.6, 0]]);
-      P.arms[0].rotation.x = kf(c, [[0, 0], [0.5, 0], [1.0, 0.8], [1.3, 2.3], [1.55, 2.4], [1.75, -2.7], [2.2, -1.0], [3.0, -0.3], [3.4, 0], [3.6, 0]]);
-      P.arms[1].rotation.x = kf(c, [[0, -0.9], [1.0, -1.5], [1.5, -1.0], [1.8, -0.5], [2.6, -0.5], [3.4, -0.9], [3.6, -0.9]]);
-      P.torso.rotation.x = kf(c, [[0, 0], [1.5, -0.1], [1.8, 0.5], [2.6, 0.35], [3.4, 0], [3.6, 0]]);
-      P.root.position.z = kf(c, [[0, -15], [1.0, -15], [1.5, -13.9], [2.6, -13.9], [3.4, -15], [3.6, -15]]);
-    }
+    const cur = { pos: new THREE.Vector3(60, 40, 60), look: new THREE.Vector3(0, 4, -26), offY: 0, offX: 0.12 };
 
     // 크기·카메라
     const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -196,20 +131,11 @@ export default function Stadium3D({ onFail, mode = "stadium" }) {
     let last = performance.now();
     const draw = now => {
       const t = (now - t0) / 1000, dt = Math.min(0.1, (now - last) / 1000); last = now;
-      const md = modeRef.current;
-      let pos, look, offY = 0, offX = 0.12;
-      if (md === "batter") { pos = [9.5 + px * 1.5, 4.0 - py, 11.5]; look = [-1.5, 1.6, -3.0]; offY = W > 760 ? 0.2 : 0.27; offX = 0; }
-      else if (md === "pitcher") { pos = [-12.5 + px * 1.5, 4.4 - py, -3.2]; look = [0.3, 1.6, -14.6]; offY = W > 760 ? 0.2 : 0.27; offX = 0; }
-      else {
-        const ang = reduce ? 0.5 : Math.sin(t * 0.07) * 0.5 + 0.35, rad = 78 + Math.sin(t * 0.05) * 5;
-        pos = [Math.sin(ang) * rad + px * 10, 46 + Math.sin(t * 0.09) * 4 - py * 5, Math.cos(ang) * rad * 0.9 + 10]; look = [0, 4, -26];
-      }
+      const ang = reduce ? 0.5 : Math.sin(t * 0.07) * 0.5 + 0.35, rad = 78 + Math.sin(t * 0.05) * 5;
+      const pos = [Math.sin(ang) * rad + px * 10, 46 + Math.sin(t * 0.09) * 4 - py * 5, Math.cos(ang) * rad * 0.9 + 10], look = [0, 4, -26];
       const k = reduce ? 1 : 1 - Math.exp(-dt * 2.4);
       cur.pos.lerp(new THREE.Vector3(...pos), k); cur.look.lerp(new THREE.Vector3(...look), k);
-      cur.offY += (offY - cur.offY) * k; cur.offX += (offX - cur.offX) * k;
-      applyOffset();
       camera.position.copy(cur.pos); camera.lookAt(cur.look);
-      animateActors(reduce ? 1.0 : t, md);
       rings.forEach((r, i) => { r.material.opacity = (i === 0 ? .8 : i === 1 ? .7 : .45) + Math.sin(t * 1.4 + i) * .12; });
       sprites.forEach((s, i) => s.scale.setScalar(68 + Math.sin(t * 2.1 + i * 1.7) * 3));
       pts.rotation.y = t * 0.008;

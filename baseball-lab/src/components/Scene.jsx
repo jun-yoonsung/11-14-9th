@@ -18,7 +18,7 @@ export default function Scene() {
   if (!fail) {
     return (
       <div className="scene" aria-hidden="true">
-        <Suspense fallback={null}><Stadium3D mode={scene} onFail={() => setFail(true)} /></Suspense>
+        <Suspense fallback={null}><Stadium3D onFail={() => setFail(true)} /></Suspense>
       </div>
     );
   }
