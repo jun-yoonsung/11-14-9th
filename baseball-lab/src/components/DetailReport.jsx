@@ -1,6 +1,15 @@
 import { Fragment } from "react";
 import { top } from "../lib/detail.js";
 
+// HashRouter에서는 href="#id"가 주소 이동으로 처리되므로 직접 스크롤한다
+const goTo = id => e => {
+  e.preventDefault();
+  const el = document.getElementById(id);
+  if (!el) return;
+  const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+};
+
 const tone = t => (t === "good" ? "good" : t === "bad" ? "bad" : undefined);
 const MixColors = ["#2146c7", "#d0312d", "#17734f", "#8d9ab8", "#c9892b", "#7a4fc2", "#2f9bb0", "#555"];
 
@@ -48,8 +57,8 @@ export default function DetailReport({ rep }) {
   return (
     <>
       <nav className="rep-nav" aria-label="보고서 목차">
-        <a href="#r-sum">종합 평가</a><a href="#r-prof">능력 프로필</a><a href="#r-all">전체 지표</a><a href="#r-comp">{rep.composition.title}</a>
-        {rep.trend && <a href="#r-trend">월별 추이</a>}{rep.pitchMix && <a href="#r-mix">구종 구성</a>}{rep.similar.length > 0 && <a href="#r-similar">비슷한 선수</a>}<a href="#r-note">읽는 법</a>
+        <a href="#r-sum" onClick={goTo("r-sum")}>종합 평가</a><a href="#r-prof" onClick={goTo("r-prof")}>능력 프로필</a><a href="#r-all" onClick={goTo("r-all")}>전체 지표</a><a href="#r-comp" onClick={goTo("r-comp")}>{rep.composition.title}</a>
+        {rep.trend && <a href="#r-trend" onClick={goTo("r-trend")}>월별 추이</a>}{rep.pitchMix && <a href="#r-mix" onClick={goTo("r-mix")}>구종 구성</a>}{rep.similar.length > 0 && <a href="#r-similar" onClick={goTo("r-similar")}>비슷한 선수</a>}<a href="#r-note" onClick={goTo("r-note")}>읽는 법</a>
       </nav>
 
       <section className="sec rep" id="r-sum"><h2>종합 평가</h2>
