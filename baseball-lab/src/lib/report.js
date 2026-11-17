@@ -1,7 +1,10 @@
 import { TYPES } from "./stats.js";
 import { build } from "./detail.js";
 import { Api } from "./api.js";
-import { esc, dateKo, dateIso, beadColor, topText } from "./format.js";
+import { esc, dateKo, dateIso, beadColor, topText, metricNote } from "./format.js";
+import { CAREER, careerPlot, careerSummary } from "./career.js";
+import { svgString } from "./chart.js";
+import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "./teamview.js";
   const T = () => TYPES;
 
   const CSS = `
@@ -90,6 +93,13 @@ import { esc, dateKo, dateIso, beadColor, topText } from "./format.js";
   .rp-fcbox svg { width: 100%; height: auto; display: block; }
   .rp-fcx { position: relative; height: 4mm; font-size: 7.8pt; color: #5c667d; margin-top: 1mm; }
   .rp-fcx span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+  .rp-cbox { position: relative; } .rp-cbox svg { width: 100%; height: auto; display: block; }
+  .rp-cbox .y { position: absolute; left: 0.6%; transform: translateY(-50%); font-size: 7.5pt; color: #5c667d; background: #fff; padding: 0 0.6mm; }
+  .rp-leg2 { display: flex; flex-wrap: wrap; gap: 1mm 5mm; font-size: 8pt; color: #5c667d; margin-bottom: 1.5mm; }
+  .rp-leg2 i { display: inline-block; width: 5mm; height: 0; border-top: 0.9mm solid; margin-right: 1.5mm; vertical-align: middle; } .rp-leg2 i.d { border-top-style: dashed; border-top-width: 0.6mm; }
+  .rp-two2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; } .rp-two2 > div { border: 0.75pt solid #d6dbe6; padding: 2.5mm 3.5mm; font-size: 9pt; line-height: 1.55; }
+  .rp-two2 h3 { font-size: 10pt; margin-bottom: 1mm; } .rp-two2 li { margin: 0.5mm 0 0 3.5mm; }
+  .rp-mn li { margin: 0.8mm 0 0.8mm 4mm; font-size: 9pt; } .rp-mn b { margin-right: 1.2mm; }
   `;
 
   const kpiTone = l => (l.value == null ? "" : l.tone);
@@ -103,12 +113,45 @@ import { esc, dateKo, dateIso, beadColor, topText } from "./format.js";
   const f3 = v => Number(v).toFixed(3);
 
   // 미리 만들어 둔 AI 해설 (tools/gen_commentary.mjs)
-  function aiBlock(c) {
-    if (!c) return "";
+  function aiBlock(c, rec) {
+    const lines = (rec && rec.result.lines) || [];
+    if (!c && !lines.length) return "";
     const ul = a => (a && a.length ? `<ul>${a.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : "");
-    return `<div class="rp-sec"><h2>AI 해설</h2><div class="rp-ai"><p><b>${esc(c.summary)}</b></p>${c.style ? `<p>${esc(c.style)}</p>` : ""}
+    const met = lines.length ? `<h2 style="margin-top:6mm">고른 지표 해설</h2><ul class="rp-mn">${lines.map(l => `<li><b>${esc(l.label)}</b>${esc((c && c.metrics && c.metrics[l.label]) || metricNote(l))}</li>`).join("")}</ul>` : "";
+    const body = c ? `<div class="rp-ai"><p><b>${esc(c.summary)}</b></p>${c.style ? `<p>${esc(c.style)}</p>` : ""}
       ${c.strengths && c.strengths.length ? `<h3>눈에 띄는 점</h3>${ul(c.strengths)}` : ""}${c.watch && c.watch.length ? `<h3>보완하거나 주의할 점</h3>${ul(c.watch)}` : ""}${c.similar ? `<p style="margin-top:2mm">${esc(c.similar)}</p>` : ""}</div>
-      <p class="rp-fine">AI가 이 보고서의 계산 수치만 바탕으로 미리 작성한 설명입니다. 숫자는 계산값과 대조해 확인했지만 해석은 참고용입니다.</p></div>`;
+      <p class="rp-fine">AI가 이 보고서의 계산 수치만 바탕으로 미리 작성한 설명입니다. 숫자는 계산값과 대조해 확인했지만 해석은 참고용입니다. 지표 해설 중 AI 문장이 없는 지표는 계산값으로 만든 문장입니다.</p>` : `<p class="rp-fine">이 선수는 AI 해설이 없어 계산값으로 만든 문장을 보여 줍니다.</p>`;
+    return `<div class="rp-sec"><h2>${c ? "AI 해설" : "지표 해설"}</h2>${body}${c ? met : met.replace(/^<h2[^>]*>고른 지표 해설<\/h2>/, "")}</div>`;
+  }
+
+  /** 계산된 좌표로 그래프 한 개를 만든다. 글자는 PDF 변환에서 글꼴이 깨지지 않도록 HTML로 얹는다. */
+  function chartBox(g) {
+    const ys = g.yt.map(t => `<span class="y" style="top:${(t.y / g.H) * 100}%">${t.label}</span>`).join("");
+    const xs = `<div class="rp-fcx">${g.xt.map(t => `<span style="left:${(t.x / g.W) * 100}%">${esc(t.label)}</span>`).join("")}</div>`;
+    return `<div class="rp-cbox">${svgString(g)}${ys}</div>${xs}`;
+  }
+
+  // 커리어: 지난 시즌 기록 + 리그 평균 + 예측을 한 그래프로
+  function careerBlock(extra, rec) {
+    const rows = extra.career && extra.career.players[rec.type][String(rec.params.target)];
+    if (!rows || rows.length < 2) return "";
+    const C = CAREER[rec.type], isBat = rec.type === "batter", fc = extra.fc, p = fc && fc.players[String(rec.params.target)];
+    const cp = careerPlot(rec.type, rows, extra.career.league[rec.type], p, fc, { W: 600, H: 190, L: 44, R: 10, T: 10, B: 8 });
+    if (!cp || !cp.geom) return "";
+    const sm = careerSummary(rec.type, rows), n = (v, d) => (v == null ? "-" : Number(v).toFixed(d));
+    const heads = isBat ? ["시즌", "나이", "팀", "경기", "타석", "타율", "출루율", "장타율", "OPS", "홈런"] : ["시즌", "나이", "팀", "경기", "이닝", "ERA", "WHIP", "K/9", "승", "패", "세이브"];
+    const shown = rows.slice(-12).reverse();
+    const trs = shown.map(r => `<tr>${r.map((v, i) => `<td>${esc(isBat ? (i >= 5 && i <= 8 ? n(v, 3) : v == null ? "-" : v) : (i === 4 || i === 7 ? n(v, 1) : i === 5 || i === 6 ? n(v, 2) : v == null ? "-" : v))}</td>`).join("")}</tr>`).join("");
+    return `<div class="rp-sec"><h2>커리어와 앞으로 (${sm.first}~${sm.last})</h2>
+      <p class="rp-pv" style="margin-bottom:2mm">데뷔 이후 시즌별 ${C.stat}입니다. ${isBat ? "50타석" : "20이닝"} 미만인 시즌은 그래프에서 뺐습니다. ${C.better === "low" ? "ERA는 낮을수록 좋은 기록입니다." : "OPS는 높을수록 좋은 기록입니다."}</p>
+      <div class="rp-leg2"><span><i style="border-color:#101216"></i>선수 ${C.stat}</span><span><i class="d" style="border-color:#8e96a6"></i>리그 평균(${isBat ? "100타석" : "30이닝"} 이상 선수 평균)</span>${cp.useFc ? '<span><i class="d" style="border-color:#5e6ad2"></i>앞으로 예측(옅은 띠: 80% 범위)</span>' : ""}</div>
+      ${chartBox(cp.geom)}
+      <ul class="rp-note" style="margin-top:2mm"><li>${sm.first}~${sm.last} 시즌 ${sm.seasons}시즌.${isBat ? ` 통산 홈런 ${sm.hr}개, 통산 ${sm.tot}타석.` : ` 통산 ${sm.w}승 ${sm.l}패 ${sm.sv}세이브, ${n(sm.tot, 1)}이닝.`}</li>
+        ${sm.peak ? `<li>가장 좋았던 시즌은 ${sm.peak[0]}년(${sm.peak[1]}세)으로 ${C.stat} ${n(sm.peak[C.main], C.digits)}입니다(${isBat ? "200타석" : "50이닝"} 이상 시즌 중).</li>` : ""}
+        ${sm.avgMain != null ? `<li>통산 ${C.stat}은 ${n(sm.avgMain, C.digits)}입니다(${isBat ? "시즌 OPS를 타석으로 가중 평균한 약식 값" : "이닝으로 가중 평균한 값"}).</li>` : ""}</ul>
+      <table class="rp-sm" style="margin-top:2.5mm"><thead><tr>${heads.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${trs}</tbody></table>
+      ${rows.length > 12 ? `<p class="rp-fine">최근 12시즌만 표시했습니다.</p>` : ""}
+      <p class="rp-fine">출처: Kaggle KBO Player Stats 1982–2026 (netsong, KBO 공식 기록 기반, CC BY-NC-SA 4.0). 시즌 중 팀을 옮긴 선수는 시즌 기록을 합쳐 계산했습니다.</p></div>`;
   }
 
   // 앞으로 5년 예측 (ml/train_forecast.py). 그래프는 도형만 그리고 글자는 HTML로 둔다(PDF 변환에서 글꼴이 깨지지 않게)
@@ -143,7 +186,7 @@ import { esc, dateKo, dateIso, beadColor, topText } from "./format.js";
   // AI 해설과 예측은 내용이 길어 각각 한 쪽으로 만든다 (없는 쪽은 만들지 않는다)
   function extraPages(extra, rec) {
     if (!extra) return [];
-    return [aiBlock(extra.ai), forecastBlock(extra.fc, extra.fc && extra.fc.players[String(rec.params.target)], rec)].filter(Boolean).map(b => `<div style="margin-top:9mm">${b}</div>`);
+    return [aiBlock(extra.ai, rec), careerBlock(extra, rec), forecastBlock(extra.fc, extra.fc && extra.fc.players[String(rec.params.target)], rec)].filter(Boolean).map(b => `<div style="margin-top:9mm">${b}</div>`);
   }
 
   function playerPages(rec, d, extra) {
@@ -243,7 +286,35 @@ import { esc, dateKo, dateIso, beadColor, topText } from "./format.js";
 
   function ipText(outs) { if (outs == null) return "-"; const w = Math.floor(outs / 3), r = outs % 3; return r ? `${w} ${r}/3` : String(w); }
 
-  function teamPages(rec) {
+  // 팀 AI 해설 + 승률 추이·예측 (있는 것만 쪽으로 만든다)
+  function teamExtra(rec, extra) {
+    if (!extra) return [];
+    const { tf, tc } = extra, teams = rec.result.teams, ids = teams.map(t => t.id), names = Object.fromEntries(teams.map(t => [t.id, t.name]));
+    const cards = ids.filter(id => tc && tc[`${rec.season}-${id}`]);
+    const hasF = tf && rec.season === tf.meta.base_season && ids.some(id => tf.teams[id]);
+    const out = [];
+    if (cards.length) {
+      const ul = a => (a && a.length ? `<ul>${a.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : "");
+      out.push(`<div class="rp-sec"><h2>팀 AI 해설</h2><div class="rp-two2">${cards.map(id => { const c = tc[`${rec.season}-${id}`];
+        return `<div><h3>${esc(names[id])}</h3><p>${esc(c.summary)}</p>${ul(c.strengths)}${ul(c.watch)}${c.outlook ? `<p style="margin-top:1mm;color:#5c667d">${esc(c.outlook)}</p>` : ""}</div>`; }).join("")}</div>
+        <p class="rp-fine">AI가 이 보고서의 계산 수치만 바탕으로 미리 작성한 설명입니다. 해석은 참고용입니다.</p></div>`);
+    }
+    if (hasF) {
+      const g = teamPlot(ids, names, tf, { W: 600, H: 190, L: 44, R: 10, T: 10, B: 8 }), v = tf.meta.validation;
+      const trs = ids.map(id => { const t = tf.teams[id]; return `<tr><td>${esc(names[id])}</td><td>${t ? `${wpText(t.now.wp)} (${t.now.w}승 ${t.now.l}패)` : "-"}</td>${tf.meta.horizons.map(h => { const q = t && t.pred.find(x => x.h === h); return `<td>${q ? `${wpText(q.wp)} (${wpText(q.lo)}~${wpText(q.hi)}, 약 ${q.wins}승)` : "-"}</td>`; }).join("")}</tr>`; }).join("");
+      const notes = tf.meta.horizons.map(h => { const x = v[h], pick = x.mae[x.chosen]; return `<li>${h}년 뒤: 시험(2019~${tf.meta.base_season}) 평균 오차 ${pick.test.toFixed(3)}, 작년 승률을 그대로 쓰는 방법 ${x.mae.last.test.toFixed(3)}. 방법은 ${esc(TEAM_METHOD[x.chosen] || x.chosen)}, 80% 범위 적중률 ${Math.round(x.coverage80 * 100)}%.</li>`; }).join("");
+      out.push(`<div class="rp-sec"><h2>팀 승률 추이와 예측 (실험적 기능)</h2>
+        <p class="rp-pv" style="margin-bottom:2mm">2005년 이후 시즌별 승률(실선)과 앞으로 ${tf.meta.horizons.length}년 예측(점선)입니다. 승률 .500은 승과 패가 같다는 뜻입니다.</p>
+        <div class="rp-leg2">${ids.map((id, i) => `<span><i style="border-color:${TEAM_COLORS[i % 4]}"></i>${esc(names[id])}</span>`).join("")}</div>
+        ${chartBox(g)}
+        <table class="rp-sm" style="margin-top:2.5mm"><thead><tr><th>팀</th><th>${tf.meta.base_season} (올해)</th>${tf.meta.horizons.map(h => `<th>${tf.meta.base_season + h} 예측</th>`).join("")}</tr></thead><tbody>${trs}</tbody></table>
+        <ul class="rp-note" style="margin-top:2mm">${notes}<li>팀 성적은 선수 이동·부상 같은 변화가 커서 먼 미래일수록 평균(.500)에 가까워지며, 시험 표본(팀·시즌 80개)이 작아 참고용입니다. 예상 승수는 승률 × 144입니다.</li></ul>
+        <p class="rp-fine">학습 데이터: Kaggle KBO Player Stats 1982–2026 (netsong, CC BY-NC-SA 4.0)을 팀·시즌별로 합산. 구단 이름이 바뀐 팀은 이어서 계산했습니다.</p></div>`);
+    }
+    return out.map(b => `<div style="margin-top:9mm">${b}</div>`);
+  }
+
+  function teamPages(rec, extra) {
     const r = rec.result;
     const head = r.metrics.map(m => `<th>${esc(m.label)}</th>`).join("");
     const body = r.teams.map(t => `<tr><td>${esc(t.name)}</td>${r.metrics.map(m => { const it = m.items.find(x => x.id === t.id); return `<td class="${m.bestId === t.id ? "good" : ""}">${esc(it.display)}</td>`; }).join("")}</tr>`).join("");
@@ -269,12 +340,12 @@ import { esc, dateKo, dateIso, beadColor, topText } from "./format.js";
     }).join("");
     const p2 = `<div class="rp-sec" style="margin-top:9mm"><h2>지표별 비교</h2>${blocks}<p class="rp-pv">빨간 세로선은 리그 평균입니다. 파란 막대가 가장 좋은 기록입니다.</p></div>
       <div class="rp-sec"><h2>분석 방법과 유의사항</h2><ul><li>리그 평균은 리그 ${r.leagueN}개 팀 전체의 평균입니다.</li>${how}</ul></div>`;
-    return [p1, p2];
+    return [p1, ...teamExtra(rec, extra), p2];
   }
 
   function html(rec, d, extra) {
     d = d || rec.result.report;
-    const parts = rec.result.kind === "team" ? teamPages(rec) : playerPages(rec, d, extra);
+    const parts = rec.result.kind === "team" ? teamPages(rec, extra) : playerPages(rec, d, extra);
     return `<div class="rp"><style>${CSS}</style>${parts.map((p, i) => pageWrap(p, i + 1, parts.length, rec)).join("")}</div>`;
   }
 
@@ -299,10 +370,10 @@ import { esc, dateKo, dateIso, beadColor, topText } from "./format.js";
 
   // PDF에 넣을 AI 해설·예측 (파일이 없거나 해당 선수 항목이 없으면 그 부분만 빠진다)
   async function extraFor(rec) {
-    if (rec.result.kind === "team") return null;
     try {
-      const [all, fc] = await Promise.all([Api.commentary(), Api.forecast()]);
-      return { ai: (all || {})[`${rec.season}-${rec.params.target}`] || null, fc };
+      if (rec.result.kind === "team") { const [tf, tc] = await Promise.all([Api.teamForecast(), Api.teamCommentary()]); return { tf, tc }; }
+      const [all, fc, career] = await Promise.all([Api.commentary(), Api.forecast(), Api.career()]);
+      return { ai: (all || {})[`${rec.season}-${rec.params.target}`] || null, fc, career };
     } catch (e) { return null; }
   }
 

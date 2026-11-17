@@ -25,6 +25,7 @@ export default function Layout() {
           <Link className="logo" to="/"><BallIcon className="ball" /><span>야구 분석 랩</span></Link>
           <nav className="tabs" aria-label="주 메뉴">
             <NavLink to="/rank" className={tab}>선수 순위</NavLink>
+            <NavLink to="/compare" className={tab}>선수 비교</NavLink>
             <NavLink to="/guide" className={tab}>지표 설명</NavLink>
             <NavLink to="/analyze" className={tab}>데이터 분석</NavLink>
             <NavLink to="/history" className={tab}>분석 기록</NavLink>

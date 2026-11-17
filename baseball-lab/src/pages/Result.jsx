@@ -11,6 +11,8 @@ import DetailReport from "../components/DetailReport.jsx";
 import SimilarPlayers from "../components/SimilarPlayers.jsx";
 import AiCommentary from "../components/AiCommentary.jsx";
 import Forecast from "../components/Forecast.jsx";
+import Career from "../components/Career.jsx";
+import TeamExtras from "../components/TeamExtras.jsx";
 import { useScene } from "../context/SceneContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 
@@ -38,6 +40,7 @@ function PlayerView({ rec, r }) {
       </div></section>
       <DetailBox rec={rec} />
       <SimilarPlayers rec={rec} />
+      <Career rec={rec} />
       <Forecast rec={rec} />
       <section className="sec"><h2>선택한 지표 상세</h2>
         <div className="table-wrap"><table>
@@ -74,7 +77,7 @@ function DetailBox({ rec }) {
   return <div><div className="rep-head"><h2 className="rep-title">{rec.type === "batter" ? "타자" : "투수"} 상세 분석 보고서</h2></div><DetailReport rep={rep} /></div>;
 }
 
-function TeamView({ r }) {
+function TeamView({ rec, r }) {
   return (
     <>
       <section className="sec" style={{ marginTop: 0 }}><h2>팀별 기록 요약</h2>
@@ -85,6 +88,7 @@ function TeamView({ r }) {
           ))}</tbody></table></div>
         <p className="note">초록색 굵은 글씨는 선택한 팀 중 가장 좋은 기록입니다.</p>
         <div className="insight">{r.insight}</div></section>
+      <TeamExtras rec={rec} />
       <section className="sec"><h2>지표별 비교</h2>
         {r.metrics.map(m => {
           const max = Math.max(...m.items.map(i => Math.abs(i.value)).concat([Math.abs(m.league)]), 1);
@@ -152,7 +156,7 @@ export default function Result() {
   return (
     <div className="wrap">
       <div className="result-head"><h1>{rec.title}</h1><p className="sub">{sub}. {dateKo(rec.createdAt)} 분석, KBO 2026 정규시즌 실제 기록</p></div>
-      {r.kind === "team" ? <TeamView r={r} /> : <PlayerView rec={rec} r={r} />}
+      {r.kind === "team" ? <TeamView rec={rec} r={r} /> : <PlayerView rec={rec} r={r} />}
       <div className="act-row">
         <button className="btn pri" type="button" disabled={busy} aria-busy={busy} onClick={savePdf}>{busy ? "보고서를 만드는 중" : "PDF로 저장"}</button>
         <button className="btn ghost" type="button" onClick={again}>조건 바꿔 다시 분석</button>

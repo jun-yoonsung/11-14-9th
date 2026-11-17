@@ -6,7 +6,9 @@
  *
  * 환각 방지: LLM에는 우리가 계산한 수치(facts)만 주고, 결과 문장에 나온 숫자가 facts에 없으면 버리고 다시 만든다.
  *
- * 사용: ANTHROPIC_API_KEY=... node tools/gen_commentary.mjs [--limit 10] [--only 50464,50030] [--force] [--dry] [--model claude-sonnet-5-5]
+ * 이미 만든 해설이라도 "지표별 해설(metrics)"이 없으면 다시 만든다(예전 형식). 이미 새 형식인 해설은 건너뛴다(--force로 전부 다시).
+ * 사용: node tools/gen_commentary.mjs [--limit 10] [--only 50464,50030] [--force] [--min-pa 50] [--min-outs 45] [--dry] [--model claude-sonnet-5-5]
+ *   --min-pa / --min-outs: 해설을 만들 최소 타석 / 최소 아웃 수(기본 50타석, 45아웃=15이닝). 표본이 작은 선수는 해설에 그 한계를 적는다
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -24,6 +26,7 @@ try {
 const DATA = path.join(ROOT, "public/data");
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i < 0 ? d : (process.argv[i + 1]?.startsWith("--") || process.argv[i + 1] == null ? true : process.argv[i + 1]); };
 const MODEL = arg("model", "claude-sonnet-5-5"), LIMIT = Number(arg("limit", 0)) || Infinity, ONLY = arg("only", "") ? String(arg("only")).split(",") : null;
+const MIN_PA = Number(arg("min-pa", 50)), MIN_OUTS = Number(arg("min-outs", 45));
 const OUT = arg("out", path.join(DATA, "commentary.json")), DRY = !!arg("dry", false), FORCE = !!arg("force", false), MOCK = !!arg("mock", false);
 
 const STR = new Set(["pid", "id", "name", "team", "pos", "hand", "month", "pitch"]);
@@ -56,8 +59,9 @@ const SYSTEM = `당신은 야구 데이터를 처음 보는 사람에게 선수 
 - 한 시즌 기록이므로 표본이 작으면(규정 미충족) 그 한계를 한 문장으로 언급하세요.
 - 어려운 용어(wOBA, FIP, ISO 등)는 처음 나올 때 한 구절로 풀어 쓰세요.
 - 존댓말, 과장 없이 담백하게 쓰세요.
+- metrics는 사실의 "강점"과 "약점" 목록에 있는 지표마다 한 문장씩 씁니다. 키는 그 지표의 "지표" 이름 그대로, 값은 기록·리그평균·백분위 중 사실에 있는 숫자로 그 지표가 의미하는 바를 설명합니다.
 반드시 아래 JSON만 출력하세요(코드블록 없이):
-{"summary":"2~3문장 총평","strengths":["강점 문장 2~3개"],"watch":["보완점 또는 주의할 점 1~2개"],"style":"이 선수가 어떤 유형인지 한 문장","similar":"비슷한 선수가 있다면 왜 닮았는지 한 문장(없으면 빈 문자열)"}`;
+{"summary":"2~3문장 총평","strengths":["강점 문장 2~3개"],"watch":["보완점 또는 주의할 점 1~2개"],"style":"이 선수가 어떤 유형인지 한 문장","similar":"비슷한 선수가 있다면 왜 닮았는지 한 문장(없으면 빈 문자열)","metrics":{"지표 이름":"한 문장"}}`;
 
 const numsIn = s => (String(s).match(/\d+(?:[.,]\d+)?|\.\d+/g) || []).map(x => String(Number(x.replace(/,/g, "")))).filter(x => x !== "NaN");
 /** 결과 문장의 숫자가 모두 사실 JSON에 있는지 확인한다. 어긋나면 이유를 돌려준다. */
@@ -65,8 +69,7 @@ export function validate(text, facts) {
   const allowed = new Set(numsIn(JSON.stringify(facts)));
   ["0", "1", "2", "3", "5", "100"].forEach(x => allowed.add(x));   // 개수 표현(2~3문장, 상위 5명 등)과 퍼센트 기준은 허용
   const bad = [...new Set(numsIn(text).filter(n => !allowed.has(n)))];
-  const names = new Set([facts.선수, ...facts.비슷한선수.map(s => s.이름)]);
-  return bad.length ? `사실에 없는 숫자: ${bad.join(", ")}` : (names.size ? null : null);
+  return bad.length ? `사실에 없는 숫자: ${bad.join(", ")}` : null;
 }
 
 async function ask(facts, feedback) {
@@ -88,6 +91,7 @@ async function one(type, row) {
   for (let t = 0; t < 3; t++) {
     const raw = await ask(facts, fb);
     let j; try { const m = raw.match(/\{[\s\S]*\}/); j = JSON.parse(m ? m[0] : raw); } catch { fb = "JSON 형식이 아닙니다"; if (process.env.DEBUG_RAW) console.warn("  원문:", raw.slice(0, 300)); continue; }
+    if (j.metrics && typeof j.metrics === "object") { const ok = new Set([...facts.강점, ...facts.약점].map(x => x.지표)); j.metrics = Object.fromEntries(Object.entries(j.metrics).filter(([k, v]) => ok.has(k) && typeof v === "string")); } else j.metrics = {};
     const why = validate(JSON.stringify(j), facts);
     if (!why) return { text: j, model: MODEL, season: row.season };
     fb = why;
@@ -98,7 +102,7 @@ async function one(type, row) {
 async function main() {
   const out = fs.existsSync(OUT) && !FORCE ? JSON.parse(fs.readFileSync(OUT, "utf8")) : {};
   const todo = [...bats.map(r => ["batter", r]), ...pits.map(r => ["pitcher", r])]
-    .filter(([ty, r]) => (ONLY ? ONLY.includes(r.pid) : (ty === "batter" ? r.pa >= 100 : r.outs >= 90)) && (FORCE || !out[`${r.season}-${r.pid}`])).slice(0, LIMIT);
+    .filter(([ty, r]) => (ONLY ? ONLY.includes(r.pid) : (ty === "batter" ? r.pa >= MIN_PA : r.outs >= MIN_OUTS)) && (FORCE || !out[`${r.season}-${r.pid}`] || !out[`${r.season}-${r.pid}`].metrics)).slice(0, LIMIT);
   console.log(`대상 ${todo.length}명 (모델 ${MODEL}${DRY ? ", dry" : ""}${MOCK ? ", mock" : ""})`);
   if (!DRY && !MOCK && !process.env.ANTHROPIC_API_KEY) { console.error("ANTHROPIC_API_KEY 환경변수가 필요합니다."); process.exit(1); }
   let done = 0, fail = 0, i = 0;

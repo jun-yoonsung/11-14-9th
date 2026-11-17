@@ -1,0 +1,93 @@
+{
+ "batter": {
+  "ET+RF+XGB+LGBM": {
+   "models": [
+    "ExtraTrees",
+    "랜덤포레스트",
+    "XGBoost",
+    "LightGBM"
+   ],
+   "val": 0.07688259672911027,
+   "test": 0.07165511276565113
+  },
+  "ET+XGB": {
+   "models": [
+    "ExtraTrees",
+    "XGBoost"
+   ],
+   "val": 0.0766130214440448,
+   "test": 0.07126108317240593
+  },
+  "ET+RF": {
+   "models": [
+    "ExtraTrees",
+    "랜덤포레스트"
+   ],
+   "val": 0.07711182509350564,
+   "test": 0.07224126900612446
+  },
+  "ET+RF+XGB+LGBM+HGB": {
+   "models": [
+    "ExtraTrees",
+    "랜덤포레스트",
+    "XGBoost",
+    "LightGBM",
+    "HGB(MAE 손실)"
+   ],
+   "val": 0.07717639328866419,
+   "test": 0.07162336326711652
+  },
+  "ET 단독": {
+   "models": [
+    "ExtraTrees"
+   ],
+   "val": 0.07697864112545992,
+   "test": 0.07188788036739677
+  }
+ },
+ "pitcher": {
+  "LGBM(MAE) 단독": {
+   "models": [
+    "LightGBM(MAE)"
+   ],
+   "val": 1.073099506035636,
+   "test": 1.130369131146746
+  },
+  "LGBM(MAE)+XGB(MAE)": {
+   "models": [
+    "LightGBM(MAE)",
+    "XGBoost(MAE)"
+   ],
+   "val": 1.0778987767929662,
+   "test": 1.1247837159879848
+  },
+  "LGBM(MAE)+XGB(MAE)+HGB(MAE)": {
+   "models": [
+    "LightGBM(MAE)",
+    "XGBoost(MAE)",
+    "HGB(MAE 손실)"
+   ],
+   "val": 1.0815467812421187,
+   "test": 1.1258956296718596
+  },
+  "MAE계열3+ET+RF": {
+   "models": [
+    "LightGBM(MAE)",
+    "XGBoost(MAE)",
+    "HGB(MAE 손실)",
+    "ExtraTrees",
+    "랜덤포레스트"
+   ],
+   "val": 1.0935747427414706,
+   "test": 1.1127468233361713
+  },
+  "LGBM(MAE)+ET": {
+   "models": [
+    "LightGBM(MAE)",
+    "ExtraTrees"
+   ],
+   "val": 1.0903561254059746,
+   "test": 1.111465663538306
+  }
+ }
+}

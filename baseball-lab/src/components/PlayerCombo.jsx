@@ -5,7 +5,7 @@ const initials = str => [...str].map(ch => { const c = ch.charCodeAt(0) - 44032;
 
 /** 검색해서 고르는 선수 입력칸: 이름, 팀, 포지션, 초성으로 찾고 방향키·Enter·Esc를 지원한다 */
 import { pitcherQual } from "../lib/role.js";
-export default function PlayerCombo({ rows, type, value, qualify, teamName, hasError, label, onPick }) {
+export default function PlayerCombo({ rows, type, value, qualify, teamName, hasError, label, onPick, id = "player" }) {
   const cur = rows.find(p => p.pid === value);
   const curLabel = cur ? `${cur.name} · ${teamName(cur.team)} · ${cur.pos}` : "";
   const [text, setText] = useState(curLabel);
@@ -35,9 +35,9 @@ export default function PlayerCombo({ rows, type, value, qualify, teamName, hasE
 
   return (
     <div className="combo">
-      <label className="label" htmlFor="player">{label}</label>
-      <input id="player" className={"field" + (hasError ? " err" : "")} type="text" role="combobox" aria-expanded={open} aria-controls="plist" aria-autocomplete="list"
-        aria-activedescendant={open && shown.length ? "po" + idx : undefined} autoComplete="off" spellCheck={false}
+      <label className="label" htmlFor={id}>{label}</label>
+      <input id={id} className={"field" + (hasError ? " err" : "")} type="text" role="combobox" aria-expanded={open} aria-controls={id + "-list"} aria-autocomplete="list"
+        aria-activedescendant={open && shown.length ? `${id}-o${idx}` : undefined} autoComplete="off" spellCheck={false}
         placeholder="이름, 팀, 포지션으로 검색 (예: 김도영, ㄱㄷㅇ)" value={text}
         onFocus={e => { setOpen(true); if (cur && text === curLabel) e.target.select(); }}
         onChange={e => { typed.current = true; setText(e.target.value); setOpen(true); }}
@@ -48,9 +48,9 @@ export default function PlayerCombo({ rows, type, value, qualify, teamName, hasE
           else if (e.key === "Enter") { if (open && shown[idx]) { e.preventDefault(); pick(shown[idx]); } }
           else if (e.key === "Escape") close();
         }} />
-      <ul className="combo-list" id="plist" role="listbox" hidden={!open} ref={listRef}>
+      <ul className="combo-list" id={id + "-list"} role="listbox" hidden={!open} ref={listRef}>
         {shown.map((p, i) => (
-          <li key={p.pid} role="option" id={"po" + i} aria-selected={i === idx} onMouseDown={e => { e.preventDefault(); pick(p); }}>
+          <li key={p.pid} role="option" id={`${id}-o${i}`} aria-selected={i === idx} onMouseDown={e => { e.preventDefault(); pick(p); }}>
             <b>{p.name}</b><span>{teamName(p.team)} · {p.pos}</span>{!isQ(p) && <em>규정 미달</em>}
           </li>
         ))}

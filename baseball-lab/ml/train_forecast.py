@@ -11,6 +11,7 @@
 import json, re, sys, warnings
 from pathlib import Path
 import numpy as np, pandas as pd
+from xgboost import XGBClassifier
 from sklearn.ensemble import HistGradientBoostingRegressor, HistGradientBoostingClassifier
 from models import Ens
 from sklearn.metrics import mean_absolute_error, roc_auc_score, brier_score_loss
@@ -31,27 +32,52 @@ def ip_to_float(v):
     return int(m.group(1)) / 3 if m else np.nan
 
 
+def static_features(raw):
+    """선수 고정 정보(키·몸무게·좌우 타투·드래프트 순번)를 숫자로 바꾼다."""
+    st = raw.groupby("Id").agg(HtWt=("HtWt", "first"), BatThrow=("BatThrow", "first"), Draft=("Draft", "first"))
+    hw = st.HtWt.astype(str).str.extract(r"(\d+)cm/(\d+)kg").astype(float)
+    st["height"], st["weight"] = hw[0], hw[1]
+    bt = st.BatThrow.astype(str).str.extract(r"([LRS])/([LR])")
+    st["bat"] = bt[0].map({"L": 0, "R": 1, "S": 2}); st["thr"] = bt[1].map({"L": 0, "R": 1})
+    st["draft_pick"] = st.Draft.astype(str).str.extract(r"(\d+)순위")[0].astype(float)
+    return st[["height", "weight", "bat", "thr", "draft_pick"]]
+
+
 def load():
     b = pd.read_csv(RAW / "kbo_batting_stats_season_1982-2026.csv", low_memory=False)
     p = pd.read_csv(RAW / "kbo_pitching_stats_season_1982-2026.csv", low_memory=False)
+    sb, sp = static_features(b), static_features(p)
     b = b.groupby(["Id", "Season"], as_index=False).agg(Player=("Player", "first"), Age=("Age", "first"), Born=("Born", "first"), Pos=("Position", "first"), Team=("Team", "last"),
         **{c: (c, "sum") for c in ["G", "PA", "AB", "H", "2B", "3B", "HR", "TB", "BB", "HBP", "SO", "SF", "SB"]})
+    # Kaggle 2026 표에 없는 타자(대부분 타석이 매우 적은 선수)는 우리 사이트의 2026 기록으로 보충한다
+    ours = pd.read_csv(ROOT / "public/data/batters.csv")
+    miss = ours[~ours.pid.isin(b[b.Season == LAST].Id)]
+    if len(miss):
+        last = b.sort_values("Season").groupby("Id").tail(1).set_index("Id")
+        add = pd.DataFrame({"Id": miss.pid.values, "Season": LAST, "Player": miss.name.values, "Pos": np.nan, "Team": miss.team.values, "Born": np.nan,
+                            "G": miss.g.values, "PA": miss.pa.values, "AB": miss.ab.values, "H": miss.h.values, "2B": miss.d2.values, "3B": miss.d3.values, "HR": miss.hr.values,
+                            "BB": miss.bb.values, "HBP": miss.hbp.values, "SO": miss.so.values, "SF": miss.sf.values, "SB": 0})
+        add["TB"] = add.H + add["2B"] + 2 * add["3B"] + 3 * add.HR
+        add["Age"] = [(last.Age[i] + (LAST - last.Season[i])) if i in last.index else np.nan for i in add.Id]   # 과거 기록이 있으면 나이를 이어서 계산, 없으면 모름
+        b = pd.concat([b, add], ignore_index=True)
+    b = b.merge(sb, left_on="Id", right_index=True, how="left")
     b["OBP"] = (b.H + b.BB + b.HBP) / (b.AB + b.BB + b.HBP + b.SF).replace(0, np.nan)
     b["SLG"] = b.TB / b.AB.replace(0, np.nan); b["OPS"] = b.OBP + b.SLG
     b["ISO"] = b.SLG - b.H / b.AB.replace(0, np.nan)
     b["K"] = b.SO / b.PA.replace(0, np.nan); b["BBr"] = b.BB / b.PA.replace(0, np.nan); b["HRr"] = b.HR / b.PA.replace(0, np.nan)
     p["IPf"] = p.IP.map(ip_to_float)
     p = p.groupby(["Id", "Season"], as_index=False).agg(Player=("Player", "first"), Age=("Age", "first"), Born=("Born", "first"), Team=("Team", "last"),
-        **{c: (c, "sum") for c in ["G", "H", "HR", "BB", "HBP", "SO", "R", "ER", "TBF", "IPf"]})
+        **{c: (c, "sum") for c in ["G", "H", "HR", "BB", "HBP", "SO", "R", "ER", "TBF", "IPf", "W", "L", "SV"]})
+    p = p.merge(sp, left_on="Id", right_index=True, how="left")
     ip = p.IPf.replace(0, np.nan)
     p["ERA"] = p.ER * 9 / ip; p["K9"] = p.SO * 9 / ip; p["BB9"] = p.BB * 9 / ip; p["HR9"] = p.HR * 9 / ip; p["WHIP"] = (p.BB + p.H) / ip; p["IPG"] = p.IPf / p.G.replace(0, np.nan)
     return b, p
 
 
 CFG = {
-    "batter": dict(target="OPS", stats=["OPS", "OBP", "SLG", "ISO", "K", "BBr", "HRr"], vol="PA", min_base=50, min_target=100, reg=200,
+    "batter": dict(target="OPS", stats=["OPS", "OBP", "SLG", "ISO", "K", "BBr", "HRr"], vol="PA", min_base=10, min_eval=50, min_target=100, reg=200,
                    weight=lambda d: d.PA),
-    "pitcher": dict(target="ERA", stats=["ERA", "K9", "BB9", "HR9", "WHIP", "IPG"], vol="IPf", min_base=20, min_target=30, reg=60,
+    "pitcher": dict(target="ERA", stats=["ERA", "K9", "BB9", "HR9", "WHIP", "IPG"], vol="IPf", min_base=5, min_eval=20, min_target=30, reg=60,
                     weight=lambda d: d.IPf),
 }
 
@@ -64,6 +90,7 @@ def build_rows(df, cfg, horizons):
     last_season = df.groupby("Id").Season.max().rename("last_season")
     first_season = df.groupby("Id").Season.min().rename("first_season")
     base = df.set_index(["Id", "Season"])
+    STATIC = ["height", "weight", "bat", "thr", "draft_pick"]
     rows = base[[*st, vol, "Age"]].copy()
     rows = rows.join(base[["G"]], rsuffix="_g") if "G" not in rows else rows
     idx = rows.index.to_frame(index=False)
@@ -74,9 +101,12 @@ def build_rows(df, cfg, horizons):
         for c in [*st, vol]:
             X[f"{c}_{k}"] = sub[c].values
     X["age"] = base.loc[list(zip(X.Id, X.t)), "Age"].values
+    for c in STATIC: X[c] = base.loc[list(zip(X.Id, X.t)), c].values
     if "Pos" in base: X["pos"] = pd.Categorical(base.loc[list(zip(X.Id, X.t)), "Pos"].values).codes
     X = X.merge(last_season, left_on="Id", right_index=True).merge(first_season, left_on="Id", right_index=True)
     X["career_years"] = X.t - X.first_season + 1
+    cnt = df.sort_values(["Id", "Season"]).assign(n=lambda d: d.groupby("Id").cumcount() + 1).set_index(["Id", "Season"]).n
+    X["gap_years"] = X.career_years - cnt.reindex(pd.MultiIndex.from_arrays([X.Id, X.t])).values   # 중간에 기록이 없는 시즌 수(부상·군 복무 등)
     cum = df.sort_values(["Id", "Season"]).assign(cumvol=lambda d: d.groupby("Id")[vol].cumsum()).set_index(["Id", "Season"]).cumvol
     X["career_vol"] = cum.reindex(pd.MultiIndex.from_arrays([X.Id, X.t])).values
     X = X.merge(lg, left_on="t", right_index=True, how="left")
@@ -124,7 +154,21 @@ def calibrate(y, mid, lo, hi, target=0.8):
 
 
 # 중앙값 예측 모델: ml/compare_models.py 에서 검증 구간(2021~2023) 오차가 가장 작았던 구성
-MID_MODELS = {"batter": ["ExtraTrees", "랜덤포레스트", "HGB(MAE 손실)", "HGB(현재)"], "pitcher": ["HGB(MAE 손실)"]}
+# 모델 선택: ml/compare_models.py, compare_ensembles.py의 검증 구간(2021~2023) 결과 1등
+MID_MODELS = {"batter": ["ExtraTrees", "XGBoost"], "pitcher": ["LightGBM(MAE)"]}
+
+
+def make_clf(kind):
+    """현역 확률 분류기: 타자는 HGB, 투수는 XGBoost (ml/compare_classifiers.py 검증 구간 1등)."""
+    if kind == "pitcher":
+        return XGBClassifier(n_estimators=250, max_depth=3, learning_rate=0.04, subsample=0.8, colsample_bytree=0.8, min_child_weight=10, reg_lambda=3.0, n_jobs=4, random_state=0)
+    return HistGradientBoostingClassifier(max_depth=3, learning_rate=0.05, max_iter=200, min_samples_leaf=40, l2_regularization=1.0, random_state=0)
+
+
+def split(d, h, cfg):
+    """학습(~2020) / 보정(2021~2023) / 시험(2024~) / 시험 전까지 전부. 보정·시험은 기준 시즌 출전이 충분한 선수만(정확도는 정규 출전 선수 기준)."""
+    ok = d[f"{cfg['vol']}_0"] >= cfg["min_eval"]
+    return d[d.t + h < VAL_FROM], d[(d.t + h >= VAL_FROM) & (d.t + h < TEST_FROM) & ok], d[(d.t + h >= TEST_FROM) & ok], d[d.t + h < TEST_FROM]
 
 
 def fit_reg(Xtr, ytr, q=None):
@@ -139,7 +183,7 @@ def run(kind, cfg, b_or_p):
     models = {}
     for h in HORIZONS:
         tgt = f"y{h}"; d = X[X[tgt].notna()]
-        tr = d[d.t + h < VAL_FROM]; cal = d[(d.t + h >= VAL_FROM) & (d.t + h < TEST_FROM)]; te = d[d.t + h >= TEST_FROM]
+        tr, cal, te, _ = split(d, h, cfg)
         # 학습(~2020) -> 구간 폭 보정(2021~2023) -> 시험(2024~2026): 시험 구간은 학습·보정에 전혀 쓰지 않는다
         m = Ens(MID_MODELS[kind]).fit(tr[cols], tr[tgt])
         lo = fit_reg(tr[cols], tr[tgt], 0.1).fit(tr[cols], tr[tgt]); hi = fit_reg(tr[cols], tr[tgt], 0.9).fit(tr[cols], tr[tgt])
@@ -160,8 +204,8 @@ def run(kind, cfg, b_or_p):
              **{f"mae_{k}": float(mean_absolute_error(te[tgt], fill(v))) for k, v in bl.items()}, "coverage80": cover}
         e["interval_scale"] = float(scale); metrics["reg"][h] = e
         # 현역 지속 확률
-        a = X[X[f"act{h}"].notna()]; atr = a[a.t + h < TEST_FROM]; ate = a[a.t + h >= TEST_FROM]
-        clf = HistGradientBoostingClassifier(max_depth=3, learning_rate=0.05, max_iter=200, min_samples_leaf=40, l2_regularization=1.0, random_state=0).fit(atr[cols], atr[f"act{h}"])
+        a = X[X[f"act{h}"].notna()]; atr = a[a.t + h < TEST_FROM]; ate = a[(a.t + h >= TEST_FROM) & (a[f"{cfg['vol']}_0"] >= cfg["min_eval"])]
+        clf = make_clf(kind).fit(atr[cols], atr[f"act{h}"])
         pa = clf.predict_proba(ate[cols])[:, 1]
         metrics["act"][h] = {"n_test": int(len(ate)), "auc": float(roc_auc_score(ate[f"act{h}"], pa)), "brier": float(brier_score_loss(ate[f"act{h}"], pa)),
                              "brier_base": float(brier_score_loss(ate[f"act{h}"], np.full(len(ate), atr[f"act{h}"].mean()))), "base_rate_test": float(ate[f"act{h}"].mean())}
@@ -170,7 +214,7 @@ def run(kind, cfg, b_or_p):
         models[h] = dict(scale=scale, chosen=chosen, resq=resq,
             mid=Ens(MID_MODELS[kind]).fit(full[cols], full[tgt]),
             lo=fit_reg(full[cols], full[tgt], 0.1).fit(full[cols], full[tgt]), hi=fit_reg(full[cols], full[tgt], 0.9).fit(full[cols], full[tgt]),
-            act=HistGradientBoostingClassifier(max_depth=3, learning_rate=0.05, max_iter=200, min_samples_leaf=40, l2_regularization=1.0, random_state=0).fit(fa[cols], fa[f"act{h}"]))
+            act=make_clf(kind).fit(fa[cols], fa[f"act{h}"]))
     return X, cols, metrics, models
 
 
@@ -192,13 +236,13 @@ def main():
                 v = baselines(cur, cfg, h)[M["chosen"]]; mid_ = np.nan_to_num(v, nan=np.nanmean(v)); lo_, hi_ = mid_ + M["resq"][0], mid_ + M["resq"][1]
             pred[h] = dict(mid=mid_, lo=lo_, hi=hi_, act=M["act"].predict_proba(cur[cols])[:, 1])
         for i, (_, r) in enumerate(cur.iterrows()):
-            pid = int(r.Id); surv = np.minimum.accumulate([pred[h]["act"][i] for h in HORIZONS])   # 현역 확률은 줄기만 한다
+            pid = int(r.Id); known_age = not np.isnan(r.age); surv = np.minimum.accumulate([pred[h]["act"][i] for h in HORIZONS])   # 현역 확률은 줄기만 한다
             ys = []
             for j, h in enumerate(HORIZONS):
                 lo, hi, mid = float(pred[h]["lo"][i]), float(pred[h]["hi"][i]), float(pred[h]["mid"][i])
-                ys.append({"h": h, "year": LAST + h, "age": int(r.age) + h, "mid": round(mid, 3), "lo": round(lo, 3), "hi": round(hi, 3), "active": round(float(surv[j]), 3), "method": models[h]["chosen"]})
-            half = next((y["age"] for y in ys if y["active"] < 0.5), None)
-            out["players"][str(pid)] = {"type": kind, "name": str(info.loc[pid, "Player"]), "age": int(r.age), "now": round(float(r[f"{cfg['target']}_0"]), 3), "pred": ys,
+                ys.append({"h": h, "year": LAST + h, "age": int(r.age) + h if known_age else None, "mid": round(mid, 3), "lo": round(lo, 3), "hi": round(hi, 3), "active": round(float(surv[j]), 3), "method": models[h]["chosen"]})
+            half = next((y["age"] for y in ys if y["active"] < 0.5 and y["age"] is not None), None)
+            out["players"][str(pid)] = {"type": kind, "name": str(info.loc[pid, "Player"]), "age": int(r.age) if known_age else None, "small": bool(r[f"{cfg['vol']}_0"] < cfg["min_eval"]), "now": round(float(r[f"{cfg['target']}_0"]), 3), "pred": ys,
                                         "retire_by": half}   # 현역 확률이 50% 아래로 내려가는 첫 나이(5년 안에 없으면 None)
     OUT.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     (ROOT / "ml/metrics.json").write_text(json.dumps(out["meta"], ensure_ascii=False, indent=1), encoding="utf-8")

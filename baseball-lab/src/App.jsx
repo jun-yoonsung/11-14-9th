@@ -10,6 +10,7 @@ import Signup from "./pages/Signup.jsx";
 import Analyze from "./pages/Analyze.jsx";
 import Result from "./pages/Result.jsx";
 import History from "./pages/History.jsx";
+import Compare from "./pages/Compare.jsx";
 import Rank from "./pages/Rank.jsx";
 import Guide from "./pages/Guide.jsx";
 
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="login" element={<Login />} />
           <Route path="signup" element={<Signup />} />
           <Route path="rank" element={<Rank />} />
+          <Route path="compare" element={<Compare />} />
           <Route path="guide" element={<Guide />} />
           <Route path="analyze" element={<Protected><Analyze /></Protected>} />
           <Route path="result/:id" element={<Protected><Result /></Protected>} />

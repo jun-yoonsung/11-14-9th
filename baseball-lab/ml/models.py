@@ -5,6 +5,8 @@ from sklearn.linear_model import RidgeCV
 from sklearn.pipeline import make_pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
+from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
 
 def cands():
     return {
@@ -14,6 +16,10 @@ def cands():
         "HGB(현재)": lambda: HGB(max_depth=3, learning_rate=0.05, max_iter=250, min_samples_leaf=40, l2_regularization=1.0, random_state=0),
         "HGB(얕고 느리게)": lambda: HGB(max_depth=2, learning_rate=0.03, max_iter=300, min_samples_leaf=60, l2_regularization=3.0, random_state=0),
         "HGB(깊게)": lambda: HGB(max_depth=5, learning_rate=0.03, max_iter=200, min_samples_leaf=30, l2_regularization=2.0, random_state=0),
+        "XGBoost": lambda: XGBRegressor(n_estimators=300, max_depth=3, learning_rate=0.03, subsample=0.8, colsample_bytree=0.8, min_child_weight=10, reg_lambda=3.0, n_jobs=4, random_state=0),
+        "XGBoost(MAE)": lambda: XGBRegressor(objective="reg:absoluteerror", n_estimators=300, max_depth=3, learning_rate=0.03, subsample=0.8, colsample_bytree=0.8, min_child_weight=10, reg_lambda=3.0, n_jobs=4, random_state=0),
+        "LightGBM": lambda: LGBMRegressor(n_estimators=300, max_depth=3, num_leaves=8, learning_rate=0.03, subsample=0.8, subsample_freq=1, colsample_bytree=0.8, min_child_samples=30, reg_lambda=3.0, n_jobs=4, random_state=0, verbose=-1),
+        "LightGBM(MAE)": lambda: LGBMRegressor(objective="l1", n_estimators=300, max_depth=3, num_leaves=8, learning_rate=0.03, subsample=0.8, subsample_freq=1, colsample_bytree=0.8, min_child_samples=30, reg_lambda=3.0, n_jobs=4, random_state=0, verbose=-1),
         "HGB(MAE 손실)": lambda: HGB(loss="absolute_error", max_depth=3, learning_rate=0.05, max_iter=250, min_samples_leaf=40, l2_regularization=1.0, random_state=0),
     }
 

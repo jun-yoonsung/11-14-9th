@@ -32,6 +32,11 @@ export const Api = {
   forecast() { if (!cache.forecast) cache.forecast = file("forecast", "json").catch(() => null); return cache.forecast; },
   // 미리 만들어 둔 AI 해설. 파일이 없으면 빈 객체(해설 없이 보여 준다)
   commentary() { if (!cache.commentary) cache.commentary = file("commentary", "json").catch(() => ({})); return cache.commentary; },
+  // 선수별 시즌 기록(커리어)과 시즌별 리그 평균 (ml/build_career.py)
+  career() { if (!cache.career) cache.career = file("career", "json").catch(() => null); return cache.career; },
+  // 팀 승률 예측과 팀 역대 성적 (ml/train_team.py), 팀 AI 해설 (tools/gen_team_commentary.mjs)
+  teamForecast() { if (!cache.teamForecast) cache.teamForecast = file("team_forecast", "json").catch(() => null); return cache.teamForecast; },
+  teamCommentary() { if (!cache.teamCommentary) cache.teamCommentary = file("team_commentary", "json").catch(() => ({})); return cache.teamCommentary; },
   batters(season) { return this.csv("batters").then(l => l.filter(x => x.season === season)); },
   pitchers(season) { return this.csv("pitchers").then(l => l.filter(x => x.season === season)); },
   teams(season) { return this.csv("teams").then(l => l.filter(x => x.season === season)); },

@@ -7,6 +7,8 @@ sys.path.insert(0, str(Path(__file__).parent)); warnings.filterwarnings("ignore"
 import train_forecast as T
 from sklearn.ensemble import HistGradientBoostingClassifier as HGBC, RandomForestClassifier, ExtraTreesClassifier
 from sklearn.linear_model import LogisticRegression
+from xgboost import XGBClassifier
+from lightgbm import LGBMClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
@@ -19,6 +21,8 @@ def cands():
         "랜덤포레스트": lambda: make_pipeline(imp(), RandomForestClassifier(n_estimators=300, min_samples_leaf=20, max_features=0.5, n_jobs=-1, random_state=0)),
         "ExtraTrees": lambda: make_pipeline(imp(), ExtraTreesClassifier(n_estimators=300, min_samples_leaf=20, max_features=0.6, n_jobs=-1, random_state=0)),
         "HGB(현재)": lambda: HGBC(max_depth=3, learning_rate=0.05, max_iter=200, min_samples_leaf=40, l2_regularization=1.0, random_state=0),
+        "XGBoost": lambda: XGBClassifier(n_estimators=250, max_depth=3, learning_rate=0.04, subsample=0.8, colsample_bytree=0.8, min_child_weight=10, reg_lambda=3.0, n_jobs=4, random_state=0),
+        "LightGBM": lambda: LGBMClassifier(n_estimators=250, max_depth=3, num_leaves=8, learning_rate=0.04, subsample=0.8, subsample_freq=1, colsample_bytree=0.8, min_child_samples=30, reg_lambda=3.0, n_jobs=4, random_state=0, verbose=-1),
         "HGB(얕게)": lambda: HGBC(max_depth=2, learning_rate=0.05, max_iter=250, min_samples_leaf=60, l2_regularization=3.0, random_state=0),
     }
 
@@ -28,7 +32,8 @@ def main():
         cfg = T.CFG[kind]; X, _, _ = T.build_rows(df, cfg, T.HORIZONS); cols = T.feature_cols(X, cfg); sc = {}
         for h in T.HORIZONS:
             a = X[X[f"act{h}"].notna()]; y = f"act{h}"
-            tr = a[a.t + h < T.VAL_FROM]; va = a[(a.t + h >= T.VAL_FROM) & (a.t + h < T.TEST_FROM)]; te = a[a.t + h >= T.TEST_FROM]; trv = a[a.t + h < T.TEST_FROM]
+            ok = a[f"{cfg['vol']}_0"] >= cfg["min_eval"]
+            tr = a[a.t + h < T.VAL_FROM]; va = a[(a.t + h >= T.VAL_FROM) & (a.t + h < T.TEST_FROM) & ok]; te = a[(a.t + h >= T.TEST_FROM) & ok]; trv = a[a.t + h < T.TEST_FROM]
             for n, mk in cands().items():
                 pv = mk().fit(tr[cols], tr[y]).predict_proba(va[cols])[:, 1]; pt = mk().fit(trv[cols], trv[y]).predict_proba(te[cols])[:, 1]
                 sc.setdefault(n, []).append((brier_score_loss(va[y], pv), brier_score_loss(te[y], pt), roc_auc_score(te[y], pt)))

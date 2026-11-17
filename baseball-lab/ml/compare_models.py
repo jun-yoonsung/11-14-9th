@@ -21,8 +21,7 @@ def main():
         table = {}
         for h in T.HORIZONS:
             tgt = f"y{h}"; d = X[X[tgt].notna()]
-            tr = d[d.t + h < T.VAL_FROM]; va = d[(d.t + h >= T.VAL_FROM) & (d.t + h < T.TEST_FROM)]; te = d[d.t + h >= T.TEST_FROM]
-            trv = d[d.t + h < T.TEST_FROM]            # 시험 전까지 전부로 다시 학습한 모델로 시험 구간을 잰다
+            tr, va, te, trv = T.split(d, h, cfg)        # trv: 시험 전까지 전부(시험 구간을 잴 모델 학습용)
             bl_v, bl_t = T.baselines(va, cfg, h), T.baselines(te, cfg, h)
             fill = lambda v: np.nan_to_num(v, nan=np.nanmean(v))
             row = {"3년가중(기준)": (mean_absolute_error(va[tgt], fill(bl_v["marcel"])), mean_absolute_error(te[tgt], fill(bl_t["marcel"]))),
