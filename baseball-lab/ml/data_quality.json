@@ -1,0 +1,535 @@
+{
+ "source": "Kaggle KBO Player Stats 1982-2026 (공식 집계)",
+ "season": 2026,
+ "changes": [
+  {
+   "file": "batters",
+   "pid": "50054",
+   "name": "천성호",
+   "col": "h",
+   "old": 66,
+   "new": 65
+  },
+  {
+   "file": "batters",
+   "pid": "50500",
+   "name": "황성빈",
+   "col": "h",
+   "old": 134,
+   "new": 133
+  },
+  {
+   "file": "batters",
+   "pid": "50854",
+   "name": "최지훈",
+   "col": "rbi",
+   "old": 65,
+   "new": 64
+  },
+  {
+   "file": "batters",
+   "pid": "51528",
+   "name": "손성빈",
+   "col": "h",
+   "old": 90,
+   "new": 91
+  },
+  {
+   "file": "batters",
+   "pid": "52348",
+   "name": "박찬혁",
+   "col": "ab",
+   "old": 305,
+   "new": 304
+  },
+  {
+   "file": "batters",
+   "pid": "54944",
+   "name": "데이비슨",
+   "col": "sf",
+   "old": 3,
+   "new": 4
+  },
+  {
+   "file": "batters",
+   "pid": "55530",
+   "name": "박찬형",
+   "col": "h",
+   "old": 10,
+   "new": 9
+  },
+  {
+   "file": "batters",
+   "pid": "55767",
+   "name": "한지윤",
+   "col": "sf",
+   "old": 0,
+   "new": 1
+  },
+  {
+   "file": "batters",
+   "pid": "56034",
+   "name": "힐리어드",
+   "col": "h",
+   "old": 170,
+   "new": 171
+  },
+  {
+   "file": "batters",
+   "pid": "56305",
+   "name": "히우라",
+   "col": "h",
+   "old": 74,
+   "new": 75
+  },
+  {
+   "file": "batters",
+   "pid": "56626",
+   "name": "카스트로",
+   "col": "h",
+   "old": 132,
+   "new": 131
+  },
+  {
+   "file": "batters",
+   "pid": "62700",
+   "name": "하주석",
+   "col": "sf",
+   "old": 0,
+   "new": 1
+  },
+  {
+   "file": "batters",
+   "pid": "62931",
+   "name": "노진혁",
+   "col": "h",
+   "old": 43,
+   "new": 42
+  },
+  {
+   "file": "batters",
+   "pid": "62947",
+   "name": "나성범",
+   "col": "h",
+   "old": 155,
+   "new": 154
+  },
+  {
+   "file": "batters",
+   "pid": "64006",
+   "name": "심우준",
+   "col": "rbi",
+   "old": 48,
+   "new": 47
+  },
+  {
+   "file": "batters",
+   "pid": "65207",
+   "name": "신민재",
+   "col": "so",
+   "old": 62,
+   "new": 61
+  },
+  {
+   "file": "batters",
+   "pid": "65898",
+   "name": "김웅빈",
+   "col": "h",
+   "old": 72,
+   "new": 71
+  },
+  {
+   "file": "batters",
+   "pid": "66606",
+   "name": "최원준",
+   "col": "h",
+   "old": 207,
+   "new": 208
+  },
+  {
+   "file": "batters",
+   "pid": "66704",
+   "name": "김태연",
+   "col": "h",
+   "old": 103,
+   "new": 104
+  },
+  {
+   "file": "batters",
+   "pid": "67893",
+   "name": "박성한",
+   "col": "h",
+   "old": 176,
+   "new": 175
+  },
+  {
+   "file": "batters",
+   "pid": "67905",
+   "name": "천재환",
+   "col": "h",
+   "old": 89,
+   "new": 88
+  },
+  {
+   "file": "batters",
+   "pid": "68912",
+   "name": "김형준",
+   "col": "h",
+   "old": 89,
+   "new": 90
+  },
+  {
+   "file": "batters",
+   "pid": "68912",
+   "name": "김형준",
+   "col": "rbi",
+   "old": 65,
+   "new": 66
+  },
+  {
+   "file": "batters",
+   "pid": "69992",
+   "name": "최정원",
+   "col": "ab",
+   "old": 220,
+   "new": 221
+  },
+  {
+   "file": "batters",
+   "pid": "69992",
+   "name": "최정원",
+   "col": "h",
+   "old": 57,
+   "new": 58
+  },
+  {
+   "file": "batters",
+   "pid": "77532",
+   "name": "손아섭",
+   "col": "rbi",
+   "old": 14,
+   "new": 15
+  },
+  {
+   "file": "batters",
+   "pid": "78168",
+   "name": "서건창",
+   "col": "h",
+   "old": 118,
+   "new": 119
+  },
+  {
+   "file": "batters",
+   "pid": "78756",
+   "name": "오선진",
+   "col": "ab",
+   "old": 69,
+   "new": 68
+  },
+  {
+   "file": "batters",
+   "pid": "78756",
+   "name": "오선진",
+   "col": "h",
+   "old": 14,
+   "new": 13
+  },
+  {
+   "file": "batters",
+   "pid": "79109",
+   "name": "오지환",
+   "col": "h",
+   "old": 94,
+   "new": 95
+  },
+  {
+   "file": "batters",
+   "pid": "79365",
+   "name": "박동원",
+   "col": "rbi",
+   "old": 55,
+   "new": 56
+  },
+  {
+   "file": "pitchers",
+   "pid": "50556",
+   "name": "최준용",
+   "col": "er",
+   "old": 26,
+   "new": 25
+  },
+  {
+   "file": "pitchers",
+   "pid": "51454",
+   "name": "이승현",
+   "col": "h",
+   "old": 53,
+   "new": 54
+  },
+  {
+   "file": "pitchers",
+   "pid": "51516",
+   "name": "김진욱",
+   "col": "h",
+   "old": 142,
+   "new": 141
+  },
+  {
+   "file": "pitchers",
+   "pid": "51516",
+   "name": "김진욱",
+   "col": "so",
+   "old": 124,
+   "new": 123
+  },
+  {
+   "file": "pitchers",
+   "pid": "51516",
+   "name": "김진욱",
+   "col": "er",
+   "old": 67,
+   "new": 66
+  },
+  {
+   "file": "pitchers",
+   "pid": "52043",
+   "name": "벤자민",
+   "col": "h",
+   "old": 117,
+   "new": 116
+  },
+  {
+   "file": "pitchers",
+   "pid": "54610",
+   "name": "성영탁",
+   "col": "h",
+   "old": 58,
+   "new": 57
+  },
+  {
+   "file": "pitchers",
+   "pid": "54610",
+   "name": "성영탁",
+   "col": "er",
+   "old": 25,
+   "new": 22
+  },
+  {
+   "file": "pitchers",
+   "pid": "54702",
+   "name": "원종혁",
+   "col": "er",
+   "old": 10,
+   "new": 9
+  },
+  {
+   "file": "pitchers",
+   "pid": "54904",
+   "name": "손주환",
+   "col": "h",
+   "old": 43,
+   "new": 44
+  },
+  {
+   "file": "pitchers",
+   "pid": "54904",
+   "name": "손주환",
+   "col": "er",
+   "old": 30,
+   "new": 32
+  },
+  {
+   "file": "pitchers",
+   "pid": "54904",
+   "name": "손주환",
+   "col": "r",
+   "old": 38,
+   "new": 39
+  },
+  {
+   "file": "pitchers",
+   "pid": "55239",
+   "name": "잭로그",
+   "col": "h",
+   "old": 181,
+   "new": 183
+  },
+  {
+   "file": "pitchers",
+   "pid": "55239",
+   "name": "잭로그",
+   "col": "er",
+   "old": 75,
+   "new": 78
+  },
+  {
+   "file": "pitchers",
+   "pid": "56459",
+   "name": "페덱",
+   "col": "h",
+   "old": 63,
+   "new": 62
+  },
+  {
+   "file": "pitchers",
+   "pid": "56459",
+   "name": "페덱",
+   "col": "er",
+   "old": 27,
+   "new": 25
+  },
+  {
+   "file": "pitchers",
+   "pid": "56531",
+   "name": "로드리게스",
+   "col": "h",
+   "old": 156,
+   "new": 157
+  },
+  {
+   "file": "pitchers",
+   "pid": "56531",
+   "name": "로드리게스",
+   "col": "er",
+   "old": 77,
+   "new": 76
+  },
+  {
+   "file": "pitchers",
+   "pid": "56724",
+   "name": "화이트",
+   "col": "h",
+   "old": 144,
+   "new": 146
+  },
+  {
+   "file": "pitchers",
+   "pid": "56724",
+   "name": "화이트",
+   "col": "er",
+   "old": 60,
+   "new": 61
+  },
+  {
+   "file": "pitchers",
+   "pid": "56801",
+   "name": "아빌라",
+   "col": "h",
+   "old": 66,
+   "new": 67
+  },
+  {
+   "file": "pitchers",
+   "pid": "56966",
+   "name": "테일러",
+   "col": "h",
+   "old": 116,
+   "new": 115
+  },
+  {
+   "file": "pitchers",
+   "pid": "56966",
+   "name": "테일러",
+   "col": "er",
+   "old": 67,
+   "new": 66
+  },
+  {
+   "file": "pitchers",
+   "pid": "62528",
+   "name": "김원중",
+   "col": "h",
+   "old": 60,
+   "new": 58
+  },
+  {
+   "file": "pitchers",
+   "pid": "62528",
+   "name": "김원중",
+   "col": "er",
+   "old": 33,
+   "new": 32
+  },
+  {
+   "file": "pitchers",
+   "pid": "62951",
+   "name": "이형범",
+   "col": "h",
+   "old": 37,
+   "new": 35
+  },
+  {
+   "file": "pitchers",
+   "pid": "62951",
+   "name": "이형범",
+   "col": "er",
+   "old": 17,
+   "new": 14
+  },
+  {
+   "file": "pitchers",
+   "pid": "66291",
+   "name": "이영하",
+   "col": "h",
+   "old": 51,
+   "new": 52
+  },
+  {
+   "file": "pitchers",
+   "pid": "67954",
+   "name": "김진호",
+   "col": "er",
+   "old": 32,
+   "new": 31
+  },
+  {
+   "file": "pitchers",
+   "pid": "67954",
+   "name": "김진호",
+   "col": "r",
+   "old": 34,
+   "new": 33
+  },
+  {
+   "file": "pitchers",
+   "pid": "69045",
+   "name": "알칸타라",
+   "col": "h",
+   "old": 155,
+   "new": 154
+  },
+  {
+   "file": "pitchers",
+   "pid": "69045",
+   "name": "알칸타라",
+   "col": "er",
+   "old": 68,
+   "new": 67
+  },
+  {
+   "file": "pitchers",
+   "pid": "76118",
+   "name": "원종현",
+   "col": "er",
+   "old": 32,
+   "new": 33
+  }
+ ],
+ "summary": {
+  "batters": {
+   "rows": 364,
+   "compared": 296,
+   "not_in_official": 68,
+   "values_changed": 0,
+   "by_column": {}
+  },
+  "pitchers": {
+   "rows": 296,
+   "compared": 296,
+   "not_in_official": 0,
+   "values_changed": 0,
+   "by_column": {}
+  },
+  "note": "이미 공식 값으로 맞춰져 있음(이전 실행의 변경 내역 유지)"
+ }
+}

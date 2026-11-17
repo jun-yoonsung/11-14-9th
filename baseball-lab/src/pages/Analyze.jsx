@@ -4,6 +4,7 @@ import { Api } from "../lib/api.js";
 import { Store } from "../lib/storage.js";
 import { TYPES, analyzePlayer, analyzeTeams } from "../lib/stats.js";
 import { build } from "../lib/detail.js";
+import { qualFor, isHist, teamLabel, usableDefs } from "../lib/season.js";
 import PlayerCombo from "../components/PlayerCombo.jsx";
 import { useScene } from "../context/SceneContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
@@ -67,12 +68,14 @@ export default function Analyze() {
   }, [step, w.type, w.season, meta]);
   useEffect(() => { document.title = `데이터 분석 ${step}/3 | 야구 분석 랩`; }, [step]);
 
-  const teamName = useCallback(id => ((meta?.teams || []).find(t => t.id === id) || {}).name || id, [meta]);
+  const teamName = useCallback(id => (meta ? teamLabel(meta, id) : id), [meta]);
 
   if (fail) return <div className="wrap"><div className="err-box" role="alert"><b>KBO 데이터를 불러오지 못했습니다.</b><br />서버(localhost 등)로 열었는지 확인해 주세요.</div></div>;
   if (!meta) return <div className="wrap"><p className="sub">불러오는 중...</p></div>;
 
-  const ty = TYPES[w.type];
+  const ty0 = TYPES[w.type], hist = isHist(meta, w.season), qual = qualFor(meta, w.season);
+  // 과거 시즌은 공식 시즌 기록만 있어 계산할 수 있는 지표만 고를 수 있다
+  const ty = hist ? { ...ty0, defs: usableDefs(w.type, ty0.defs), defaults: ty0.defaults.filter(k => usableDefs(w.type, ty0.defs).some(d => d.key === k)) } : ty0;
 
   // ---------- 분석 실행 ----------
   async function run() {
@@ -88,18 +91,18 @@ export default function Analyze() {
       result = analyzeTeams(rows, w.teams, w.metrics);
       title = `${w.teams.length}개 팀 ${w.season} 팀 비교`;
     } else {
-      result = analyzePlayer(w.type, rows, w.target, w.metrics, meta.qualify);
+      result = analyzePlayer(w.type, rows, w.target, w.metrics.filter(k => ty.defs.some(d => d.key === k)), qual);
       result.teamName = teamName(result.subject.team);
       try {   // 상세 보고서: 유형(타자·투수)에 맞는 항목을 만들어 함께 저장
-        const monthly = await Api.monthly(w.type, w.target);
-        const mix = w.type === "pitcher" ? await Api.pitchmix(w.target) : null;
-        result.report = build(w.type, rows, w.target, meta.qualify, meta, monthly, mix);
+        const monthly = await Api.monthly(w.type, w.target, w.season);
+        const mix = w.type === "pitcher" ? await Api.pitchmix(w.target, w.season) : null;
+        result.report = build(w.type, rows, w.target, qual, meta, monthly, mix);
       } catch (err) { console.warn("상세 보고서를 만들지 못했습니다", err); }
       title = `${result.subject.name} ${w.season} ${ty.label}`;
     }
     const rec = {
       id: Store.newId(), createdAt: new Date().toISOString(), mode: "record", source: "site", type: w.type, season: w.season, title,
-      params: { target: w.target || "", teams: w.teams.slice(), metrics: w.metrics.slice() }, result,
+      params: { target: w.target || "", teams: w.teams.slice(), metrics: w.metrics.filter(k => ty.defs.some(d => d.key === k)) }, result,
     };
     Store.add(rec);
     navigate(`/result/${encodeURIComponent(rec.id)}`);
@@ -109,7 +112,7 @@ export default function Analyze() {
     if (w.metrics.includes(k)) { update({ metrics: w.metrics.filter(x => x !== k) }); setErrors({}); }
     else { update({ metrics: [...w.metrics, k] }); setErrors({}); }
   };
-  const allKeys = () => TYPES[w.type].defs.map(d => d.key);
+  const allKeys = () => ty.defs.map(d => d.key);
   const selectAll = () => { update({ metrics: allKeys() }); setErrors({}); };
   const clearAll = () => { update({ metrics: [] }); };
   const toggleGroup = (keys, on) => { update({ metrics: on ? w.metrics.filter(k => !keys.includes(k)) : [...w.metrics, ...keys.filter(k => !w.metrics.includes(k))] }); setErrors({}); };
@@ -162,12 +165,13 @@ export default function Analyze() {
         <h1>무엇을 분석할까요?</h1>
         <div className="seg" role="group" aria-label="분석 종류">
           {Object.keys(TYPES).map(k => (
-            <button key={k} type="button" aria-pressed={w.type === k} onClick={() => { if (w.type !== k) { update({ type: k, target: "", teams: [], metrics: TYPES[k].defaults.slice() }); setErrors({}); setRows([]); } }}>{TYPES[k].label}</button>
+            <button key={k} type="button" aria-pressed={w.type === k} onClick={() => { if (w.type !== k) { update({ type: k, target: "", teams: [], metrics: (hist ? usableDefs(k, TYPES[k].defs).filter(d => TYPES[k].defaults.includes(d.key)).map(d => d.key) : TYPES[k].defaults.slice()) }); setErrors({}); setRows([]); } }}>{TYPES[k].label}</button>
           ))}
         </div>
         <div className="row2">
           <div><label className="label" htmlFor="season">시즌</label>
-            <select className="field" id="season" value={w.season} onChange={e => update({ season: Number(e.target.value) })}>{meta.seasons.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+            <select className="field" id="season" value={w.season} onChange={e => { const s = Number(e.target.value), h = isHist(meta, s), keep = h ? usableDefs(w.type, TYPES[w.type].defs).map(d => d.key) : null; setRows([]); update({ season: s, target: "", teams: [], metrics: keep ? w.metrics.filter(k => keep.includes(k)) : w.metrics }); setErrors({}); }}>{(meta.allSeasons || meta.seasons).map(s => <option key={s} value={s}>{s}{s === meta.seasons[0] ? " (최신, 투구별 기록 포함)" : ""}</option>)}</select>
+            {hist && <p className="hint">{meta.historyNote}</p>}</div>
           {w.type === "team" ? (
             <div>
               <span className="label" id="tl">비교할 팀 <span className="count">{w.teams.length} / 4개</span></span>
@@ -178,7 +182,7 @@ export default function Analyze() {
             </div>
           ) : (
             <div>
-              <PlayerCombo rows={rows} type={w.type} value={w.target} qualify={meta.qualify} teamName={teamName} hasError={!!errors.target} label={ty.short}
+              <PlayerCombo rows={rows} type={w.type} value={w.target} qualify={qual} teamName={teamName} hasError={!!errors.target} label={ty.short}
                 onPick={pid => { update({ target: pid }); setErrors({}); }} />
               <p className="hint">{w.target ? "다른 선수를 보려면 칸을 눌러 새로 검색하세요. " : ""}타석이나 이닝이 많은 선수가 먼저 나옵니다. 규정 미달 선수는 순위 없이 참고용으로 분석됩니다.</p>
               <div className="err-msg" role="alert">{errors.target}</div>

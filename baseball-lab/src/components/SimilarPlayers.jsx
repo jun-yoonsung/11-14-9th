@@ -13,6 +13,7 @@ export default function SimilarPlayers({ rec }) {
     let live = true;
     (async () => {
       try {
+        if (rec.season !== (await Api.meta()).seasons[0]) { if (live) setRes(null); return; }   // 스타일 비교는 투구별 기록이 있는 최신 시즌만
         const [meta, rows] = await Promise.all([Api.meta(), rec.type === "batter" ? Api.batters(rec.season) : Api.pitchers(rec.season)]);
         const q = meta.qualify, pid = rec.params.target;
         const me = rows.find(s => s.pid === pid), role = rec.type === "pitcher" && me ? me.pos : null;   // 투수는 같은 역할(선발/불펜)끼리만 비교

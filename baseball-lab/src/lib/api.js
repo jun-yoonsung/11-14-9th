@@ -4,6 +4,7 @@ import { CONFIG } from "../config.js";
 import { BASE } from "./format.js";
 
 const cache = {};
+const LATEST = 2026;   // 투구별 기록이 있는 최신 시즌(meta.seasons[0]과 같다)
 const STR = new Set(["pid", "id", "name", "team", "pos", "hand", "month", "pitch"]);
 const fromDb = () => cloudEnabled && CONFIG.dataFromDb;
 const file = (name, ext) => fetch(`${BASE}data/${name}.${ext}`).then(r => { if (!r.ok) throw new Error(`${name}.${ext} ${r.status}`); return ext === "json" ? r.json() : r.text(); });
@@ -37,9 +38,13 @@ export const Api = {
   // 팀 승률 예측과 팀 역대 성적 (ml/train_team.py), 팀 AI 해설 (tools/gen_team_commentary.mjs)
   teamForecast() { if (!cache.teamForecast) cache.teamForecast = file("team_forecast", "json").catch(() => null); return cache.teamForecast; },
   teamCommentary() { if (!cache.teamCommentary) cache.teamCommentary = file("team_commentary", "json").catch(() => ({})); return cache.teamCommentary; },
-  batters(season) { return this.csv("batters").then(l => l.filter(x => x.season === season)); },
-  pitchers(season) { return this.csv("pitchers").then(l => l.filter(x => x.season === season)); },
-  teams(season) { return this.csv("teams").then(l => l.filter(x => x.season === season)); },
-  monthly(type, pid) { return this.csv(type === "batter" ? "batters_monthly" : "pitchers_monthly").then(l => l.filter(x => x.pid === pid)); },
-  pitchmix(pid) { return this.csv("pitchmix").then(l => l.filter(x => x.pid === pid)); },
+  // 최신 시즌은 batters.csv 등(투구별 기록 포함), 과거 시즌은 *_hist.csv(공식 시즌 기록만)에서 읽는다
+  batters(season) { return this.csv(season === LATEST ? "batters" : "batters_hist").then(l => l.filter(x => x.season === season)); },
+  pitchers(season) { return this.csv(season === LATEST ? "pitchers" : "pitchers_hist").then(l => l.filter(x => x.season === season)); },
+  teams(season) { return this.csv(season === LATEST ? "teams" : "teams_hist").then(l => l.filter(x => x.season === season)); },
+  // 월별·구종 기록은 최신 시즌에만 있다(과거 시즌이면 비어 있는 값)
+  monthly(type, pid, season = LATEST) { return season !== LATEST ? Promise.resolve([]) : this.csv(type === "batter" ? "batters_monthly" : "pitchers_monthly").then(l => l.filter(x => x.pid === pid)); },
+  pitchmix(pid, season = LATEST) { return season !== LATEST ? Promise.resolve([]) : this.csv("pitchmix").then(l => l.filter(x => x.pid === pid)); },
+  records() { if (!cache.records) cache.records = file("records", "json").catch(() => null); return cache.records; },
+  forecastExtra() { if (!cache.forecastExtra) cache.forecastExtra = file("forecast_extra", "json").catch(() => null); return cache.forecastExtra; },
 };

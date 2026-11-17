@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { Api } from "../lib/api.js";
 import { Store } from "../lib/storage.js";
 import { TYPES } from "../lib/stats.js";
@@ -13,6 +13,7 @@ import AiCommentary from "../components/AiCommentary.jsx";
 import Forecast from "../components/Forecast.jsx";
 import Career from "../components/Career.jsx";
 import TeamExtras from "../components/TeamExtras.jsx";
+import { qualFor } from "../lib/season.js";
 import { useScene } from "../context/SceneContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 
@@ -25,7 +26,7 @@ const RAW = {
 function PlayerView({ rec, r }) {
   const TY = TYPES[rec.type];
   const raw = { ...r.raw, ip: ipText(r.raw.outs) };
-  const cols = RAW[rec.type];
+  const cols = RAW[rec.type].filter(c => raw[c[0]] != null);   // 과거 시즌은 없는 열(선발 경기, 투구 수 등)을 뺀다
   return (
     <>
       <AiCommentary rec={rec} />
@@ -66,9 +67,9 @@ function DetailBox({ rec }) {
       try {
         const meta = await Api.meta();
         const rows = await (rec.type === "batter" ? Api.batters(rec.season) : Api.pitchers(rec.season));
-        const monthly = await Api.monthly(rec.type, rec.params.target);
-        const mix = rec.type === "pitcher" ? await Api.pitchmix(rec.params.target) : null;
-        if (!dead) setRep(build(rec.type, rows, rec.params.target, meta.qualify, meta, monthly, mix));
+        const monthly = await Api.monthly(rec.type, rec.params.target, rec.season);
+        const mix = rec.type === "pitcher" ? await Api.pitchmix(rec.params.target, rec.season) : null;
+        if (!dead) setRep(build(rec.type, rows, rec.params.target, qualFor(meta, rec.season), meta, monthly, mix));
       } catch (e) { /* 만들지 못하면 상세 보고서 없이 보여 준다 */ }
     })();
     return () => { dead = true; };
@@ -139,6 +140,7 @@ export default function Result() {
       </div>
     );
   }
+  if (rec.result.kind === "compare") return <Navigate to={rec.result.path} replace />;
   const r = rec.result;
   const sub = r.kind === "team" ? `${rec.season} 시즌, ${r.teams.map(t => t.name).join(", ")}` : `${rec.season} 시즌, ${r.teamName || r.subject.team} 소속, ${r.subject.pos} 포지션`;
 
@@ -155,7 +157,7 @@ export default function Result() {
 
   return (
     <div className="wrap">
-      <div className="result-head"><h1>{rec.title}</h1><p className="sub">{sub}. {dateKo(rec.createdAt)} 분석, KBO 2026 정규시즌 실제 기록</p></div>
+      <div className="result-head"><h1>{rec.title}</h1><p className="sub">{sub}. {dateKo(rec.createdAt)} 분석, KBO {rec.season} 정규시즌 실제 기록</p></div>
       {r.kind === "team" ? <TeamView rec={rec} r={r} /> : <PlayerView rec={rec} r={r} />}
       <div className="act-row">
         <button className="btn pri" type="button" disabled={busy} aria-busy={busy} onClick={savePdf}>{busy ? "보고서를 만드는 중" : "PDF로 저장"}</button>

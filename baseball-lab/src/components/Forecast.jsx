@@ -1,5 +1,36 @@
 import { useEffect, useState } from "react";
 import { Api } from "../lib/api.js";
+import { plot } from "../lib/chart.js";
+
+const PCT = ["K", "BBr", "HRr"];   // 비율 지표는 %로 보여 준다
+const fx = (k, v, d) => (PCT.includes(k) ? `${(v * 100).toFixed(1)}%` : v.toFixed(d));
+
+/** OPS·ERA 외 다른 지표의 앞으로 5년 예측 (ml/train_forecast_extra.py → forecast_extra.json) */
+function ExtraStats({ pid, type, base }) {
+  const [ex, setEx] = useState(null), [sel, setSel] = useState(null);
+  useEffect(() => { let live = true; Api.forecastExtra().then(x => { if (live) setEx(x); }); return () => { live = false; }; }, []);
+  const p = ex?.players?.[pid], list = ex?.meta?.stats?.[type];
+  if (!p || !list) return null;
+  const cur = list.find(s => s.key === (sel || list[0].key)), e = p[cur.key], m = ex.meta.metrics[`${type}:${cur.key}`];
+  if (!e) return null;
+  const g = plot({ series: [{ name: cur.label, color: "#5e6ad2", width: 2.2, pts: [{ x: base, y: e.now }, ...e.pred.map(q => ({ x: base + q.h, y: q.mid, t: `${base + q.h} 예측 ${fx(cur.key, q.mid, cur.digits)}` }))] }], bands: [{ color: "#e3e6f8", pts: [{ x: base, lo: e.now, hi: e.now }, ...e.pred.map(q => ({ x: base + q.h, lo: q.lo, hi: q.hi }))] }], yDigits: PCT.includes(cur.key) ? 3 : cur.digits, H: 200 });
+  return (
+    <div style={{ marginTop: 18 }}>
+      <h3>다른 지표도 예측해 보기</h3>
+      <div className="chips" role="group" aria-label="예측할 지표">{list.map(s => <button key={s.key} className="chip" type="button" aria-pressed={s.key === cur.key} onClick={() => setSel(s.key)}>{s.label}</button>)}</div>
+      <figure className="fc-chart"><svg viewBox={`0 0 ${g.W} ${g.H}`} role="img" aria-label={`${cur.label} 예측 그래프`}>
+        {g.yt.map(t => <g key={t.y}><line x1={g.L} x2={g.W - g.R} y1={t.y} y2={t.y} className="fc-grid" /><text x={g.L - 6} y={t.y + 4} textAnchor="end" className="fc-tick">{t.label}</text></g>)}
+        {g.bandPaths.map((b, i) => <path key={i} d={b.d} className="fc-band" />)}
+        {g.paths.map(q => <path key={q.name} d={q.d} className="fc-line" />)}
+        {g.dots.map((d, i) => <circle key={i} cx={d.x} cy={d.y} r={d.r} className={i ? "fc-dot" : "fc-dot now"}><title>{d.title}</title></circle>)}
+        {g.xt.map(t => <text key={t.label} x={t.x} y={g.H - 10} textAnchor="middle" className="fc-tick">{t.label}</text>)}
+      </svg><figcaption>올해 {fx(cur.key, e.now, cur.digits)}에서 이어지는 예측입니다. 옅은 띠는 80% 범위예요.</figcaption></figure>
+      <div className="table-wrap"><table className="tf-t"><thead><tr><th>시즌</th><th>예상 {cur.label}</th><th>80% 범위</th></tr></thead><tbody>
+        {e.pred.map(q => <tr key={q.h}><td>{base + q.h}</td><td>{fx(cur.key, q.mid, cur.digits)}</td><td>{fx(cur.key, q.lo, cur.digits)} ~ {fx(cur.key, q.hi, cur.digits)}</td></tr>)}</tbody></table></div>
+      <p className="note">시험 구간(2024~{base})에서 1년 뒤 평균 오차는 {fx(cur.key, m[1].mae_chosen, cur.digits + (PCT.includes(cur.key) ? 0 : 0))}로, 작년 기록을 그대로 쓰는 방법({fx(cur.key, m[1].mae_last, cur.digits)})보다 {m[1].mae_chosen < m[1].mae_last ? "작았" : "크거나 같았"}고 80% 범위 적중률은 {Math.round(m[1].coverage80 * 100)}%였어요. OPS·ERA보다 단순하게 만든 예측이라 참고용으로 봐 주세요.</p>
+    </div>
+  );
+}
 
 const METHOD = { ml: "머신러닝 모델", marcel: "최근 3시즌 가중 평균", league: "리그 평균" };
 const f3 = v => v.toFixed(3);
@@ -47,6 +78,7 @@ export default function Forecast({ rec }) {
         </tbody>
       </table></div>
       <p className="note"><b>은퇴 시기</b>: {retire} 현역 확률은 그 해에 KBO 1군 기록이 남아 있을 확률이며, 부상·군 복무·해외 진출도 "기록 없음"으로 잡힙니다.</p>
+      <ExtraStats pid={String(rec.params.target)} type={p.type} base={fc.meta.base_season} />
       <details className="fc-acc"><summary>이 예측은 얼마나 믿을 수 있나요?</summary>
         <ul className="plain">
           <li>2024~{fc.meta.base_season} 시즌은 학습에 쓰지 않고 따로 떼어 두었다가 맞혀 봤어요. 1년 뒤 {isBat ? "OPS" : "ERA"} 평균 오차는 약 {f3(e1.mae_chosen)}로, 작년 기록을 그대로 쓰는 방법({f3(e1.mae_last)})보다 작았습니다.</li>

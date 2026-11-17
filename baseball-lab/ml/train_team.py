@@ -54,8 +54,9 @@ def main():
     base_now = t[t.Season == T.LAST].set_index("Franchise")
     out = {"meta": {"source": "Kaggle: netsong / KBO Player Stats 1982-2026 (CC BY-NC-SA 4.0)을 팀·시즌별로 합산", "base_season": T.LAST, "horizons": HORIZONS, "games": 144, "validation": {}},
            "teams": {}, "history": {}}
+    t["rank"] = t.groupby("Season").wp.rank(ascending=False, method="min").astype(int); t["n"] = t.groupby("Season").wp.transform("size").astype(int)   # 그 시즌 승률 순위(같은 승률이면 같은 순위)와 팀 수
     for f in cur:
-        g = t[t.Franchise == f]; out["history"][f] = [[int(x.Season), int(x.W), int(x.L), int(x.RS), int(x.RA), round(float(x.wp), 3)] for x in g.itertuples()]
+        g = t[t.Franchise == f]; out["history"][f] = [[int(x.Season), int(x.W), int(x.L), int(x.RS), int(x.RA), round(float(x.wp), 3), int(x.rank), int(x.n)] for x in g.itertuples()]
     for h in HORIZONS:
         d = rows(t, h); d = d[d.n >= 2]
         tr = d[d.t + h < VAL_FROM]; va = d[(d.t + h >= VAL_FROM) & (d.t + h < TEST_FROM)]; te = d[d.t + h >= TEST_FROM]; trv = d[d.t + h < TEST_FROM]

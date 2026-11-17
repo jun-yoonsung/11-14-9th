@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Api } from "../lib/api.js";
-import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "../lib/teamview.js";
+import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "../lib/teamview.js";
 
 /** 팀 분석 결과 아래에 붙는 승률 추이·예측과 AI 해설. 파일이 없으면 아무것도 그리지 않는다. */
 export default function TeamExtras({ rec }) {
-  const [d, setD] = useState(null);
+  const [d, setD] = useState(null), [from, setFrom] = useState(2005);
   useEffect(() => {
     let live = true;
     Promise.all([Api.teamForecast(), Api.teamCommentary()]).then(([tf, tc]) => { if (live) setD({ tf, tc }); }).catch(() => {});
@@ -16,7 +16,8 @@ export default function TeamExtras({ rec }) {
   const hasF = tf && rec.season === tf.meta.base_season && ids.some(id => tf.teams[id]);
   const cards = ids.filter(id => tc?.[`${rec.season}-${id}`]);
   if (!hasF && !cards.length) return null;
-  const g = hasF ? teamPlot(ids, names, tf) : null, v = hasF ? tf.meta.validation : null;
+  const g = hasF ? teamPlot(ids, names, tf, {}, from) : null, v = hasF ? tf.meta.validation : null;
+  const sums = hasF ? ids.map(id => [id, teamSummary(tf, id)]).filter(x => x[1]) : [];
   return (
     <>
       {cards.length > 0 && (
@@ -33,7 +34,8 @@ export default function TeamExtras({ rec }) {
       {hasF && g && (
         <section className="sec fc-box" aria-label="팀 승률 예측">
           <h2>팀 승률 추이와 예측 <small className="tag">실험적 기능</small></h2>
-          <p className="sub">2005년 이후 시즌별 승률(실선)과 앞으로 {tf.meta.horizons.length}년 예측(점선)입니다. 승률 .500은 승과 패가 같다는 뜻이에요.</p>
+          <p className="sub">{from}년 이후 시즌별 승률(실선)과 앞으로 {tf.meta.horizons.length}년 예측(점선)입니다. 승률 .500은 승과 패가 같다는 뜻이에요.</p>
+          <div className="seg2" role="group" aria-label="그래프 기간" style={{ margin: "8px 0" }}>{[[2005, "2005년 이후"], [1982, "전체(1982~)"]].map(([y, l]) => <button key={y} type="button" aria-pressed={from === y} onClick={() => setFrom(y)}>{l}</button>)}</div>
           <ul className="legend2">{ids.map((id, i) => <li key={id}><i style={{ background: TEAM_COLORS[i % 4] }} />{names[id]}</li>)}</ul>
           <figure className="fc-chart">
             <svg viewBox={`0 0 ${g.W} ${g.H}`} role="img" aria-label="팀별 시즌 승률 그래프">
@@ -48,6 +50,12 @@ export default function TeamExtras({ rec }) {
             <tbody>{ids.map(id => { const t = tf.teams[id]; return (
               <tr key={id}><td>{names[id]}</td><td>{t ? `${wpText(t.now.wp)} (${t.now.w}승 ${t.now.l}패)` : "-"}</td>
                 {tf.meta.horizons.map(h => { const q = t?.pred.find(x => x.h === h); return <td key={h}>{q ? <>{wpText(q.wp)} <small>({wpText(q.lo)}~{wpText(q.hi)}, 약 {q.wins}승)</small></> : "-"}</td>; })}</tr>); })}</tbody></table></div>
+          {sums.length > 0 && <>
+            <h3 style={{ marginTop: 18 }}>팀 역대 요약</h3>
+            <div className="table-wrap"><table className="tf-t">
+              <thead><tr><th>팀</th><th>통산 승-패</th><th>통산 승률</th><th>최고 시즌</th><th>최저 시즌</th><th>승률 1위</th><th>5위 이내</th></tr></thead>
+              <tbody>{sums.map(([id, s]) => <tr key={id}><td>{names[id]}</td><td>{s.w}-{s.l}</td><td>{wpText(s.wp)}</td><td>{s.best[0]}년 {wpText(s.best[5])}</td><td>{s.worst[0]}년 {wpText(s.worst[5])}</td><td>{s.first}회</td><td>{s.top5}회 / {s.seasons}시즌</td></tr>)}</tbody></table></div>
+            <p className="note">{sums[0][1].from}년(또는 팀 창단 시즌)부터의 기록입니다. 순위는 그 시즌 승률 순서이며, 가을야구 진출 팀 수가 해마다 달라 "5위 이내"는 참고용입니다. 구단 이름이 바뀐 팀은 이어서 계산했습니다.</p></>}
           <details className="fc-acc"><summary>이 예측은 얼마나 믿을 수 있나요?</summary>
             <ul className="plain">
               {tf.meta.horizons.map(h => { const x = v[h], pick = x.mae[x.chosen]; return (

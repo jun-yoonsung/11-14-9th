@@ -8,8 +8,9 @@ import { Store, Auth } from "../lib/storage.js";
 import { dateKo } from "../lib/format.js";
 import { TYPES } from "../lib/stats.js";
 
-const TAG = { batter: "bat", pitcher: "pit", team: "team" };
+const TAG = { batter: "bat", pitcher: "pit", team: "team", compare: "cmp" };
 const metricLabels = rec => {
+  if (rec.result.kind === "compare") return `${rec.result.names.length}명 비교, 리그 백분위 기준`;
   const list = (rec.result.kind === "team" ? rec.result.metrics : rec.result.lines).map(x => x.label);
   return list.length > 8 ? `${list.slice(0, 6).join(", ")} 외 ${list.length - 6}개 (총 ${list.length}개 지표)` : list.join(", ");
 };
@@ -50,7 +51,7 @@ export default function History() {
       <ul className="hist">
         {sorted.map(rec => (
           <li key={rec.id}>
-            <Link className="t" to={`/result/${encodeURIComponent(rec.id)}`}>{rec.title}</Link>
+            <Link className="t" to={rec.result.kind === "compare" ? rec.result.path : `/result/${encodeURIComponent(rec.id)}`}>{rec.title}</Link>
             <div className="ops">
               {confirmId === rec.id ? (
                 <>
@@ -62,7 +63,7 @@ export default function History() {
                 <button className="linkbtn quiet" type="button" aria-label={`${rec.title} 삭제`} onClick={() => setConfirmId(rec.id)}>삭제</button>
               )}
             </div>
-            <div className="meta"><span className={"tag " + TAG[rec.type]}>{TYPES[rec.type].short}</span>{dateKo(rec.createdAt)}, {metricLabels(rec)}</div>
+            <div className="meta"><span className={"tag " + TAG[rec.type]}>{rec.type === "compare" ? "비교" : TYPES[rec.type].short}</span>{dateKo(rec.createdAt)}, {metricLabels(rec)}</div>
           </li>
         ))}
       </ul>

@@ -116,15 +116,19 @@
     <div class="row">
       <div class="block">
         <h3>🖥️ 화면 (프론트엔드) <span class="tag pub">🌐 공개</span></h3>
-        <p class="do">눈에 보이는 8개 화면을 그리고, 지표 계산, 순위·군집 계산, 상세 보고서 만들기, PDF 만들기까지 모두 처리합니다.</p>
+        <p class="do">눈에 보이는 10개 화면(역대 기록·선수 비교 포함)을 그리고, 지표 계산, 순위·군집 계산, 상세 보고서 만들기, PDF 만들기까지 모두 처리합니다.</p>
         <dl class="kv">
           <dt>쓰는 기술</dt><dd>React 19 (화면 부품), Tailwind CSS v4 (디자인), React Router (화면 이동), Vite (빌드 도구), three.js (3D 야구장 배경)</dd>
-          <dt>화면(주소)</dt><dd><code>#/</code> 메인 · <code>#/login</code> <code>#/signup</code> · <code>#/analyze</code> · <code>#/result/번호</code> · <code>#/history</code> · <code>#/rank</code> <code>#/guide</code> (<code>#/rank</code>, <code>#/guide</code>는 로그인 없이 열림)</dd>
+          <dt>화면(주소)</dt><dd><code>#/</code> 메인 · <code>#/login</code> <code>#/signup</code> · <code>#/analyze</code> · <code>#/result/번호</code> · <code>#/history</code> · <code>#/records</code> (역대 기록) · <code>#/compare</code> (선수 2~4명 비교) · <code>#/rank</code> <code>#/guide</code> (<code>#/rank</code>, <code>#/guide</code>는 로그인 없이 열림)</dd>
           <dt>대표 파일</dt><dd><code>src/pages/*.jsx</code> (화면), <code>src/components/*.jsx</code> (공통 부품)</dd>
         </dl>
         <div class="subs">
           <div class="sub"><b>lib/stats.js</b>지표 계산(타자 34개·투수 32개·팀 12개, 묶음별로 정리), 리그 평균과 순위(백분위). “전체 지표 분석”이 이 목록 전체를 한 번에 계산</div>
           <div class="sub"><b>components/AiCommentary.jsx · Forecast.jsx</b>미리 만든 AI 해설 상자, 앞으로 5년 예측(그래프·표·현역 확률)</div>
+          <div class="sub"><b>pages/Records.jsx · lib/season.js</b>역대 통산 순위·시즌 최고 기록·선수 기록 검색(1982~2026), 과거 시즌 분석에서 계산 가능한 지표만 골라 주는 규칙(<code>usableDefs</code>), 시즌별 규정 타석·이닝 기준</div>
+          <div class="sub"><b>pages/Compare.jsx · lib/compare.js</b>선수 2~4명 비교(영역별 막대, 지표 표, 나이별 커리어, 5년 예측), 비교 저장·PDF</div>
+          <div class="sub"><b>components/Career.jsx · TeamExtras.jsx · lib/career.js · teamview.js</b>선수 커리어 그래프, 팀 승률 추이·예측·역대 요약(통산 승률, 최고·최저 시즌)</div>
+          <div class="sub"><b>lib/chart.js · paginate.js</b>화면과 PDF가 같이 쓰는 그래프 좌표 계산, PDF에서 한 쪽을 넘치는 블록을 다음 쪽으로 넘기는 보정</div>
           <div class="sub"><b>lib/role.js</b>투수 선발/불펜 구분 기준(역할별 규정 이닝). 투수는 같은 역할끼리만 비교</div>
           <div class="sub"><b>lib/detail.js</b>타자·투수별 상세 보고서 데이터 만들기</div>
           <div class="sub"><b>lib/rank.js</b>순위 표 열, 유형 버튼 규칙, K-평균 자동 군집, 2차원 지도(PCA), 비슷한 선수 찾기(z-점수 거리)</div>
@@ -169,7 +173,7 @@
         <h3>📊 KBO 데이터 파일 (CSV) <span class="tag pub">🌐 공개</span></h3>
         <p class="do">데이터베이스 대신 쓰는 표 파일입니다. KBO 2026 정규시즌 720경기를 선수·팀·월별로 요약한 값이며, 브라우저가 내려받아 읽기만 합니다.</p>
         <dl class="kv">
-          <dt>대표 파일</dt><dd><code>public/data/batters.csv</code> (타자 364명)<br><code>public/data/pitchers.csv</code> (투수 296명)<br><code>public/data/teams.csv</code> <code>*_monthly.csv</code> <code>pitchmix.csv</code> <code>meta.json</code><br>타자·투수 파일에는 선구안 지표용 열(스윙, 헛스윙, 존 안·밖 투구와 스윙 수)이 들어 있습니다.</dd>
+          <dt>대표 파일</dt><dd><code>public/data/batters.csv</code> (타자 364명)<br><code>public/data/pitchers.csv</code> (투수 296명)<br><code>public/data/batters_hist.csv</code> <code>pitchers_hist.csv</code> <code>teams_hist.csv</code> (1982~2026 시즌 기록, 과거 시즌 분석용) · <code>records.json</code> (역대 기록) · <code>career.json</code> · <code>forecast.json</code> <code>forecast_extra.json</code> <code>team_forecast.json</code> (예측) · <code>commentary.json</code> <code>team_commentary.json</code> (AI 해설)<br><code>public/data/teams.csv</code> <code>*_monthly.csv</code> <code>pitchmix.csv</code> <code>meta.json</code><br>타자·투수 파일에는 선구안 지표용 열(스윙, 헛스윙, 존 안·밖 투구와 스윙 수)이 들어 있습니다.</dd>
         </dl>
         <p class="term"><b>CSV</b>: 쉼표로 칸을 나눈 표 형식의 글자 파일. 엑셀로도 열립니다.</p>
       </div>
@@ -233,6 +237,7 @@
           <dt>넣는 것</dt><dd>원본 <code>kbo_2026_data</code> 폴더 (저장소 맨 위에도 올려 둠)</dd>
           <dt>나오는 것</dt><dd><code>public/data/*.csv</code>(선구안 지표 포함), <code>public/data/meta.json</code></dd>
         </dl>
+        <p class="do" style="margin-top:8px">예측·역대 기록용 Python 스크립트(<code>ml/</code>, Kaggle <i>KBO Player Stats 1982–2026</i> 사용): <code>train_forecast.py</code>(OPS·ERA·현역 확률), <code>train_forecast_extra.py</code>(출루율·장타율·삼진/볼넷/홈런 비율, WHIP·K/9 등), <code>train_team.py</code>(팀 승률), <code>build_career.py</code>(커리어), <code>build_history.py</code>(과거 시즌·역대 기록), <code>fix_official.py</code>(공식 집계 값으로 맞춤, <code>data_quality.json</code>에 기록). 원본 CSV는 재배포 금지라 GitHub에 올리지 않습니다.</p>
         <p class="term"><b>pandas</b>: 파이썬에서 표 데이터를 계산하는 도구.</p>
       </div>
     </div>
@@ -262,6 +267,9 @@
     <tr><td>순위 표의 유형 버튼·기준 숫자를 바꾸고 싶다</td><td class="tw"><code>src/lib/rank.js</code> (RULES, FEAT: 비슷한 선수·군집에 쓰는 지표)</td></tr>
     <tr><td>AI 해설을 새로 만들고 싶다</td><td class="tw"><code>tools/.env</code>에 키를 넣고 <code>node tools/gen_commentary.mjs</code> (결과: <code>public/data/commentary.json</code>, 이미 만든 선수는 건너뜀)</td></tr>
     <tr><td>예측 모델을 다시 학습하고 싶다</td><td class="tw"><code>ml/raw/</code>에 Kaggle CSV 2개를 넣고 <code>python3 ml/train_forecast.py</code> (결과: <code>public/data/forecast.json</code>, <code>ml/metrics.json</code>). 모델 후보 비교는 <code>ml/compare_models.py</code>, <code>ml/compare_classifiers.py</code></td></tr>
+    <tr><td>역대 기록(통산·시즌 최고) 목록을 바꾸고 싶다</td><td class="tw"><code>ml/build_history.py</code> 실행 → <code>public/data/records.json</code>, 화면은 <code>src/pages/Records.jsx</code></td></tr>
+    <tr><td>선수 비교(최대 인원, 앞선다고 보는 기준)를 바꾸고 싶다</td><td class="tw"><code>src/lib/compare.js</code> (LEAD, 계산), <code>src/pages/Compare.jsx</code> (화면), <code>src/pages/History.jsx</code> (저장된 비교 열기)</td></tr>
+    <tr><td>PDF 쪽 나누기·넘침을 고치고 싶다</td><td class="tw"><code>src/lib/paginate.js</code>, 쪽 내용은 <code>src/lib/report.js</code></td></tr>
     <tr><td>비슷한 선수 표·스타일 지도를 바꾸고 싶다</td><td class="tw"><code>src/components/SimilarPlayers.jsx</code>, <code>src/components/ClusterMap.jsx</code>, 계산은 <code>src/lib/rank.js</code> (similar, pca2)</td></tr>
     <tr><td>지표 설명 글을 바꾸고 싶다</td><td class="tw"><code>src/lib/detail.js</code> (지표 정의의 설명 문장), <code>src/pages/Guide.jsx</code> (용어 설명)</td></tr>
     <tr><td>실제 로그인과 DB를 켜고 싶다</td><td class="tw"><code>src/config.js</code>에 Firebase 연결 값 넣기 → <code>firestore.rules</code> 올리기 → <code>python3 tools/upload_firestore.py 키파일.json</code></td></tr>

@@ -1,5 +1,6 @@
 /* 상세 분석 보고서 데이터 만들기 (화면은 components/DetailReport.jsx) */
 import { ROLE_MIN_OUTS, roleLabel, pitcherQual, pitcherQualText } from "./role.js";
+import { usableDefs, teamLabel } from "./season.js";
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   const div = (a, b) => (b ? a / b : null);
@@ -100,6 +101,7 @@ import { ROLE_MIN_OUTS, roleLabel, pitcherQual, pitcherQualText } from "./role.j
 
   // 한 선수의 모든 지표를 리그와 비교해 계산한다
   function measure(C, rows, line, q) {
+    // (과거 시즌이면 C.defs는 build가 이미 계산 가능한 지표만 남긴 것)
     const qual = (C.peers ? C.peers(rows, line) : rows).filter(r => C.qualify(r, q));
     const isQ = C.qualify(line, q);
     const league = sumLine(qual);
@@ -121,12 +123,14 @@ import { ROLE_MIN_OUTS, roleLabel, pitcherQual, pitcherQualText } from "./role.j
 
   // ---------- 보고서 만들기 ----------
   function build(type, rows, pid, q, meta, monthly, mix) {
-    const C = CFG[type];
     const line = rows.find(r => r.pid === pid);
+    const hist = line.season !== meta.seasons[0];   // 과거 시즌: 공식 시즌 기록만 있어 계산 가능한 지표만 쓴다
+    const base = CFG[type];
+    const C = hist ? { ...base, defs: usableDefs(type, base.defs), similarKeys: base.similarKeys.filter(k => usableDefs(type, base.defs).some(d => d.key === k)) } : base;
     const isQ = C.qualify(line, q);
     const items = measure(C, rows, line, q);
     const by = Object.fromEntries(items.map(i => [i.key, i]));
-    const teamName = id => ((meta.teams || []).find(t => t.id === id) || {}).name || id;
+    const teamName = id => teamLabel(meta, id);
 
     // 능력 프로필: 영역별 백분위 평균
     const profile = Object.keys(C.groups).map(g => {
@@ -191,7 +195,7 @@ import { ROLE_MIN_OUTS, roleLabel, pitcherQual, pitcherQualText } from "./role.j
 
     // 비슷한 선수: 주요 지표 백분위 거리가 가까운 순서
     const sims = C.similarKeys.map(k => C.defs.find(d => d.key === k));
-    const role = type === "pitcher" ? line.pos : null;
+    const role = type === "pitcher" && ROLE_MIN_OUTS[line.pos] ? line.pos : null;
     const simPool = role ? rows.filter(r => r.pos === role && r.outs >= ROLE_MIN_OUTS[role]) : qual;
     const valsOf = d => simPool.map(d.calc).filter(x => x != null);
     const allVals = sims.map(valsOf);
@@ -209,13 +213,13 @@ import { ROLE_MIN_OUTS, roleLabel, pitcherQual, pitcherQualText } from "./role.j
     if (!isQ) notes.push(`이 선수는 규정(${C.qualText(q, line.pos)})을 채우지 못해 순위는 매기지 않았고, 백분위는 규정을 채운 ${type === "pitcher" ? roleLabel(line.pos) : C.noun} ${items[0].n}명과 비교한 참고용 값입니다.`);
     notes.push(`리그 평균과 백분위는 규정을 채운 ${C.noun} ${items[0].n}명을 기준으로 계산했습니다. 백분위 91은 리그 ${C.noun}의 91%보다 좋은 기록이라는 뜻이고, ${type === "pitcher" ? "ERA·WHIP처럼 낮을수록 좋은 지표도 같은 방향으로 맞췄습니다." : "삼진 비율처럼 낮을수록 좋은 지표도 같은 방향으로 맞췄습니다."}`);
     notes.push("한 시즌의 기록은 운과 표본 크기의 영향을 받습니다. 타자는 타석, 투수는 이닝이 적을수록 수치가 크게 흔들립니다.");
-    notes.push(`${meta.note || "KBO 정규시즌 경기 기록입니다."} 2루타·3루타·사구·희생플라이는 투구별 기록의 타석 결과에서 집계해 공식 기록과 소폭 다를 수 있습니다.`);
+    notes.push(hist ? (meta.historyNote || "과거 시즌은 공식 시즌 기록입니다.") : `${meta.note || "KBO 정규시즌 경기 기록입니다."} 투구별 기록에서 집계한 값 중 공식 집계(Kaggle KBO Player Stats)와 다른 값은 공식 값으로 바꿨습니다(ml/data_quality.json).`);
     if (type === "pitcher") notes.push("수비 무관 평균자책(FIP)은 약식 상수 3.10을 사용한 값이라 공식 기록과 다를 수 있습니다.");
 
     return {
       version: 1, type, season: line.season, qualified: isQ, qualText: C.qualText(q, line.pos), noun: type === "pitcher" ? roleLabel(line.pos) : C.noun, leagueN: items[0].n,
       subject: { name: line.name, team: teamName(line.team), pos: line.pos },
-      headline, profile, items, strengths, weaknesses, composition, trend, pitchMix, similar, similarTitle: role ? `비슷한 유형의 ${roleLabel(role)}` : `비슷한 유형의 타자`, notes,
+      headline, profile, items, strengths, weaknesses, composition, trend, pitchMix, similar, similarTitle: role ? `비슷한 유형의 ${roleLabel(role)}` : `비슷한 유형의 ${type === "pitcher" ? "투수" : "타자"}`, notes,
     };
   }
 

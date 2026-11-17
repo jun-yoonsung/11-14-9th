@@ -53,6 +53,11 @@
 - 팀 승률(시험 2019~2026, 팀·시즌 80개): 1년 뒤 평균 오차 0.055(작년 승률 0.068), 2년 0.058(0.071), 3년 0.062(0.071). 3년 뒤는 사실상 .500으로 수렴하는 방법이 뽑혔습니다.
 - 최신 수치는 `metrics.json`과 화면의 "이 예측은 얼마나 믿을 수 있나요?"에서 확인합니다.
 
+## 5-1. 다른 지표 예측 (`train_forecast_extra.py`)
+- 대상: 타자 출루율·장타율·삼진 비율·볼넷 비율·홈런 비율, 투수 WHIP·9이닝당 삼진·9이닝당 볼넷·9이닝당 피홈런. 같은 시간 순서 검증(학습 ~2020, 보정·선택 2021~2023, 시험 2024~2026)과 80% 범위 보정을 쓰고, 지표·시점마다 작년 값/Marcel/리그 평균/모델 중 검증 1등을 고릅니다.
+- OPS·ERA용 모델처럼 모델을 폭넓게 비교하지 않은 단순한 구성이라 **참고용**입니다. 지표별 시험 오차와 80% 적중률은 `forecast_extra.json`의 `meta.metrics`와 화면 안내에 있습니다.
+- 팀 간 상대 전적, 경기별 기록은 데이터에 없어 다루지 않습니다.
+
 ## 6. 한계 (솔직한 정리)
 - **"제일 정확한 모델"이라고 보장하지 않습니다.** 후보 중 검증 구간 기준 최선이며, 타자는 트리 계열 모델끼리 차이가 사실상 없었습니다.
 - 투수 시험 구간 표본이 146~282개로 작아서 모델 사이의 작은 차이는 우연일 수 있습니다. 투수 시험 구간에서는 랜덤포레스트(1.106)·ExtraTrees(1.108)가 선택된 LightGBM(MAE)(1.130)보다 나았지만(1~5년 평균), 시험 결과를 보고 모델을 바꾸지 않았습니다.
@@ -67,6 +72,7 @@
 1. Kaggle에서 CSV 2개를 받아 `ml/raw/`에 둡니다(`kbo_batting_stats_season_1982-2026.csv`, `kbo_pitching_stats_season_1982-2026.csv`).
 2. `python3 ml/train_forecast.py` → `public/data/forecast.json`, `ml/metrics.json` 갱신.
 3. 커리어·팀: `python3 ml/build_career.py`, `python3 ml/train_team.py`.
+3-1. 다른 지표 예측: `python3 ml/train_forecast_extra.py` → `forecast_extra.json`. 과거 시즌·역대 기록: `python3 ml/build_history.py` → `batters_hist.csv`, `pitchers_hist.csv`, `teams_hist.csv`, `records.json`. 2026 값을 공식 집계로 맞춤: `python3 ml/fix_official.py`(여러 번 실행해도 같은 결과, 바뀐 값은 `data_quality.json`).
 4. 모델을 다시 비교하려면 `python3 ml/compare_models.py`, `python3 ml/compare_ensembles.py`, `python3 ml/compare_classifiers.py`.
 5. 필요한 패키지: pandas, numpy, scikit-learn, xgboost, lightgbm.
 

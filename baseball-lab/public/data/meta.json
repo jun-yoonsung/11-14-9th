@@ -64,5 +64,340 @@
  "range": [
   "2026-03-28",
   "2026-10-12"
- ]
+ ],
+ "allSeasons": [
+  2026,
+  2025,
+  2024,
+  2023,
+  2022,
+  2021,
+  2020,
+  2019,
+  2018,
+  2017,
+  2016,
+  2015,
+  2014,
+  2013,
+  2012,
+  2011,
+  2010,
+  2009,
+  2008,
+  2007,
+  2006,
+  2005,
+  2004,
+  2003,
+  2002,
+  2001,
+  2000,
+  1999,
+  1998,
+  1997,
+  1996,
+  1995,
+  1994,
+  1993,
+  1992,
+  1991,
+  1990,
+  1989,
+  1988,
+  1987,
+  1986,
+  1985,
+  1984,
+  1983,
+  1982
+ ],
+ "seasonInfo": {
+  "1982": {
+   "games": 80,
+   "batterPa": 248,
+   "pitcherOuts": 240,
+   "teams": 6
+  },
+  "1983": {
+   "games": 99,
+   "batterPa": 307,
+   "pitcherOuts": 297,
+   "teams": 6
+  },
+  "1984": {
+   "games": 100,
+   "batterPa": 310,
+   "pitcherOuts": 300,
+   "teams": 6
+  },
+  "1985": {
+   "games": 110,
+   "batterPa": 341,
+   "pitcherOuts": 330,
+   "teams": 6
+  },
+  "1986": {
+   "games": 107,
+   "batterPa": 332,
+   "pitcherOuts": 321,
+   "teams": 7
+  },
+  "1987": {
+   "games": 108,
+   "batterPa": 335,
+   "pitcherOuts": 324,
+   "teams": 7
+  },
+  "1988": {
+   "games": 107,
+   "batterPa": 332,
+   "pitcherOuts": 321,
+   "teams": 7
+  },
+  "1989": {
+   "games": 117,
+   "batterPa": 363,
+   "pitcherOuts": 351,
+   "teams": 7
+  },
+  "1990": {
+   "games": 120,
+   "batterPa": 372,
+   "pitcherOuts": 360,
+   "teams": 7
+  },
+  "1991": {
+   "games": 127,
+   "batterPa": 394,
+   "pitcherOuts": 381,
+   "teams": 8
+  },
+  "1992": {
+   "games": 126,
+   "batterPa": 391,
+   "pitcherOuts": 378,
+   "teams": 8
+  },
+  "1993": {
+   "games": 125,
+   "batterPa": 388,
+   "pitcherOuts": 375,
+   "teams": 8
+  },
+  "1994": {
+   "games": 126,
+   "batterPa": 391,
+   "pitcherOuts": 378,
+   "teams": 8
+  },
+  "1995": {
+   "games": 126,
+   "batterPa": 391,
+   "pitcherOuts": 378,
+   "teams": 8
+  },
+  "1996": {
+   "games": 125,
+   "batterPa": 388,
+   "pitcherOuts": 375,
+   "teams": 8
+  },
+  "1997": {
+   "games": 125,
+   "batterPa": 388,
+   "pitcherOuts": 375,
+   "teams": 8
+  },
+  "1998": {
+   "games": 129,
+   "batterPa": 400,
+   "pitcherOuts": 387,
+   "teams": 8
+  },
+  "1999": {
+   "games": 132,
+   "batterPa": 409,
+   "pitcherOuts": 396,
+   "teams": 8
+  },
+  "2000": {
+   "games": 134,
+   "batterPa": 415,
+   "pitcherOuts": 402,
+   "teams": 8
+  },
+  "2001": {
+   "games": 131,
+   "batterPa": 406,
+   "pitcherOuts": 393,
+   "teams": 8
+  },
+  "2002": {
+   "games": 137,
+   "batterPa": 425,
+   "pitcherOuts": 411,
+   "teams": 8
+  },
+  "2003": {
+   "games": 136,
+   "batterPa": 422,
+   "pitcherOuts": 408,
+   "teams": 8
+  },
+  "2004": {
+   "games": 132,
+   "batterPa": 409,
+   "pitcherOuts": 396,
+   "teams": 8
+  },
+  "2005": {
+   "games": 138,
+   "batterPa": 428,
+   "pitcherOuts": 414,
+   "teams": 8
+  },
+  "2006": {
+   "games": 125,
+   "batterPa": 388,
+   "pitcherOuts": 375,
+   "teams": 8
+  },
+  "2007": {
+   "games": 125,
+   "batterPa": 388,
+   "pitcherOuts": 375,
+   "teams": 8
+  },
+  "2008": {
+   "games": 130,
+   "batterPa": 403,
+   "pitcherOuts": 390,
+   "teams": 8
+  },
+  "2009": {
+   "games": 133,
+   "batterPa": 412,
+   "pitcherOuts": 399,
+   "teams": 8
+  },
+  "2010": {
+   "games": 135,
+   "batterPa": 418,
+   "pitcherOuts": 405,
+   "teams": 8
+  },
+  "2011": {
+   "games": 135,
+   "batterPa": 418,
+   "pitcherOuts": 405,
+   "teams": 8
+  },
+  "2012": {
+   "games": 131,
+   "batterPa": 406,
+   "pitcherOuts": 393,
+   "teams": 8
+  },
+  "2013": {
+   "games": 128,
+   "batterPa": 397,
+   "pitcherOuts": 384,
+   "teams": 9
+  },
+  "2014": {
+   "games": 128,
+   "batterPa": 397,
+   "pitcherOuts": 384,
+   "teams": 9
+  },
+  "2015": {
+   "games": 149,
+   "batterPa": 462,
+   "pitcherOuts": 447,
+   "teams": 10
+  },
+  "2016": {
+   "games": 154,
+   "batterPa": 477,
+   "pitcherOuts": 462,
+   "teams": 10
+  },
+  "2017": {
+   "games": 147,
+   "batterPa": 456,
+   "pitcherOuts": 441,
+   "teams": 10
+  },
+  "2018": {
+   "games": 144,
+   "batterPa": 446,
+   "pitcherOuts": 432,
+   "teams": 10
+  },
+  "2019": {
+   "games": 146,
+   "batterPa": 453,
+   "pitcherOuts": 438,
+   "teams": 10
+  },
+  "2020": {
+   "games": 143,
+   "batterPa": 443,
+   "pitcherOuts": 429,
+   "teams": 10
+  },
+  "2021": {
+   "games": 145,
+   "batterPa": 450,
+   "pitcherOuts": 435,
+   "teams": 10
+  },
+  "2022": {
+   "games": 144,
+   "batterPa": 446,
+   "pitcherOuts": 432,
+   "teams": 10
+  },
+  "2023": {
+   "games": 152,
+   "batterPa": 471,
+   "pitcherOuts": 456,
+   "teams": 10
+  },
+  "2024": {
+   "games": 146,
+   "batterPa": 453,
+   "pitcherOuts": 438,
+   "teams": 10
+  },
+  "2025": {
+   "games": 142,
+   "batterPa": 440,
+   "pitcherOuts": 426,
+   "teams": 10
+  },
+  "2026": {
+   "games": 143,
+   "batterPa": 443,
+   "pitcherOuts": 429,
+   "teams": 10
+  }
+ },
+ "historyNote": "1982~2025 시즌은 KBO 공식 기록(Kaggle KBO Player Stats 1982–2026, CC BY-NC-SA 4.0)이라 투구별 기록(스윙·구속 등)이 없어 기본 기록 지표만 계산합니다.",
+ "teamNames": {
+  "OB": "OB(현 두산)",
+  "MBC": "MBC(현 LG)",
+  "해태": "해태(현 KIA)",
+  "빙그레": "빙그레(현 한화)",
+  "SK": "SK(현 SSG)",
+  "넥센": "넥센(현 키움)",
+  "우리": "우리(현 키움)",
+  "히어로즈": "히어로즈(현 키움)",
+  "청보": "청보",
+  "태평양": "태평양",
+  "삼미": "삼미",
+  "쌍방울": "쌍방울",
+  "현대": "현대"
+ }
 }

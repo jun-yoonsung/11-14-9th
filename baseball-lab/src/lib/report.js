@@ -4,7 +4,9 @@ import { Api } from "./api.js";
 import { esc, dateKo, dateIso, beadColor, topText, metricNote } from "./format.js";
 import { CAREER, careerPlot, careerSummary } from "./career.js";
 import { svgString } from "./chart.js";
-import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "./teamview.js";
+import { qualFor } from "./season.js";
+import { paginate } from "./paginate.js";
+import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamview.js";
   const T = () => TYPES;
 
   const CSS = `
@@ -99,6 +101,10 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "./teamview.js";
   .rp-leg2 i { display: inline-block; width: 5mm; height: 0; border-top: 0.9mm solid; margin-right: 1.5mm; vertical-align: middle; } .rp-leg2 i.d { border-top-style: dashed; border-top-width: 0.6mm; }
   .rp-two2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; } .rp-two2 > div { border: 0.75pt solid #d6dbe6; padding: 2.5mm 3.5mm; font-size: 9pt; line-height: 1.55; }
   .rp-two2 h3 { font-size: 10pt; margin-bottom: 1mm; } .rp-two2 li { margin: 0.5mm 0 0 3.5mm; }
+  .rp-cbar { margin: 2.2mm 0; } .rp-cbar > b { display: block; font-size: 9pt; margin-bottom: 0.6mm; }
+  .rp-crow { display: grid; grid-template-columns: 1fr 8mm; gap: 2mm; align-items: center; font-size: 7.8pt; color: #5c667d; margin: 0.5mm 0; }
+  .rp-ct { height: 2.6mm; background: #eceff5; border-radius: 1.3mm; } .rp-ct i { display: block; height: 100%; border-radius: 1.3mm; }
+  .rp-cmpt td small { color: #5c667d; margin-left: 1mm; font-size: 7pt; } .rp-cmpt td.ld { font-weight: 700; }
   .rp-mn li { margin: 0.8mm 0 0.8mm 4mm; font-size: 9pt; } .rp-mn b { margin-right: 1.2mm; }
   `;
 
@@ -107,7 +113,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "./teamview.js";
   const pageWrap = (inner, n, total, rec) => `<section class="rp-page">
     <div class="rp-top"><b>야구 분석 랩</b><span>분석 보고서, ${esc(dateKo(rec.createdAt))}</span></div>
     ${inner}
-    <div class="rp-foot"><span>화면과 보고서의 선수와 팀 기록은 KBO 2026 정규시즌 경기 기록을 집계한 값입니다.</span><span>${n} / ${total}</span></div></section>`;
+    <div class="rp-foot"><span>화면과 보고서의 선수와 팀 기록은 KBO ${rec.season} 정규시즌 기록입니다.</span><span>${n} / ${total}</span></div></section>`;
 
   const METHOD = { ml: "머신러닝 모델", marcel: "최근 3시즌 가중 평균", league: "리그 평균" };
   const f3 = v => Number(v).toFixed(3);
@@ -154,8 +160,17 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "./teamview.js";
       <p class="rp-fine">출처: Kaggle KBO Player Stats 1982–2026 (netsong, KBO 공식 기록 기반, CC BY-NC-SA 4.0). 시즌 중 팀을 옮긴 선수는 시즌 기록을 합쳐 계산했습니다.</p></div>`;
   }
 
+  // OPS·ERA 외 다른 지표 예측 표(forecast_extra.json)
+  const PCTK = ["K", "BBr", "HRr"], fxv = (k, v, d) => (PCTK.includes(k) ? `${(v * 100).toFixed(1)}%` : Number(v).toFixed(d));
+  function extraTable(ex, p, rec, fc) {
+    const e = ex && ex.players[String(rec.params.target)], list = ex && ex.meta.stats[rec.type];
+    if (!e || !list) return "";
+    const b = fc.meta.base_season, rows = list.filter(s => e[s.key]).map(s => `<tr><td>${esc(s.label)}</td><td>${fxv(s.key, e[s.key].now, s.digits)}</td>${e[s.key].pred.map(q => `<td>${fxv(s.key, q.mid, s.digits)}</td>`).join("")}</tr>`).join("");
+    return `<p class="rp-pv" style="margin-top:2.5mm"><b>다른 지표 예측</b> (예상값, OPS·ERA보다 단순한 모델이라 참고용)</p><table class="rp-sm"><thead><tr><th>지표</th><th>${b} (올해)</th>${[1, 2, 3, 4, 5].map(h => `<th>${b + h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
   // 앞으로 5년 예측 (ml/train_forecast.py). 그래프는 도형만 그리고 글자는 HTML로 둔다(PDF 변환에서 글꼴이 깨지지 않게)
-  function forecastBlock(fc, p, rec) {
+  function forecastBlock(fc, p, rec, fxAll) {
     if (!fc || !p || rec.season !== fc.meta.base_season) return "";
     const isBat = p.type === "batter", name = isBat ? "OPS" : "평균자책점(ERA)", m = fc.meta.metrics[p.type], e1 = m.reg[1], a1 = m.act[1];
     const pts = [{ year: fc.meta.base_season, mid: p.now, lo: p.now, hi: p.now }, ...p.pred];
@@ -174,6 +189,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "./teamview.js";
       <div class="rp-fcbox">${svg}${xl}</div><p class="rp-fine">선은 예측값, 옅은 띠는 실제 값이 들어올 가능성이 80%인 범위입니다. 먼 미래일수록 띠가 넓습니다.</p>
       <table class="rp-sm" style="margin-top:2mm"><thead><tr><th>시즌</th><th>나이</th><th>예상 ${isBat ? "OPS" : "ERA"}</th><th>80% 범위</th><th>현역일 확률</th><th>예측 방법</th></tr></thead><tbody>
         <tr><td>${fc.meta.base_season} (올해)</td><td>${p.age}세</td><td>${f3(p.now)}</td><td>-</td><td>-</td><td>실제 기록</td></tr>${rows}</tbody></table>
+      ${extraTable(fxAll, p, rec, fc)}
       <p class="rp-pv" style="margin-top:2mm"><b>은퇴 시기</b>: ${retire} 현역 확률은 그 해에 KBO 1군 기록이 남아 있을 확률이며, 부상·군 복무·해외 진출도 "기록 없음"으로 잡힙니다.</p>
       <ul class="rp-note" style="margin-top:1.5mm">
         <li>${fc.meta.base_season - 2}~${fc.meta.base_season} 시즌은 학습에 쓰지 않고 따로 떼어 맞혀 봤습니다. 1년 뒤 ${isBat ? "OPS" : "ERA"} 평균 오차는 약 ${f3(e1.mae_chosen)}로 작년 기록을 그대로 쓰는 방법(${f3(e1.mae_last)})보다 작았고, 80% 범위 적중률은 ${Math.round(e1.coverage80 * 100)}%였습니다.</li>
@@ -186,7 +202,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "./teamview.js";
   // AI 해설과 예측은 내용이 길어 각각 한 쪽으로 만든다 (없는 쪽은 만들지 않는다)
   function extraPages(extra, rec) {
     if (!extra) return [];
-    return [aiBlock(extra.ai, rec), careerBlock(extra, rec), forecastBlock(extra.fc, extra.fc && extra.fc.players[String(rec.params.target)], rec)].filter(Boolean).map(b => `<div style="margin-top:9mm">${b}</div>`);
+    return [aiBlock(extra.ai, rec), careerBlock(extra, rec), forecastBlock(extra.fc, extra.fc && extra.fc.players[String(rec.params.target)], rec, extra.fx)].filter(Boolean).map(b => `<div style="margin-top:9mm">${b}</div>`);
   }
 
   function playerPages(rec, d, extra) {
@@ -205,12 +221,13 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "./teamview.js";
       ? [["g", "경기"], ["pa", "타석"], ["ab", "타수"], ["h", "안타"], ["d2", "2루타"], ["d3", "3루타"], ["hr", "홈런"], ["rbi", "타점"], ["r", "득점"], ["bb", "볼넷"], ["hbp", "사구"], ["so", "삼진"], ["sf", "희생플라이"]]
       : [["g", "경기"], ["gs", "선발"], ["ip", "이닝"], ["h", "피안타"], ["hr", "피홈런"], ["bb", "볼넷"], ["so", "삼진"], ["er", "자책점"], ["r", "실점"], ["pitches", "투구 수"]];
     const raw = Object.assign({}, r.raw, { ip: ipText(r.raw.outs) });
-    const rawTable = `<table><thead><tr>${rawCols.map(c => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody><tr>${rawCols.map(c => `<td>${esc(raw[c[0]])}</td>`).join("")}</tr></tbody></table>`;
+    const rc = rawCols.filter(c => raw[c[0]] != null);   // 과거 시즌에 없는 열은 뺀다
+    const rawTable = `<table><thead><tr>${rc.map(c => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody><tr>${rc.map(c => `<td>${esc(raw[c[0]])}</td>`).join("")}</tr></tbody></table>`;
     const how = r.lines.map(l => `<li><b>${esc(l.label)}</b>: ${esc(l.how)}${l.better === "low" ? " (낮을수록 좋음)" : ""}</li>`).join("");
     const unq = r.qualified ? "" : `<li>이 선수는 규정(${esc(r.qualText)})을 채우지 못해 순위는 매기지 않고 백분위만 참고용으로 계산했습니다.</li>`;
 
     const p1 = `<h1 class="rp-title">${esc(rec.title)}</h1>
-      <p class="rp-meta">${esc(teamName)} 소속, ${esc(s.pos)} 포지션, ${rec.season} 시즌. KBO 2026 정규시즌 실제 기록으로 분석했습니다.</p>
+      <p class="rp-meta">${esc(teamName)} 소속, ${esc(s.pos)} 포지션, ${rec.season} 시즌. KBO ${rec.season} 정규시즌 실제 기록으로 분석했습니다.</p>
       <div class="rp-sec"><h2>핵심 요약</h2><div class="rp-kpis" style="--cols:${r.lines.length === 4 ? 4 : Math.min(r.lines.length, 3)}">${kpis}</div></div>
       <div class="rp-sec"><h2>리그 안에서의 위치</h2><div class="rp-pcts">${bars}
         <div class="rp-scale"><div></div><div><span>하위</span><span>평균</span><span>상위</span></div><div></div></div></div>
@@ -286,6 +303,28 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "./teamview.js";
 
   function ipText(outs) { if (outs == null) return "-"; const w = Math.floor(outs / 3), r = outs % 3; return r ? `${w} ${r}/3` : String(w); }
 
+  // 선수 비교 PDF(2~4명): 요약·영역 막대·나이별 커리어 / 지표별 표 / 예측 비교
+  function comparePages(rec) {
+    const r = rec.result, c = r.cmp, ch = r.charts || {}, col = ch.colors || ["#5e6ad2", "#d0312d", "#17734f", "#c9892b"], n = c.names.length;
+    const leg = `<div class="rp-leg2">${c.names.map((nm, i) => `<span><i style="border-color:${col[i]}"></i>${esc(nm)}</span>`).join("")}</div>`;
+    const bars = c.profile.map(g => `<div class="rp-cbar"><b>${esc(g.name)}</b>${g.scores.map((s, i) => `<div class="rp-crow"><div class="rp-ct"><i style="width:${s}%;background:${col[i]}"></i></div><span>${s}</span></div>`).join("")}</div>`).join("");
+    const groups = [...new Set(c.items.map(i => i.group))];
+    const trs = groups.map(g => `<tr class="gh"><td colspan="${n + 1}">${esc(g)}</td></tr>` + c.items.filter(i => i.group === g).map(it =>
+      `<tr><td>${esc(it.label)}${it.label !== it.en ? ` <span style="color:#5c667d;font-size:7pt">${esc(it.en)}</span>` : ""}</td>${it.vals.map((v, i) => `<td class="${it.lead === i ? "ld" : ""}" style="${it.lead === i ? `color:${col[i]}` : ""}">${esc(v.display)}${v.pct == null ? "" : `<small>상위 ${100 - v.pct}%</small>`}</td>`).join("")}</tr>`).join("")).join("");
+    const p1 = `<h1 class="rp-title">${esc(rec.title)}</h1>
+      <p class="rp-meta">${rec.season} 시즌, 같은 종류 선수 ${n}명을 리그 백분위로 비교했습니다.</p>
+      <div class="rp-sec"><h2>한눈에 보기</h2><div class="rp-callout">${esc(c.summary)}</div></div>
+      <div class="rp-sec"><h2>영역별 비교</h2><p class="rp-pv" style="margin-bottom:1.5mm">영역별 리그 백분위 평균입니다(높을수록 좋음).</p>${leg}${bars}</div>
+      ${ch.age ? `<div class="rp-sec"><h2>나이별 커리어 비교 (${esc(c.unit)})</h2>${leg}${chartBox(ch.age)}</div>` : ""}`;
+    const p2 = `<div class="rp-sec" style="margin-top:9mm"><h2>지표별 비교</h2><table class="rp-sm rp-cmpt"><thead><tr><th>지표</th>${c.names.map((nm, i) => `<th style="color:${col[i]}">${esc(nm)}</th>`).join("")}</tr></thead><tbody>${trs}</tbody></table>
+      <p class="rp-fine">굵은 색 글씨는 리그 백분위가 두 번째로 좋은 선수보다 8점 이상 앞선 선수입니다. 순위와 백분위는 각자 같은 종류의 규정 충족 선수 기준입니다.</p></div>`;
+    const fcs = ch.fcs, d = ch.digits;
+    const p3 = ch.fut ? `<div class="rp-sec" style="margin-top:9mm"><h2>앞으로 5년 예측 비교 (실험적 기능)</h2><p class="rp-pv" style="margin-bottom:2mm">선은 예측값, 옅은 띠는 실제 값이 들어올 가능성이 80%인 범위입니다.</p>${leg}${chartBox(ch.fut)}
+      <table class="rp-sm" style="margin-top:2.5mm"><thead><tr><th>시즌</th>${c.names.map(nm => `<th>${esc(nm)}</th>`).join("")}</tr></thead><tbody>${fcs[0].pred.map((q, k) => `<tr><td>${q.year}</td>${fcs.map(f => { const x = f.pred[k]; return `<td>${x.mid.toFixed(d)} (${x.lo.toFixed(d)}~${x.hi.toFixed(d)}, 현역 ${Math.round(x.active * 100)}%)</td>`; }).join("")}</tr>`).join("")}</tbody></table>
+      <p class="rp-fine">은퇴 시기 예측: ${c.names.map((nm, i) => `${esc(nm)} ${fcs[i].retire_by ? fcs[i].retire_by + "세" : "5년 안에는 높게 유지"}`).join(", ")}. 정확도와 한계는 선수별 분석 결과 화면에 있습니다. 학습 데이터: Kaggle KBO Player Stats 1982–2026 (netsong, CC BY-NC-SA 4.0).</p></div>` : "";
+    return [p1, p2, p3].filter(Boolean);
+  }
+
   // 팀 AI 해설 + 승률 추이·예측 (있는 것만 쪽으로 만든다)
   function teamExtra(rec, extra) {
     if (!extra) return [];
@@ -302,12 +341,14 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "./teamview.js";
     if (hasF) {
       const g = teamPlot(ids, names, tf, { W: 600, H: 190, L: 44, R: 10, T: 10, B: 8 }), v = tf.meta.validation;
       const trs = ids.map(id => { const t = tf.teams[id]; return `<tr><td>${esc(names[id])}</td><td>${t ? `${wpText(t.now.wp)} (${t.now.w}승 ${t.now.l}패)` : "-"}</td>${tf.meta.horizons.map(h => { const q = t && t.pred.find(x => x.h === h); return `<td>${q ? `${wpText(q.wp)} (${wpText(q.lo)}~${wpText(q.hi)}, 약 ${q.wins}승)` : "-"}</td>`; }).join("")}</tr>`; }).join("");
+      const sums = ids.map(id => [id, teamSummary(tf, id)]).filter(x => x[1]);
+      const sumTable = sums.length ? `<table class="rp-sm" style="margin-top:2.5mm"><thead><tr><th>팀 역대</th><th>통산 승-패</th><th>통산 승률</th><th>최고 시즌</th><th>최저 시즌</th><th>승률 1위</th><th>5위 이내</th></tr></thead><tbody>${sums.map(([id, s]) => `<tr><td>${esc(names[id])}</td><td>${s.w}-${s.l}</td><td>${wpText(s.wp)}</td><td>${s.best[0]}년 ${wpText(s.best[5])}</td><td>${s.worst[0]}년 ${wpText(s.worst[5])}</td><td>${s.first}회</td><td>${s.top5}/${s.seasons}</td></tr>`).join("")}</tbody></table>` : "";
       const notes = tf.meta.horizons.map(h => { const x = v[h], pick = x.mae[x.chosen]; return `<li>${h}년 뒤: 시험(2019~${tf.meta.base_season}) 평균 오차 ${pick.test.toFixed(3)}, 작년 승률을 그대로 쓰는 방법 ${x.mae.last.test.toFixed(3)}. 방법은 ${esc(TEAM_METHOD[x.chosen] || x.chosen)}, 80% 범위 적중률 ${Math.round(x.coverage80 * 100)}%.</li>`; }).join("");
       out.push(`<div class="rp-sec"><h2>팀 승률 추이와 예측 (실험적 기능)</h2>
         <p class="rp-pv" style="margin-bottom:2mm">2005년 이후 시즌별 승률(실선)과 앞으로 ${tf.meta.horizons.length}년 예측(점선)입니다. 승률 .500은 승과 패가 같다는 뜻입니다.</p>
         <div class="rp-leg2">${ids.map((id, i) => `<span><i style="border-color:${TEAM_COLORS[i % 4]}"></i>${esc(names[id])}</span>`).join("")}</div>
         ${chartBox(g)}
-        <table class="rp-sm" style="margin-top:2.5mm"><thead><tr><th>팀</th><th>${tf.meta.base_season} (올해)</th>${tf.meta.horizons.map(h => `<th>${tf.meta.base_season + h} 예측</th>`).join("")}</tr></thead><tbody>${trs}</tbody></table>
+        <table class="rp-sm" style="margin-top:2.5mm"><thead><tr><th>팀</th><th>${tf.meta.base_season} (올해)</th>${tf.meta.horizons.map(h => `<th>${tf.meta.base_season + h} 예측</th>`).join("")}</tr></thead><tbody>${trs}</tbody></table>${sumTable}
         <ul class="rp-note" style="margin-top:2mm">${notes}<li>팀 성적은 선수 이동·부상 같은 변화가 커서 먼 미래일수록 평균(.500)에 가까워지며, 시험 표본(팀·시즌 80개)이 작아 참고용입니다. 예상 승수는 승률 × 144입니다.</li></ul>
         <p class="rp-fine">학습 데이터: Kaggle KBO Player Stats 1982–2026 (netsong, CC BY-NC-SA 4.0)을 팀·시즌별로 합산. 구단 이름이 바뀐 팀은 이어서 계산했습니다.</p></div>`);
     }
@@ -322,7 +363,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "./teamview.js";
     const best = r.metrics.map(m => `<li><b>${esc(m.label)}</b>: ${esc(m.bestName)} ${esc(m.bestDisplay)}${m.better === "low" ? " (낮을수록 좋음)" : ""}</li>`).join("");
     const how = r.metrics.map(m => `<li><b>${esc(m.label)}</b>: ${esc(m.how)}</li>`).join("");
     const p1 = `<h1 class="rp-title">${esc(rec.title)}</h1>
-      <p class="rp-meta">${r.teams.map(t => esc(t.name)).join(", ")}. KBO 2026 정규시즌 실제 기록으로 분석했습니다.</p>
+      <p class="rp-meta">${r.teams.map(t => esc(t.name)).join(", ")}. KBO ${rec.season} 정규시즌 실제 기록으로 분석했습니다.</p>
       <div class="rp-sec"><h2>팀별 기록 요약</h2><table><thead><tr><th>팀</th>${head}</tr></thead><tbody>${body}${lg}</tbody></table>
         <p class="rp-pv" style="margin-top:2.5mm">초록색 굵은 글씨는 선택한 팀 중 가장 좋은 기록입니다.</p></div>
       <div class="rp-sec"><h2>지표별 1위</h2><ul>${best}</ul></div>
@@ -345,11 +386,12 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "./teamview.js";
 
   function html(rec, d, extra) {
     d = d || rec.result.report;
-    const parts = rec.result.kind === "team" ? teamPages(rec, extra) : playerPages(rec, d, extra);
+    const parts = rec.result.kind === "compare" ? comparePages(rec) : rec.result.kind === "team" ? teamPages(rec, extra) : playerPages(rec, d, extra);
     return `<div class="rp"><style>${CSS}</style>${parts.map((p, i) => pageWrap(p, i + 1, parts.length, rec)).join("")}</div>`;
   }
 
   function fileName(rec) {
+    if (rec.result.kind === "compare") return `선수비교_${rec.result.names.join("_")}_${dateIso(rec.createdAt)}.pdf`.replace(/[\\/:*?"<>|\s]+/g, "_");
     const ty = T()[rec.type];
     const who = rec.result.kind === "team" ? `${rec.result.teams.length}개팀` : rec.result.subject.name;
     return `${ty.label.replace(/\s/g, "")}_${who}_${dateIso(rec.createdAt)}.pdf`.replace(/[\\/:*?"<>|\s]+/g, "_");
@@ -357,23 +399,24 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "./teamview.js";
 
   // 상세 보고서가 저장돼 있지 않은 예전 기록이면 지금 만든다
   async function reportFor(rec) {
-    if (rec.result.kind === "team") return null;
+    if (rec.result.kind === "team" || rec.result.kind === "compare") return null;
     if (rec.result.report) return rec.result.report;
     try {
       const meta = await Api.meta();
       const rows = await (rec.type === "batter" ? Api.batters(rec.season) : Api.pitchers(rec.season));
-      const monthly = await Api.monthly(rec.type, rec.params.target);
-      const mix = rec.type === "pitcher" ? await Api.pitchmix(rec.params.target) : null;
-      return build(rec.type, rows, rec.params.target, meta.qualify, meta, monthly, mix);
+      const monthly = await Api.monthly(rec.type, rec.params.target, rec.season);
+      const mix = rec.type === "pitcher" ? await Api.pitchmix(rec.params.target, rec.season) : null;
+      return build(rec.type, rows, rec.params.target, qualFor(meta, rec.season), meta, monthly, mix);
     } catch (e) { return null; }
   }
 
   // PDF에 넣을 AI 해설·예측 (파일이 없거나 해당 선수 항목이 없으면 그 부분만 빠진다)
   async function extraFor(rec) {
+    if (rec.result.kind === "compare") return null;
     try {
       if (rec.result.kind === "team") { const [tf, tc] = await Promise.all([Api.teamForecast(), Api.teamCommentary()]); return { tf, tc }; }
-      const [all, fc, career] = await Promise.all([Api.commentary(), Api.forecast(), Api.career()]);
-      return { ai: (all || {})[`${rec.season}-${rec.params.target}`] || null, fc, career };
+      const [all, fc, career, fx] = await Promise.all([Api.commentary(), Api.forecast(), Api.career(), Api.forecastExtra()]);
+      return { ai: (all || {})[`${rec.season}-${rec.params.target}`] || null, fc, career, fx };
     } catch (e) { return null; }
   }
 
@@ -390,6 +433,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, wpText } from "./teamview.js";
     window.scrollTo(0, 0);
     try {
       if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      paginate(host);   // 한 쪽에 안 들어가는 블록은 다음 쪽으로
       const worker = html2pdf().set({
         margin: 0, filename: fileName(rec), image: { type: "jpeg", quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", windowWidth: 794, scrollX: 0, scrollY: 0, x: 0, y: 0 },
