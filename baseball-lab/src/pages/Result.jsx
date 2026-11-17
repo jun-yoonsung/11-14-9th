@@ -9,6 +9,8 @@ import { dateKo, topText } from "../lib/format.js";
 import PctBlock from "../components/PctBlock.jsx";
 import DetailReport from "../components/DetailReport.jsx";
 import SimilarPlayers from "../components/SimilarPlayers.jsx";
+import AiCommentary from "../components/AiCommentary.jsx";
+import Forecast from "../components/Forecast.jsx";
 import { useScene } from "../context/SceneContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 
@@ -24,6 +26,7 @@ function PlayerView({ rec, r }) {
   const cols = RAW[rec.type];
   return (
     <>
+      <AiCommentary rec={rec} />
       <div className="kpis">{r.lines.map(l => (
         <div className="kpi" key={l.key}><small>{l.label}{l.label !== l.en ? " " + l.en : ""}</small><strong>{l.display}</strong><em className={l.value == null ? "" : l.tone}>{kpiNote(l)}</em></div>
       ))}</div>
@@ -35,6 +38,7 @@ function PlayerView({ rec, r }) {
       </div></section>
       <DetailBox rec={rec} />
       <SimilarPlayers rec={rec} />
+      <Forecast rec={rec} />
       <section className="sec"><h2>선택한 지표 상세</h2>
         <div className="table-wrap"><table>
           <thead><tr><th>지표</th><th>선수 기록</th><th>리그 평균</th><th>차이</th><th>리그 위치</th></tr></thead>

@@ -525,3 +525,26 @@ body.has-scene main { transition: padding-top .7s ease; }
 .cmap figcaption { color: var(--muted); font-size: var(--t-sm); margin-top: 8px; }
 .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
 tr.me td { background: var(--blue-soft); font-weight: 700; }
+
+/* AI 해설 (미리 만들어 둔 문장을 보여 주는 상자) */
+.ai-box { border: 1px solid var(--line); border-bottom: 1px solid var(--line); border-left: 3px solid var(--blue); border-radius: var(--r-lg); background: var(--white); padding: 20px 22px; }
+.ai-box h2 { margin-top: 0; }
+.ai-lead { font-size: var(--t-md); line-height: 1.7; max-width: 70ch; margin-top: 8px; }
+.ai-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px 28px; margin-top: 8px; }
+.ai-cols h3 { font-size: var(--t-md); margin-top: 12px; }
+
+/* 앞으로 5년 예측 */
+.fc-box { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--white); padding: 20px 22px; }
+.fc-box h2 { margin-top: 0; }
+.fc-box .tag { font-size: var(--t-xs); font-weight: 500; color: var(--blue); border: 1px solid var(--blue); border-radius: var(--r-pill); padding: 1px 8px; margin-left: 6px; vertical-align: middle; letter-spacing: 0; }
+.fc-chart { margin: 14px 0 6px; }
+.fc-chart svg { width: 100%; height: auto; display: block; }
+.fc-chart figcaption { color: var(--muted); font-size: var(--t-sm); margin-top: 4px; }
+.fc-grid { stroke: var(--line); stroke-width: 1; }
+.fc-tick { font-size: 11px; fill: var(--muted); }
+.fc-band { fill: var(--blue-soft); stroke: none; }
+.fc-line { fill: none; stroke: var(--blue); stroke-width: 2; }
+.fc-dot { fill: var(--blue); stroke: #fff; stroke-width: 2; }
+.fc-dot.now { fill: var(--ink); }
+.fc-acc { margin-top: 12px; }
+.fc-acc summary { cursor: pointer; font-weight: 700; color: var(--ink); }

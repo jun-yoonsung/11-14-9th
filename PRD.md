@@ -273,3 +273,14 @@ baseball-lab/
 | 바꿈 | "비슷한 유형·스타일이 비슷한 선수"는 같은 역할 안에서만 찾음 (선발 60이닝, 불펜 30이닝 이상) | `detail.js`, `SimilarPlayers.jsx` |
 | 바꿈 | 선수 순위: 보직 기본값 "선발", 스타일 지도·군집을 보직별로 따로 계산 | `src/pages/Rank.jsx` |
 
+### v1.6 (2026-11-17) AI 해설 · 앞으로 5년 예측
+
+| 구분 | 내용 | 관련 파일 |
+|---|---|---|
+| 추가함 | **AI 해설**: 선수별 총평·눈에 띄는 점·보완점을 LLM이 쉬운 말로 설명. 사이트에서 LLM을 부르지 않고 내 컴퓨터에서 **미리 생성해 파일로 저장**(키 노출·비용·대기·문장 변동 방지). 결과 문장의 숫자가 계산값과 다르면 버리고 다시 생성 | `tools/gen_commentary.mjs`, `public/data/commentary.json`, `src/components/AiCommentary.jsx` |
+| 추가함 | **앞으로 5년 예측**: 타자 OPS·투수 ERA를 1~5년 뒤까지 예측(80% 범위 포함)하고, 해마다 현역으로 남아 있을 확률과 은퇴 예상 나이를 보여 줌. 학습 데이터는 Kaggle "KBO Player Stats 1982–2026"(KBO 공식 기록 기반, CC BY-NC-SA 4.0) | `ml/train_forecast.py`, `public/data/forecast.json`, `src/components/Forecast.jsx` |
+| 규칙 | 모델 선택: 후보(Ridge·랜덤포레스트·ExtraTrees·부스팅 여러 설정·앙상블)를 검증 구간(2021~2023) 오차로 비교해 고름. 성적 예측은 타자=4개 모델 평균(앙상블), 투수=MAE 손실 부스팅. 현역 지속 확률은 부스팅 분류(후보 중 1위 또는 차이가 오차 범위 안) | `ml/compare_models.py`, `ml/compare_classifiers.py`, `ml/model_comparison.json` |
+| 규칙 | 예측은 2024~2026 시즌을 학습에 쓰지 않고 따로 떼어 맞혀 본 결과로 정확도를 화면에 공개. 검증 구간에서 머신러닝·3년 가중평균·리그 평균 중 가장 나은 방법을 시점별로 자동 선택 | `ml/metrics.json` |
+| 규칙 | 원본 CSV는 재배포 금지 라이선스라 GitHub에 올리지 않음(`ml/raw/`는 gitignore). 예측 결과와 출처 표기만 공개 | `.gitignore` |
+| 다음 버전 | 영상 데이터 분석 | |
+

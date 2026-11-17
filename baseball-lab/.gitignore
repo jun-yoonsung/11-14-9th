@@ -5,3 +5,12 @@ dist
 # Firebase 서비스 계정 키는 올리지 않는다
 *service-account*.json
 *-adminsdk-*.json
+
+# API 키 (절대 올리지 않기)
+tools/.env
+.env
+
+# 예측 모델 원본 데이터(재배포 금지 라이선스)
+ml/raw/*.csv
+__pycache__/
+*.pyc

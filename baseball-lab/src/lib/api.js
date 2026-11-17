@@ -28,6 +28,10 @@ export const Api = {
     return cache[key];
   },
   meta() { return this.json("meta"); },
+  // 미리 학습해 둔 예측 결과(ml/train_forecast.py가 만듦). 없으면 null
+  forecast() { if (!cache.forecast) cache.forecast = file("forecast", "json").catch(() => null); return cache.forecast; },
+  // 미리 만들어 둔 AI 해설. 파일이 없으면 빈 객체(해설 없이 보여 준다)
+  commentary() { if (!cache.commentary) cache.commentary = file("commentary", "json").catch(() => ({})); return cache.commentary; },
   batters(season) { return this.csv("batters").then(l => l.filter(x => x.season === season)); },
   pitchers(season) { return this.csv("pitchers").then(l => l.filter(x => x.season === season)); },
   teams(season) { return this.csv("teams").then(l => l.filter(x => x.season === season)); },
