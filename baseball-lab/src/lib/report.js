@@ -83,6 +83,13 @@ import { esc, dateKo, dateIso, beadColor, topText } from "./format.js";
   .rp-sim small { display: block; color: #5c667d; font-size: 7.8pt; }
   .rp-sm th, .rp-sm td { font-size: 8.5pt; padding: 1.7mm 2mm; }
   .rp-note { font-size: 8.8pt; }
+  .rp-ai { border: 0.75pt solid #d6dbe6; border-left: 1.2mm solid #1d3fbb; padding: 3.5mm 4.5mm; font-size: 9.5pt; line-height: 1.6; }
+  .rp-ai p { margin-bottom: 1.8mm; } .rp-ai h3 { font-size: 9.5pt; margin: 2.2mm 0 0.8mm; }
+  .rp-ai ul { padding-left: 4mm; } .rp-ai li { margin: 0.6mm 0; }
+  .rp-fine { font-size: 7.8pt; color: #5c667d; line-height: 1.5; margin-top: 1.8mm; }
+  .rp-fcbox svg { width: 100%; height: auto; display: block; }
+  .rp-fcx { position: relative; height: 4mm; font-size: 7.8pt; color: #5c667d; margin-top: 1mm; }
+  .rp-fcx span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
   `;
 
   const kpiTone = l => (l.value == null ? "" : l.tone);
@@ -92,7 +99,54 @@ import { esc, dateKo, dateIso, beadColor, topText } from "./format.js";
     ${inner}
     <div class="rp-foot"><span>화면과 보고서의 선수와 팀 기록은 KBO 2026 정규시즌 경기 기록을 집계한 값입니다.</span><span>${n} / ${total}</span></div></section>`;
 
-  function playerPages(rec, d) {
+  const METHOD = { ml: "머신러닝 모델", marcel: "최근 3시즌 가중 평균", league: "리그 평균" };
+  const f3 = v => Number(v).toFixed(3);
+
+  // 미리 만들어 둔 AI 해설 (tools/gen_commentary.mjs)
+  function aiBlock(c) {
+    if (!c) return "";
+    const ul = a => (a && a.length ? `<ul>${a.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : "");
+    return `<div class="rp-sec"><h2>AI 해설</h2><div class="rp-ai"><p><b>${esc(c.summary)}</b></p>${c.style ? `<p>${esc(c.style)}</p>` : ""}
+      ${c.strengths && c.strengths.length ? `<h3>눈에 띄는 점</h3>${ul(c.strengths)}` : ""}${c.watch && c.watch.length ? `<h3>보완하거나 주의할 점</h3>${ul(c.watch)}` : ""}${c.similar ? `<p style="margin-top:2mm">${esc(c.similar)}</p>` : ""}</div>
+      <p class="rp-fine">AI가 이 보고서의 계산 수치만 바탕으로 미리 작성한 설명입니다. 숫자는 계산값과 대조해 확인했지만 해석은 참고용입니다.</p></div>`;
+  }
+
+  // 앞으로 5년 예측 (ml/train_forecast.py). 그래프는 도형만 그리고 글자는 HTML로 둔다(PDF 변환에서 글꼴이 깨지지 않게)
+  function forecastBlock(fc, p, rec) {
+    if (!fc || !p || rec.season !== fc.meta.base_season) return "";
+    const isBat = p.type === "batter", name = isBat ? "OPS" : "평균자책점(ERA)", m = fc.meta.metrics[p.type], e1 = m.reg[1], a1 = m.act[1];
+    const pts = [{ year: fc.meta.base_season, mid: p.now, lo: p.now, hi: p.now }, ...p.pred];
+    const W = 600, H = 150, L = 8, R = 8, T0 = 8, B0 = 8, vals = pts.flatMap(x => [x.lo, x.hi]);
+    const lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) * 0.12 || 0.1, y0 = lo - pad, y1 = hi + pad;
+    const X = i => L + (i / (pts.length - 1)) * (W - L - R), Y = v => T0 + (1 - (v - y0) / (y1 - y0)) * (H - T0 - B0);
+    const band = `${pts.map((x, i) => `${i ? "L" : "M"}${X(i)},${Y(x.hi)}`).join(" ")} ${pts.slice().reverse().map((x, i) => `L${X(pts.length - 1 - i)},${Y(x.lo)}`).join(" ")}Z`;
+    const line = pts.map((x, i) => `${i ? "L" : "M"}${X(i)},${Y(x.mid)}`).join(" ");
+    const svg = `<svg viewBox="0 0 ${W} ${H}"><rect x="0" y="0" width="${W}" height="${H}" fill="#fff" stroke="#e4e8f0"/><path d="${band}" fill="#e3e8f9"/><path d="${line}" fill="none" stroke="#1d3fbb" stroke-width="2.2"/>${pts.map((x, i) => `<circle cx="${X(i)}" cy="${Y(x.mid)}" r="${i ? 4 : 5}" fill="${i ? "#1d3fbb" : "#111"}" stroke="#fff" stroke-width="1.5"/>`).join("")}</svg>`;
+    const xl = `<div class="rp-fcx">${pts.map((x, i) => `<span style="left:${(X(i) / W) * 100}%">${x.year}${i ? "" : " (올해)"}</span>`).join("")}</div>`;
+    const rows = p.pred.map(x => `<tr><td>${x.year}</td><td>${x.age}세</td><td>${f3(x.mid)}</td><td>${f3(x.lo)} ~ ${f3(x.hi)}</td><td>${Math.round(x.active * 100)}%</td><td>${METHOD[x.method]}</td></tr>`).join("");
+    const retire = p.retire_by ? `현역 확률이 50% 아래로 내려가는 첫 나이는 ${p.retire_by}세로 예측됩니다.` : "향후 5년 안에는 현역 확률이 50% 아래로 내려가지 않는 것으로 예측됩니다.";
+    const weak = p.pred.filter(x => x.method !== "ml");
+    return `<div class="rp-sec"><h2>앞으로 5년 예측 (실험적 기능)</h2>
+      <p class="rp-pv" style="margin-bottom:2mm">과거 KBO 선수들의 시즌 기록(1990~${fc.meta.base_season})으로 학습한 모델이 향후 ${name}과 현역으로 남아 있을 확률을 예측했습니다. 한 시즌의 우연한 변동은 평균 쪽으로 되돌아가는 경향이 있어, 올해 기록이 매우 좋거나 나빴다면 예측은 평균에 가깝게 나옵니다.</p>
+      <div class="rp-fcbox">${svg}${xl}</div><p class="rp-fine">선은 예측값, 옅은 띠는 실제 값이 들어올 가능성이 80%인 범위입니다. 먼 미래일수록 띠가 넓습니다.</p>
+      <table class="rp-sm" style="margin-top:2mm"><thead><tr><th>시즌</th><th>나이</th><th>예상 ${isBat ? "OPS" : "ERA"}</th><th>80% 범위</th><th>현역일 확률</th><th>예측 방법</th></tr></thead><tbody>
+        <tr><td>${fc.meta.base_season} (올해)</td><td>${p.age}세</td><td>${f3(p.now)}</td><td>-</td><td>-</td><td>실제 기록</td></tr>${rows}</tbody></table>
+      <p class="rp-pv" style="margin-top:2mm"><b>은퇴 시기</b>: ${retire} 현역 확률은 그 해에 KBO 1군 기록이 남아 있을 확률이며, 부상·군 복무·해외 진출도 "기록 없음"으로 잡힙니다.</p>
+      <ul class="rp-note" style="margin-top:1.5mm">
+        <li>${fc.meta.base_season - 2}~${fc.meta.base_season} 시즌은 학습에 쓰지 않고 따로 떼어 맞혀 봤습니다. 1년 뒤 ${isBat ? "OPS" : "ERA"} 평균 오차는 약 ${f3(e1.mae_chosen)}로 작년 기록을 그대로 쓰는 방법(${f3(e1.mae_last)})보다 작았고, 80% 범위 적중률은 ${Math.round(e1.coverage80 * 100)}%였습니다.</li>
+        <li>현역 여부는 1년 뒤 기준 ${Math.round(a1.auc * 100)}점(100점 만점, 50점이 동전 던지기 수준)으로 구분했습니다.</li>
+        ${weak.length ? `<li>${weak.map(x => x.year).join(", ")} 시즌 예측은 시험에서 머신러닝 모델이 더 낫지 않아 ${METHOD[weak[0].method]} 방식으로 대신했습니다.</li>` : ""}
+        <li>그 선수가 그 해에 충분히 뛴다는 가정(타자 100타석, 투수 30이닝 이상)의 값이며 부상·보직 변경은 반영하지 못합니다.</li></ul>
+      <p class="rp-fine">학습 데이터: Kaggle KBO Player Stats 1982–2026 (netsong, KBO 공식 기록 기반, CC BY-NC-SA 4.0). 학습용·비영리 프로젝트에서만 사용합니다.</p></div>`;
+  }
+
+  // AI 해설과 예측은 내용이 길어 각각 한 쪽으로 만든다 (없는 쪽은 만들지 않는다)
+  function extraPages(extra, rec) {
+    if (!extra) return [];
+    return [aiBlock(extra.ai), forecastBlock(extra.fc, extra.fc && extra.fc.players[String(rec.params.target)], rec)].filter(Boolean).map(b => `<div style="margin-top:9mm">${b}</div>`);
+  }
+
+  function playerPages(rec, d, extra) {
     const r = rec.result, ty = T()[rec.type], s = r.subject;
     const teamName = r.teamName || s.team;
     const kpis = r.lines.map(l => `<div class="rp-kpi"><small>${esc(l.label)}${l.label !== l.en ? " " + esc(l.en) : ""}</small><strong>${esc(l.display)}</strong><em class="${kpiTone(l)}">${esc(kpiNote(l))}</em></div>`).join("");
@@ -126,10 +180,11 @@ import { esc, dateKo, dateIso, beadColor, topText } from "./format.js";
         ${unq}${d ? "" : how}
         ${(d ? d.notes.slice(1) : []).map(n => `<li>${esc(n)}</li>`).join("")}
         <li>분모가 0이어서 계산할 수 없는 값은 "-"로 표시했습니다.</li></ul></div>`;
-    if (!d) return [p1, pSel];
+    const ex = extraPages(extra, rec);   // AI 해설·예측이 있으면 쪽을 추가
+    if (!d) return [p1, ...ex, pSel];
     const [d2, d3, d4, formula] = detailPages(rec, d);
     const cut = pSel.indexOf('<div class="rp-sec"><h2>분석 방법');   // 방법·유의사항은 여유 있는 3쪽으로, 계산식은 마지막 쪽으로
-    return [p1, d2, d3 + pSel.slice(cut), d4, pSel.slice(0, cut) + formula];
+    return [p1, ...ex, d2, d3 + pSel.slice(cut), d4, pSel.slice(0, cut) + formula];
 
   }
 
@@ -217,9 +272,9 @@ import { esc, dateKo, dateIso, beadColor, topText } from "./format.js";
     return [p1, p2];
   }
 
-  function html(rec, d) {
+  function html(rec, d, extra) {
     d = d || rec.result.report;
-    const parts = rec.result.kind === "team" ? teamPages(rec) : playerPages(rec, d);
+    const parts = rec.result.kind === "team" ? teamPages(rec) : playerPages(rec, d, extra);
     return `<div class="rp"><style>${CSS}</style>${parts.map((p, i) => pageWrap(p, i + 1, parts.length, rec)).join("")}</div>`;
   }
 
@@ -242,13 +297,22 @@ import { esc, dateKo, dateIso, beadColor, topText } from "./format.js";
     } catch (e) { return null; }
   }
 
+  // PDF에 넣을 AI 해설·예측 (파일이 없거나 해당 선수 항목이 없으면 그 부분만 빠진다)
+  async function extraFor(rec) {
+    if (rec.result.kind === "team") return null;
+    try {
+      const [all, fc] = await Promise.all([Api.commentary(), Api.forecast()]);
+      return { ai: (all || {})[`${rec.season}-${rec.params.target}`] || null, fc };
+    } catch (e) { return null; }
+  }
+
   // output: "save" (파일 내려받기) | "datauristring" (확인용)
   async function generate(rec, output) {
     let html2pdf;
     try { html2pdf = (await import("html2pdf.js")).default; } catch (e) { throw new Error("PDF 도구를 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 다시 눌러 주세요."); }
     const host = document.createElement("div");
     host.style.cssText = "position:absolute;left:-10000px;top:0;width:210mm;";
-    host.innerHTML = html(rec, await reportFor(rec));
+    host.innerHTML = html(rec, await reportFor(rec), await extraFor(rec));
     document.body.appendChild(host);
     // 화면이 스크롤된 채로 찍으면 스크롤한 만큼 내용이 밀려 PDF가 깨진다. 찍는 동안만 맨 위로 되돌린다.
     const sx = window.pageXOffset, sy = window.pageYOffset;
