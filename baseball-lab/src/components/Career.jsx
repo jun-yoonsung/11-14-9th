@@ -22,7 +22,7 @@ export default function Career({ rec }) {
   const g = cp.geom;
   return (
     <section className="sec fc-box" aria-label="커리어">
-      <h2>커리어와 앞으로 <small className="tag">1982~2026 기록</small></h2>
+      <h2>{cp.useFc ? "커리어와 앞으로" : "커리어"} <small className="tag">1982~2026 기록</small></h2>
       <p className="sub">데뷔 이후 시즌별 {C.stat}입니다. 점 위에 마우스를 올리면 시즌 기록이 보여요. {isBat ? "50타석" : "20이닝"} 미만인 시즌은 그래프에서 뺐고, 아래 표에는 모두 있습니다.</p>
       <ul className="legend2">
         <li><i style={{ background: "#101216" }} />선수 {C.stat}</li><li><i className="dash" style={{ borderColor: "#8e96a6" }} />리그 평균({isBat ? "100타석" : "30이닝"} 이상 선수 평균)</li>

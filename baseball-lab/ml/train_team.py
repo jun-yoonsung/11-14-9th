@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np, pandas as pd
 from sklearn.linear_model import Ridge
 from sklearn.ensemble import ExtraTreesRegressor
+from catboost import CatBoostRegressor
 sys.path.insert(0, str(Path(__file__).parent)); warnings.filterwarnings("ignore")
 import train_forecast as T
 
@@ -45,7 +46,8 @@ def baselines(d):
             "shrunk": (0.5 + 0.55 * ((d.wp0 * 3 + d.wp1 * 2 + d.wp2) / 6 - 0.5)).values}
 
 def models():
-    return {"Ridge": lambda: Ridge(alpha=3.0), "ExtraTrees": lambda: ExtraTreesRegressor(n_estimators=300, min_samples_leaf=8, random_state=0, n_jobs=4)}
+    return {"Ridge": lambda: Ridge(alpha=3.0), "ExtraTrees": lambda: ExtraTreesRegressor(n_estimators=300, min_samples_leaf=8, random_state=0, n_jobs=4),
+            "CatBoost": lambda: CatBoostRegressor(iterations=300, depth=3, learning_rate=0.04, l2_leaf_reg=8, random_seed=0, verbose=0, thread_count=4)}
 
 def mae(a, b): return float(np.mean(np.abs(np.asarray(a) - np.asarray(b))))
 

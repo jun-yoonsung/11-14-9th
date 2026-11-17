@@ -9,6 +9,8 @@ from sklearn.ensemble import HistGradientBoostingClassifier as HGBC, RandomFores
 from sklearn.linear_model import LogisticRegression
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
+from catboost import CatBoostClassifier
+from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
@@ -23,6 +25,9 @@ def cands():
         "HGB(현재)": lambda: HGBC(max_depth=3, learning_rate=0.05, max_iter=200, min_samples_leaf=40, l2_regularization=1.0, random_state=0),
         "XGBoost": lambda: XGBClassifier(n_estimators=250, max_depth=3, learning_rate=0.04, subsample=0.8, colsample_bytree=0.8, min_child_weight=10, reg_lambda=3.0, n_jobs=4, random_state=0),
         "LightGBM": lambda: LGBMClassifier(n_estimators=250, max_depth=3, num_leaves=8, learning_rate=0.04, subsample=0.8, subsample_freq=1, colsample_bytree=0.8, min_child_samples=30, reg_lambda=3.0, n_jobs=4, random_state=0, verbose=-1),
+        "CatBoost": lambda: CatBoostClassifier(iterations=400, depth=4, learning_rate=0.05, l2_leaf_reg=5, rsm=0.8, random_seed=0, verbose=0, thread_count=4),
+        "CatBoost(깊게)": lambda: CatBoostClassifier(iterations=600, depth=6, learning_rate=0.04, l2_leaf_reg=8, rsm=0.7, random_seed=0, verbose=0, thread_count=4),
+        "신경망(MLP)": lambda: make_pipeline(imp(), StandardScaler(), MLPClassifier(hidden_layer_sizes=(64, 32), alpha=0.05, learning_rate_init=0.003, max_iter=400, early_stopping=True, n_iter_no_change=20, random_state=0)),
         "HGB(얕게)": lambda: HGBC(max_depth=2, learning_rate=0.05, max_iter=250, min_samples_leaf=60, l2_regularization=3.0, random_state=0),
     }
 

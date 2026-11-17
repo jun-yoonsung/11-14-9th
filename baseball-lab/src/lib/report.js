@@ -312,7 +312,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
     const trs = groups.map(g => `<tr class="gh"><td colspan="${n + 1}">${esc(g)}</td></tr>` + c.items.filter(i => i.group === g).map(it =>
       `<tr><td>${esc(it.label)}${it.label !== it.en ? ` <span style="color:#5c667d;font-size:7pt">${esc(it.en)}</span>` : ""}</td>${it.vals.map((v, i) => `<td class="${it.lead === i ? "ld" : ""}" style="${it.lead === i ? `color:${col[i]}` : ""}">${esc(v.display)}${v.pct == null ? "" : `<small>상위 ${100 - v.pct}%</small>`}</td>`).join("")}</tr>`).join("")).join("");
     const p1 = `<h1 class="rp-title">${esc(rec.title)}</h1>
-      <p class="rp-meta">${rec.season} 시즌, 같은 종류 선수 ${n}명을 리그 백분위로 비교했습니다.</p>
+      <p class="rp-meta">${[...new Set(r.seasons || [rec.season])].join(", ")} 시즌, 같은 종류 선수 ${n}명을 각자 그 시즌 리그 안에서의 백분위로 비교했습니다.</p>
       <div class="rp-sec"><h2>한눈에 보기</h2><div class="rp-callout">${esc(c.summary)}</div></div>
       <div class="rp-sec"><h2>영역별 비교</h2><p class="rp-pv" style="margin-bottom:1.5mm">영역별 리그 백분위 평균입니다(높을수록 좋음).</p>${leg}${bars}</div>
       ${ch.age ? `<div class="rp-sec"><h2>나이별 커리어 비교 (${esc(c.unit)})</h2>${leg}${chartBox(ch.age)}</div>` : ""}`;

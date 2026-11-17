@@ -16,7 +16,7 @@
     "XGBoost"
    ],
    "val": 0.0766130214440448,
-   "test": 0.07126108317240593
+   "test": 0.07126108317240594
   },
   "ET+RF": {
    "models": [
@@ -43,6 +43,49 @@
    ],
    "val": 0.07697864112545992,
    "test": 0.07188788036739677
+  },
+  "ET+XGB+CatBoost": {
+   "models": [
+    "ExtraTrees",
+    "XGBoost",
+    "CatBoost"
+   ],
+   "val": 0.07656311820115119,
+   "test": 0.07153536190865843
+  },
+  "ET+XGB+CatBoost+MLP": {
+   "models": [
+    "ExtraTrees",
+    "XGBoost",
+    "CatBoost",
+    "신경망(MLP)"
+   ],
+   "val": 0.07639766333291136,
+   "test": 0.07106260140811349
+  },
+  "ET+CatBoost": {
+   "models": [
+    "ExtraTrees",
+    "CatBoost"
+   ],
+   "val": 0.07640728295682715,
+   "test": 0.07162886995549725
+  },
+  "CatBoost 단독": {
+   "models": [
+    "CatBoost"
+   ],
+   "val": 0.07732903578361602,
+   "test": 0.07311834997251529
+  },
+  "ET큰+XGB+CatBoost(깊게)": {
+   "models": [
+    "ExtraTrees(큰)",
+    "XGBoost",
+    "CatBoost(깊게)"
+   ],
+   "val": 0.07644145282475867,
+   "test": 0.07118867153500577
   }
  },
  "pitcher": {
@@ -78,7 +121,7 @@
     "ExtraTrees",
     "랜덤포레스트"
    ],
-   "val": 1.0935747427414706,
+   "val": 1.0935747427414704,
    "test": 1.1127468233361713
   },
   "LGBM(MAE)+ET": {
@@ -88,6 +131,39 @@
    ],
    "val": 1.0903561254059746,
    "test": 1.111465663538306
+  },
+  "LGBM(MAE)+CatBoost(MAE)": {
+   "models": [
+    "LightGBM(MAE)",
+    "CatBoost(MAE)"
+   ],
+   "val": 1.0645519331449849,
+   "test": 1.1293210751024234
+  },
+  "LGBM(MAE)+CatBoost(MAE)+XGB(MAE)": {
+   "models": [
+    "LightGBM(MAE)",
+    "CatBoost(MAE)",
+    "XGBoost(MAE)"
+   ],
+   "val": 1.069713899602331,
+   "test": 1.1257550234709535
+  },
+  "CatBoost(MAE) 단독": {
+   "models": [
+    "CatBoost(MAE)"
+   ],
+   "val": 1.0616079171673627,
+   "test": 1.132289887330949
+  },
+  "LGBM(MAE)+CatBoost(MAE)+MLP": {
+   "models": [
+    "LightGBM(MAE)",
+    "CatBoost(MAE)",
+    "신경망(MLP)"
+   ],
+   "val": 1.0736400479629489,
+   "test": 1.1276639394770673
   }
  }
 }

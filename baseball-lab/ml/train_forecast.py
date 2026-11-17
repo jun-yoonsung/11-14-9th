@@ -12,6 +12,7 @@ import json, re, sys, warnings
 from pathlib import Path
 import numpy as np, pandas as pd
 from xgboost import XGBClassifier
+from catboost import CatBoostClassifier
 from sklearn.ensemble import HistGradientBoostingRegressor, HistGradientBoostingClassifier
 from models import Ens
 from sklearn.metrics import mean_absolute_error, roc_auc_score, brier_score_loss
@@ -155,13 +156,13 @@ def calibrate(y, mid, lo, hi, target=0.8):
 
 # 중앙값 예측 모델: ml/compare_models.py 에서 검증 구간(2021~2023) 오차가 가장 작았던 구성
 # 모델 선택: ml/compare_models.py, compare_ensembles.py의 검증 구간(2021~2023) 결과 1등
-MID_MODELS = {"batter": ["ExtraTrees", "XGBoost"], "pitcher": ["LightGBM(MAE)"]}
+MID_MODELS = {"batter": ["ExtraTrees", "XGBoost", "CatBoost", "신경망(MLP)"], "pitcher": ["CatBoost(MAE)"]}   # 2026-11 재비교(CatBoost·신경망 추가) 결과
 
 
 def make_clf(kind):
-    """현역 확률 분류기: 타자는 HGB, 투수는 XGBoost (ml/compare_classifiers.py 검증 구간 1등)."""
+    """현역 확률 분류기: 타자는 HGB, 투수는 CatBoost(깊게) (ml/compare_classifiers.py 검증 구간 1등)."""
     if kind == "pitcher":
-        return XGBClassifier(n_estimators=250, max_depth=3, learning_rate=0.04, subsample=0.8, colsample_bytree=0.8, min_child_weight=10, reg_lambda=3.0, n_jobs=4, random_state=0)
+        return CatBoostClassifier(iterations=600, depth=6, learning_rate=0.04, l2_leaf_reg=8, rsm=0.7, random_seed=0, verbose=0, thread_count=4)
     return HistGradientBoostingClassifier(max_depth=3, learning_rate=0.05, max_iter=200, min_samples_leaf=40, l2_regularization=1.0, random_state=0)
 
 

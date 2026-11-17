@@ -237,7 +237,7 @@
           <dt>넣는 것</dt><dd>원본 <code>kbo_2026_data</code> 폴더 (저장소 맨 위에도 올려 둠)</dd>
           <dt>나오는 것</dt><dd><code>public/data/*.csv</code>(선구안 지표 포함), <code>public/data/meta.json</code></dd>
         </dl>
-        <p class="do" style="margin-top:8px">예측·역대 기록용 Python 스크립트(<code>ml/</code>, Kaggle <i>KBO Player Stats 1982–2026</i> 사용): <code>train_forecast.py</code>(OPS·ERA·현역 확률), <code>train_forecast_extra.py</code>(출루율·장타율·삼진/볼넷/홈런 비율, WHIP·K/9 등), <code>train_team.py</code>(팀 승률), <code>build_career.py</code>(커리어), <code>build_history.py</code>(과거 시즌·역대 기록), <code>fix_official.py</code>(공식 집계 값으로 맞춤, <code>data_quality.json</code>에 기록). 원본 CSV는 재배포 금지라 GitHub에 올리지 않습니다.</p>
+        <p class="do" style="margin-top:8px">예측·역대 기록용 Python 스크립트(<code>ml/</code>, Kaggle <i>KBO Player Stats 1982–2026</i> 사용): <code>train_forecast.py</code>(OPS·ERA·현역 확률, 후보: 부스팅·ExtraTrees·CatBoost·신경망, 검증 구간 1등 선택), <code>train_forecast_extra.py</code>(출루율·장타율·삼진/볼넷/홈런 비율, WHIP·K/9 등), <code>train_team.py</code>(팀 승률), <code>build_career.py</code>(1982~ 모든 선수 커리어), <code>build_history.py</code>(과거 시즌·역대 기록), <code>fix_official.py</code>(공식 집계 값으로 맞춤, <code>data_quality.json</code>에 기록). 원본 CSV는 재배포 금지라 GitHub에 올리지 않습니다.</p>
         <p class="term"><b>pandas</b>: 파이썬에서 표 데이터를 계산하는 도구.</p>
       </div>
     </div>

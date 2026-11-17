@@ -9,7 +9,7 @@ import PlayerCombo from "../components/PlayerCombo.jsx";
 import { useScene } from "../context/SceneContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 
-const KEYS = ["a", "b", "c", "d"];
+const KEYS = ["a", "b", "c", "d"], SK = ["sa", "sb", "sc", "sd"];
 
 function Chart({ g, label }) {
   if (!g) return null;
@@ -31,36 +31,36 @@ export default function Compare() {
   const toast = useToast();
   const [sp, setSp] = useSearchParams();
   const type = sp.get("type") === "pitcher" ? "pitcher" : "batter";
-  const pids = KEYS.map(k => sp.get(k) || "");
+  const pids = KEYS.map(k => sp.get(k) || ""), LATEST_S = 2026;
+  const seasons = SK.map(k => Number(sp.get(k)) || LATEST_S);
   const [shown, setShown] = useState(() => Math.max(2, ...pids.map((p, i) => (p ? i + 1 : 0))));
   const set = patch => { const n = new URLSearchParams(sp); Object.entries(patch).forEach(([k, v]) => (v ? n.set(k, v) : n.delete(k))); setSp(n, { replace: true }); };
-  const [data, setData] = useState(null), [fail, setFail] = useState(false), [busy, setBusy] = useState(false);
+  const [meta, setMeta] = useState(null), [pool, setPool] = useState({}), [extra, setExtra] = useState(null), [fail, setFail] = useState(false), [busy, setBusy] = useState(false);
   useEffect(() => { document.title = "선수 비교 | 야구 분석 랩"; }, []);
+  useEffect(() => { let live = true; Promise.all([Api.meta(), Api.career(), Api.forecast()]).then(([m, career, fc]) => { if (live) { setMeta(m); setExtra({ career, fc }); } }).catch(() => live && setFail(true)); return () => { live = false; }; }, []);
+  const need = [...new Set(seasons.slice(0, shown))].sort().join(",");
   useEffect(() => {
     let live = true;
-    (async () => {
-      try {
-        const meta = await Api.meta(), season = meta.seasons[0];
-        const [rows, career, fc] = await Promise.all([type === "batter" ? Api.batters(season) : Api.pitchers(season), Api.career(), Api.forecast()]);
-        if (live) setData({ meta, season, rows, career, fc });
-      } catch (e) { if (live) setFail(true); }
-    })();
+    setPool({});
+    Promise.all(need.split(",").map(Number).map(async y => [y, await (type === "batter" ? Api.batters(y) : Api.pitchers(y))])).then(list => { if (live) setPool(Object.fromEntries(list)); }).catch(() => live && setFail(true));
     return () => { live = false; };
-  }, [type]);
-
-  const teamName = id => (data ? teamLabel(data.meta, id) : id);
-  const chosen = pids.slice(0, shown);
-  const first = data?.rows.find(r => r.pid === chosen.find(Boolean));
-  const poolFor = i => (data ? data.rows.filter(r => !chosen.some((p, j) => j !== i && p === r.pid) && (type === "batter" || !first || r.pos === first.pos)) : []);
-  const ready = data && chosen.every(Boolean) && chosen.every(p => data.rows.some(r => r.pid === p)) && (type === "batter" || chosen.every(p => data.rows.find(r => r.pid === p).pos === first.pos));
-  const cmp = useMemo(() => (ready ? buildCompare(type, data.rows, chosen, data.meta, data.career, data.fc) : null), [ready, type, data, chosen.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [type, need]);
+  const data = meta && extra && need.split(",").every(y => pool[y]) ? { meta, ...extra } : null;
+  const teamName = id => (meta ? teamLabel(meta, id) : id);
+  const chosen = pids.slice(0, shown), chosenS = seasons.slice(0, shown), anyHist = chosenS.some(y => y !== LATEST_S);
+  const rowOf = (pid, y) => (pool[y] || []).find(r => r.pid === pid);
+  const first = rowOf(chosen.find(Boolean), chosenS[chosen.findIndex(Boolean)]);
+  const poolFor = i => (pool[chosenS[i]] || []).filter(r => !chosen.some((p, j) => j !== i && p === r.pid && chosenS[j] === chosenS[i]) && (type === "batter" || anyHist || !first || first.season !== LATEST_S || r.pos === first.pos));
+  const ready = data && chosen.every((p, i) => p && rowOf(p, chosenS[i])) && (type === "batter" || anyHist || chosen.every((p, i) => rowOf(p, chosenS[i]).pos === first.pos));
+  const cmp = useMemo(() => (ready ? buildCompare(type, chosen.map((p, i) => ({ pid: p, season: chosenS[i], rows: pool[chosenS[i]] })), data.meta, data.career, data.fc) : null), [ready, type, data, chosen.join(","), chosenS.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
   const mismatch = type === "pitcher" && data && chosen.every(Boolean) && !ready;
   const C = cmp?.C;
+  const setSeason = (i, y) => { const keep = (pool[y] || []).some(r => r.pid === chosen[i]); set({ [SK[i]]: y === LATEST_S ? "" : String(y), ...(keep ? {} : { [KEYS[i]]: "" }) }); };
 
   const record = () => ({
-    id: Store.newId(), createdAt: new Date().toISOString(), mode: "record", source: "site", type: "compare", season: data.season,
+    id: Store.newId(), createdAt: new Date().toISOString(), mode: "record", source: "site", type: "compare", season: chosenS[0],
     title: `${cmp.names.join(" · ")} 선수 비교`, params: { target: "", teams: [], metrics: [] },
-    result: { kind: "compare", ptype: type, pids: chosen, path: `/compare?type=${type}&${chosen.map((p, i) => `${KEYS[i]}=${p}`).join("&")}`, names: cmp.names, cmp: { summary: cmp.summary, names: cmp.names, type, profile: cmp.profile, items: cmp.items.map(it => ({ group: it.group, label: it.label, en: it.en, vals: it.vals, lead: it.lead })), unit: C.stat } },
+    result: { kind: "compare", ptype: type, pids: chosen, seasons: chosenS, path: `/compare?type=${type}&${chosen.map((p, i) => `${KEYS[i]}=${p}${chosenS[i] === LATEST_S ? "" : `&${SK[i]}=${chosenS[i]}`}`).join("&")}`, names: cmp.names, cmp: { summary: cmp.summary, names: cmp.names, type, profile: cmp.profile, items: cmp.items.map(it => ({ group: it.group, label: it.label, en: it.en, vals: it.vals, lead: it.lead })), unit: C.stat } },
   });
   const save = () => { Store.add(record()); toast("비교를 분석 기록에 저장했습니다."); };
   const savePdf = async () => {
@@ -73,17 +73,19 @@ export default function Compare() {
   const groups = cmp ? [...new Set(cmp.items.map(i => i.group))] : [];
   return (
     <div className="wrap">
-      <div className="result-head"><h1>선수 비교</h1><p className="sub">같은 종류의 선수 2~4명을 리그 백분위로 나란히 비교합니다. 투수는 선발은 선발끼리, 불펜은 불펜끼리 비교해요.</p></div>
+      <div className="result-head"><h1>선수 비교</h1><p className="sub">같은 종류의 선수 2~4명을 리그 백분위로 나란히 비교합니다. 시즌을 다르게 골라 다른 해의 선수나, 같은 선수의 다른 해를 비교할 수도 있어요. 같은 시즌의 투수는 선발은 선발끼리, 불펜은 불펜끼리 비교합니다.</p></div>
       {fail && <div className="err-box" role="alert">기록을 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요.</div>}
       <div className="seg2" role="group" aria-label="비교할 선수 종류" style={{ margin: "14px 0 4px", maxWidth: 260 }}>
-        {["batter", "pitcher"].map(t => <button key={t} type="button" aria-pressed={type === t} onClick={() => { set({ type: t, a: "", b: "", c: "", d: "" }); setShown(2); }}>{t === "batter" ? "타자" : "투수"}</button>)}
+        {["batter", "pitcher"].map(t => <button key={t} type="button" aria-pressed={type === t} onClick={() => { set({ type: t, a: "", b: "", c: "", d: "", sa: "", sb: "", sc: "", sd: "" }); setShown(2); }}>{t === "batter" ? "타자" : "투수"}</button>)}
       </div>
       {data && (
         <div className="cmp-pick">
           {chosen.map((p, i) => (
             <div key={i}>
-              <PlayerCombo id={"cmp-" + KEYS[i]} label={`${i + 1}번째 선수`} rows={poolFor(i)} type={type} value={p} qualify={qualFor(data.meta, data.season)} teamName={teamName} onPick={v => set({ [KEYS[i]]: v })} />
-              {i >= 2 && <button className="linkbtn quiet" type="button" onClick={() => { set({ [KEYS[i]]: "" }); setShown(n => Math.max(2, n - 1)); }}>이 선수 빼기</button>}
+              <label className="label" htmlFor={"cs-" + KEYS[i]}>{i + 1}번째 선수의 시즌</label>
+              <select id={"cs-" + KEYS[i]} className="field" value={chosenS[i]} onChange={e => setSeason(i, Number(e.target.value))}>{[...data.meta.allSeasons].sort((a, b) => b - a).map(y => <option key={y} value={y}>{y}{y === LATEST_S ? " (최신, 투구·예측 포함)" : ""}</option>)}</select>
+              <PlayerCombo id={"cmp-" + KEYS[i]} label={`${i + 1}번째 선수`} rows={poolFor(i)} type={type} value={p} qualify={qualFor(data.meta, chosenS[i])} teamName={teamName} onPick={v => set({ [KEYS[i]]: v })} />
+              {i >= 2 && <button className="linkbtn quiet" type="button" onClick={() => { set({ [KEYS[i]]: "", [SK[i]]: "" }); setShown(n => Math.max(2, n - 1)); }}>이 선수 빼기</button>}
             </div>
           ))}
           {shown < 4 && <div className="cmp-add"><button className="btn" type="button" onClick={() => setShown(n => n + 1)}>선수 추가 ({shown}/4명)</button></div>}
@@ -92,8 +94,8 @@ export default function Compare() {
       {!cmp && data && <p className="sub">{mismatch ? "선발 투수와 불펜 투수는 던지는 이닝과 역할이 달라 비교하지 않아요. 같은 역할의 선수를 골라 주세요." : "선수를 모두 고르면 비교 결과가 나타납니다."}</p>}
       {cmp && <>
         <div className="cmp-top" style={{ "--n": cmp.names.length }}>
-          {cmp.reps.map((r, i) => { const row = data.rows.find(x => x.pid === chosen[i]); return (
-            <div key={i} className="cmp-card" style={{ borderTop: `4px solid ${CMP_COLORS[i]}` }}><h3>{r.subject.name}</h3><p>{r.subject.team} · {r.subject.pos} · {data.season} 시즌 · {type === "batter" ? `${row.pa}타석` : `${(row.outs / 3).toFixed(1)}이닝`}{r.qualified ? "" : " · 규정 미달"}</p></div>); })}
+          {cmp.reps.map((r, i) => { const row = rowOf(chosen[i], chosenS[i]); return (
+            <div key={i} className="cmp-card" style={{ borderTop: `4px solid ${CMP_COLORS[i]}` }}><h3>{cmp.names[i]}</h3><p>{r.subject.team} · {r.subject.pos} · {chosenS[i]} 시즌 · {type === "batter" ? `${row.pa}타석` : `${(row.outs / 3).toFixed(1)}이닝`}{r.qualified ? "" : " · 규정 미달"}</p></div>); })}
         </div>
         <div className="act-row" style={{ marginTop: 0 }}>
           <button className="btn pri" type="button" onClick={save}>비교 저장</button>
