@@ -115,7 +115,7 @@ function TeamView({ rec, r }) {
 }
 
 /** 분석 결과: 저장된 결과 요약으로 그린다 (분석 당시와 같은 값이 나오게 하려고 다시 계산하지 않는다) */
-export default function Result() {
+function ResultInner() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
@@ -166,4 +166,10 @@ export default function Result() {
       </div>
     </div>
   );
+}
+
+/** 결과 주소가 바뀌면(다른 기록으로 이동) 화면 상태를 새로 시작한다 */
+export default function Result() {
+  const { id } = useParams();
+  return <ResultInner key={id} />;
 }

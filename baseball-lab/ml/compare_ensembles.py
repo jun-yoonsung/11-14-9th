@@ -10,11 +10,11 @@ from sklearn.metrics import mean_absolute_error as mae
 
 ENS = {
     "batter": {"ET+RF+XGB+LGBM": ["ExtraTrees", "랜덤포레스트", "XGBoost", "LightGBM"], "ET+XGB": ["ExtraTrees", "XGBoost"], "ET+RF": ["ExtraTrees", "랜덤포레스트"],
-               "ET+RF+XGB+LGBM+HGB": ["ExtraTrees", "랜덤포레스트", "XGBoost", "LightGBM", "HGB(MAE 손실)"], "ET 단독": ["ExtraTrees"],
+               "ET+RF+XGB+LGBM+HGB": ["ExtraTrees", "랜덤포레스트", "XGBoost", "LightGBM", "HGB(MAE 손실)"], "ET 단독": ["ExtraTrees"], "ET+XGB+CatBoost+MLP+GRU": ["ExtraTrees", "XGBoost", "CatBoost", "신경망(MLP)", "시계열(GRU)"], "ET+GRU": ["ExtraTrees", "시계열(GRU)"],
                "ET+XGB+CatBoost": ["ExtraTrees", "XGBoost", "CatBoost"], "ET+XGB+CatBoost+MLP": ["ExtraTrees", "XGBoost", "CatBoost", "신경망(MLP)"], "ET+CatBoost": ["ExtraTrees", "CatBoost"], "CatBoost 단독": ["CatBoost"], "ET큰+XGB+CatBoost(깊게)": ["ExtraTrees(큰)", "XGBoost", "CatBoost(깊게)"]},
     "pitcher": {"LGBM(MAE) 단독": ["LightGBM(MAE)"], "LGBM(MAE)+XGB(MAE)": ["LightGBM(MAE)", "XGBoost(MAE)"], "LGBM(MAE)+XGB(MAE)+HGB(MAE)": ["LightGBM(MAE)", "XGBoost(MAE)", "HGB(MAE 손실)"],
                 "MAE계열3+ET+RF": ["LightGBM(MAE)", "XGBoost(MAE)", "HGB(MAE 손실)", "ExtraTrees", "랜덤포레스트"], "LGBM(MAE)+ET": ["LightGBM(MAE)", "ExtraTrees"],
-                "LGBM(MAE)+CatBoost(MAE)": ["LightGBM(MAE)", "CatBoost(MAE)"], "LGBM(MAE)+CatBoost(MAE)+XGB(MAE)": ["LightGBM(MAE)", "CatBoost(MAE)", "XGBoost(MAE)"], "CatBoost(MAE) 단독": ["CatBoost(MAE)"], "LGBM(MAE)+CatBoost(MAE)+MLP": ["LightGBM(MAE)", "CatBoost(MAE)", "신경망(MLP)"]},
+                "LGBM(MAE)+CatBoost(MAE)": ["LightGBM(MAE)", "CatBoost(MAE)"], "LGBM(MAE)+CatBoost(MAE)+XGB(MAE)": ["LightGBM(MAE)", "CatBoost(MAE)", "XGBoost(MAE)"], "CatBoost(MAE) 단독": ["CatBoost(MAE)"], "CatBoost(MAE)+GRU": ["CatBoost(MAE)", "시계열(GRU)"], "GRU 단독": ["시계열(GRU)"], "LGBM(MAE)+CatBoost(MAE)+MLP": ["LightGBM(MAE)", "CatBoost(MAE)", "신경망(MLP)"]},
 }
 
 def main():

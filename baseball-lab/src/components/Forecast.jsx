@@ -27,7 +27,7 @@ function ExtraStats({ pid, type, base }) {
       </svg><figcaption>올해 {fx(cur.key, e.now, cur.digits)}에서 이어지는 예측입니다. 옅은 띠는 80% 범위예요.</figcaption></figure>
       <div className="table-wrap"><table className="tf-t"><thead><tr><th>시즌</th><th>예상 {cur.label}</th><th>80% 범위</th></tr></thead><tbody>
         {e.pred.map(q => <tr key={q.h}><td>{base + q.h}</td><td>{fx(cur.key, q.mid, cur.digits)}</td><td>{fx(cur.key, q.lo, cur.digits)} ~ {fx(cur.key, q.hi, cur.digits)}</td></tr>)}</tbody></table></div>
-      <p className="note">시험 구간(2024~{base})에서 1년 뒤 평균 오차는 {fx(cur.key, m[1].mae_chosen, cur.digits + (PCT.includes(cur.key) ? 0 : 0))}로, 작년 기록을 그대로 쓰는 방법({fx(cur.key, m[1].mae_last, cur.digits)})보다 {m[1].mae_chosen < m[1].mae_last ? "작았" : "크거나 같았"}고 80% 범위 적중률은 {Math.round(m[1].coverage80 * 100)}%였어요. OPS·ERA보다 단순하게 만든 예측이라 참고용으로 봐 주세요.</p>
+      <p className="note">시험 구간(2024~{base})에서 1년 뒤 평균 오차는 {fx(cur.key, m[1].mae_chosen, cur.digits + (PCT.includes(cur.key) ? 0 : 0))}로, 작년 기록을 그대로 쓰는 방법({fx(cur.key, m[1].mae_last, cur.digits)})보다 {m[1].mae_chosen < m[1].mae_last ? "작았" : "크거나 같았"}고 80% 범위 적중률은 {Math.round(m[1].coverage80 * 100)}%였어요. 이 지표는 {cur.model ? cur.model.join("+") : "여러 모델"} 구성이 검증 구간에서 가장 정확해 골랐어요(지표마다 따로 비교). 참고용으로 봐 주세요.</p>
     </div>
   );
 }

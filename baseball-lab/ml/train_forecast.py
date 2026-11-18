@@ -177,7 +177,8 @@ def fit_reg(Xtr, ytr, q=None):
     return HistGradientBoostingRegressor(loss="quantile", quantile=q, **kw) if q else HistGradientBoostingRegressor(**kw)
 
 
-def run(kind, cfg, b_or_p, with_act=True):
+def run(kind, cfg, b_or_p, with_act=True, mid_models=None):
+    mm = mid_models or MID_MODELS[kind]
     X, base, lg = build_rows(b_or_p, cfg, HORIZONS)
     cols = feature_cols(X, cfg)
     metrics = {"reg": {}, "act": {}}
@@ -186,7 +187,7 @@ def run(kind, cfg, b_or_p, with_act=True):
         tgt = f"y{h}"; d = X[X[tgt].notna()]
         tr, cal, te, _ = split(d, h, cfg)
         # 학습(~2020) -> 구간 폭 보정(2021~2023) -> 시험(2024~2026): 시험 구간은 학습·보정에 전혀 쓰지 않는다
-        m = Ens(MID_MODELS[kind]).fit(tr[cols], tr[tgt])
+        m = Ens(mm).fit(tr[cols], tr[tgt])
         lo = fit_reg(tr[cols], tr[tgt], 0.1).fit(tr[cols], tr[tgt]); hi = fit_reg(tr[cols], tr[tgt], 0.9).fit(tr[cols], tr[tgt])
         scale = calibrate(cal[tgt].values, m.predict(cal[cols]), lo.predict(cal[cols]), hi.predict(cal[cols]))
         pr = m.predict(te[cols]); bl = baselines(te, cfg, h); blc = baselines(cal, cfg, h)
@@ -203,7 +204,7 @@ def run(kind, cfg, b_or_p, with_act=True):
         cover = float(np.mean((te[tgt].values >= tlo) & (te[tgt].values <= thi)))
         e = {"n_test": int(len(te)), "chosen": chosen, "mae_chosen": float(mean_absolute_error(te[tgt], tmid)), "mae_ml": float(mean_absolute_error(te[tgt], pr)),
              **{f"mae_{k}": float(mean_absolute_error(te[tgt], fill(v))) for k, v in bl.items()}, "coverage80": cover}
-        e["interval_scale"] = float(scale); metrics["reg"][h] = e
+        e["mae_cal_ml"] = float(mae_cal["ml"]); e["interval_scale"] = float(scale); metrics["reg"][h] = e
         # 현역 지속 확률 (다른 지표 예측에서는 건너뛴다)
         a = X[X[f"act{h}"].notna()]; atr = a[a.t + h < TEST_FROM]; ate = a[(a.t + h >= TEST_FROM) & (a[f"{cfg['vol']}_0"] >= cfg["min_eval"])]
         if with_act:
@@ -214,7 +215,7 @@ def run(kind, cfg, b_or_p, with_act=True):
         # 최종 모델: 정답이 있는 모든 자료로 다시 학습
         full = d; fa = a
         models[h] = dict(scale=scale, chosen=chosen, resq=resq,
-            mid=Ens(MID_MODELS[kind]).fit(full[cols], full[tgt]),
+            mid=Ens(mm).fit(full[cols], full[tgt]),
             lo=fit_reg(full[cols], full[tgt], 0.1).fit(full[cols], full[tgt]), hi=fit_reg(full[cols], full[tgt], 0.9).fit(full[cols], full[tgt]),
             act=make_clf(kind).fit(fa[cols], fa[f"act{h}"]) if with_act else None)
     return X, cols, metrics, models
