@@ -601,3 +601,17 @@ tr.me td { background: var(--blue-soft); font-weight: 700; }
 .back-link::before { content: "‹ "; }
 .explain li { margin-bottom: 8px; }
 @media (max-width: 720px) { .more-card { flex-direction: column; align-items: stretch; padding: 22px 20px; } .more-btn { text-align: center; } }
+
+/* 타구 방향 */
+.spray-svg { display: block; width: 100%; max-width: 520px; margin: 14px auto 4px; }
+.spray-t { font-size: 11px; font-weight: 700; }
+.spray-z { font-size: 9.5px; font-weight: 400; }
+.spray-v { font-size: 11px; font-weight: 700; }
+.spray h3 { margin: 28px 0 6px; }
+.seg-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 4px; }
+.kpis-sm .kpi strong { font-size: 2.2rem; }
+.spray-svg.sm { max-width: 340px; margin: 4px auto; }
+.spray-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 20px; margin-top: 8px; }
+.spray-grid figure { margin: 0; } .spray-grid figcaption { font-weight: 700; text-align: center; }
+tr.mine td { background: var(--blue-soft); font-weight: 700; }
+td.bad { color: var(--red); font-weight: 700; }

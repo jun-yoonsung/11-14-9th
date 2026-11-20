@@ -1,0 +1,39 @@
+// 타구 방향 그림 계산 (데이터: public/data/spray.json, 만드는 곳: ml/spray.py)
+export const ZONES = ["좌익수", "좌중간", "중견수", "우중간", "우익수", "1루수", "2루수", "유격수", "3루수", "투수", "포수"];
+export const SIDE_NAMES = ["당겨 침", "가운데", "밀어 침"];
+const CX = 200, CY = 330;
+const pt = (r, deg) => [CX + r * Math.sin(deg * Math.PI / 180), CY - r * Math.cos(deg * Math.PI / 180)];
+const wedge = (r1, r2, a1, a2) => {
+  const [x1, y1] = pt(r2, a1), [x2, y2] = pt(r2, a2), [x3, y3] = pt(r1, a2), [x4, y4] = pt(r1, a1);
+  return `M${x1.toFixed(1)} ${y1.toFixed(1)}A${r2} ${r2} 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)}L${x3.toFixed(1)} ${y3.toFixed(1)}A${r1} ${r1} 0 0 0 ${x4.toFixed(1)} ${y4.toFixed(1)}Z`;
+};
+const OF = [[-45, -23], [-23, -10], [-10, 10], [10, 23], [23, 45]];
+// ZONES 순서: 0 좌익수 1 좌중간 2 중견수 3 우중간 4 우익수 5 1루수 6 2루수 7 유격수 8 3루수 9 투수 10 포수
+const IFA = { 8: [-45, -22], 7: [-22, 0], 6: [0, 22], 5: [22, 45] };
+export const SHAPES = (() => {
+  const s = [];
+  OF.forEach((a, i) => { const m = (a[0] + a[1]) / 2, [lx, ly] = pt(235, m); s.push({ i, d: wedge(150, 310, a[0], a[1]), lx, ly }); });
+  Object.entries(IFA).forEach(([i, a]) => { const m = (a[0] + a[1]) / 2, [lx, ly] = pt(105, m); s.push({ i: +i, d: wedge(62, 148, a[0], a[1]), lx, ly }); });
+  const [px, py] = pt(40, 0), [cx, cy] = pt(10, 0);
+  s.push({ i: 9, circle: [px, py, 18], lx: px, ly: py }, { i: 10, circle: [cx, cy + 4, 14], lx: cx + 34, ly: cy + 8 });
+  return s;
+})();
+export const pctOf = (a, n) => (n ? (a / n) * 100 : 0);
+export const f1 = v => (v == null || Number.isNaN(v) ? "-" : v.toFixed(1));
+export const lowSample = n => n < 60;
+
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+/** 야구장 모양 방향 그림(SVG 문자열). 화면과 PDF가 같은 그림을 쓴다. mode: "share"(타구가 간 비율) | "hit"(안타 비율) */
+export function fieldSvg(e, mode = "share", { width = "100%", label = "타구 방향 그림" } = {}) {
+  const val = i => (mode === "share" ? pctOf(e.z[i], e.n) : pctOf(e.zh[i], e.z[i]));
+  const max = Math.max(...ZONES.map((_, i) => val(i)), 1);
+  const shapes = SHAPES.map(s => {
+    const v = val(s.i), rel = mode === "share" ? e.z[s.i] : e.zh[s.i], a = 0.12 + 0.78 * (v / max);
+    const fill = `rgba(33,70,199,${rel ? a.toFixed(2) : 0.05})`, ink = a > 0.55 && rel ? "#fff" : "#101216";
+    const sh = s.circle ? `<circle cx="${s.circle[0].toFixed(1)}" cy="${s.circle[1].toFixed(1)}" r="${s.circle[2]}" fill="${fill}" stroke="#fff" stroke-width="2"/>` : `<path d="${s.d}" fill="${fill}" stroke="#fff" stroke-width="2"/>`;
+    return `${sh}<text x="${s.lx.toFixed(1)}" y="${s.ly.toFixed(1)}" text-anchor="middle" fill="${ink}" font-weight="700"><tspan x="${s.lx.toFixed(1)}" dy="-0.2em" font-size="9.5" font-weight="400">${ZONES[s.i]}</tspan><tspan x="${s.lx.toFixed(1)}" dy="1.2em" font-size="11">${f1(val(s.i))}%</tspan></text>`;
+  }).join("");
+  const aria = `${label}. ${ZONES.map((z, i) => `${z} ${f1(val(i))}%`).join(", ")}`;
+  return `<svg viewBox="0 0 400 350" width="${width}" role="img" aria-label="${esc(aria)}" xmlns="http://www.w3.org/2000/svg"><path d="M200 330 L20 150 A255 255 0 0 1 380 150 Z" fill="#e7ede3"/>${shapes}<path d="M200 330 L215 315 L200 300 L185 315 Z" fill="#fff" stroke="#8d9ab8"/></svg>`;
+}
+export const PGROUP_NAMES = ["직구계(직구·투심·커터)", "변화구(슬라이더·스위퍼·커브)", "오프스피드(체인지업·포크)"];

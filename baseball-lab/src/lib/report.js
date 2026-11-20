@@ -6,6 +6,7 @@ import { CAREER, careerPlot, careerSummary } from "./career.js";
 import { svgString } from "./chart.js";
 import { qualFor } from "./season.js";
 import { paginate } from "./paginate.js";
+import { ZONES, SIDE_NAMES, PGROUP_NAMES, fieldSvg, pctOf, f1 as sf1 } from "./spray.js";
 import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamview.js";
   const T = () => TYPES;
 
@@ -199,10 +200,57 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
       <p class="rp-fine">학습 데이터: Kaggle KBO Player Stats 1982–2026 (netsong, KBO 공식 기록 기반, CC BY-NC-SA 4.0). 학습용·비영리 프로젝트에서만 사용합니다.</p></div>`;
   }
 
+  // 타구 방향 (2026 시즌만, public/data/spray.json)
+  function sprayBlock(sp, rec) {
+    if (!sp || rec.season !== sp.meta.season) return "";
+    const isBat = rec.type === "batter", e = (isBat ? sp.b : sp.p)[String(rec.params.target)];
+    if (!e || e.n < 1) return "";
+    const L = sp.meta.league, outs = e.ty[0] + e.ty[1] + e.ty[2], lgOuts = L.ty[0] + L.ty[1] + L.ty[2];
+    const goao = e.ty[1] + e.ty[2] ? (e.ty[0] / (e.ty[1] + e.ty[2])).toFixed(2) : "-", lgGoao = (L.ty[0] / (L.ty[1] + L.ty[2])).toFixed(2);
+    const zr = ZONES.map((z, i) => e.z[i] > 0 || L.z[i] > 0 ? `<tr><td>${z}</td><td>${e.z[i]}</td><td>${sf1(pctOf(e.z[i], e.n))}%</td><td>${sf1(pctOf(L.z[i], L.n))}%</td><td>${e.z[i] ? sf1(pctOf(e.zh[i], e.z[i])) + "%" : "-"}</td></tr>` : "").join("");
+    const pg = e.pg.map((g, i) => `<tr><td>${esc(PGROUP_NAMES[i])}</td><td>${g[0]}</td><td>${g[0] ? sf1(pctOf(g[1], g[0])) : "-"}%</td><td>${g[0] ? sf1(pctOf(g[2], g[0])) : "-"}%</td><td>${g[0] ? sf1(pctOf(g[3], g[0])) : "-"}%</td><td>${g[0] ? sf1(pctOf(g[4], g[0])) : "-"}%</td></tr>`).join("");
+    let batBlock = "";
+    if (isBat) {
+      const sd = e.sd.map(v => pctOf(v, e.n));
+      const crs = ["바깥쪽", "가운데", "안쪽"].map((nm, c) => { const n = e.cr[c].reduce((a, b) => a + b, 0); return `<tr><td>${nm}</td><td>${n}</td><td>${n ? sf1(pctOf(e.cr[c][0], n)) + "%" : "-"}</td><td>${sf1(e.md[c][0] * 100)}%</td><td>${sf1(e.md[c][1] * 100)}%</td><td>${sf1(e.md[c][2] * 100)}%</td></tr>`; }).join("");
+      batBlock = `<p class="rp-pv" style="margin-top:3mm"><b>당겨 치는 정도</b>: 당겨 침 ${sf1(sd[0])}%, 가운데 ${sf1(sd[1])}%, 밀어 침 ${sf1(sd[2])}% (표본 보정 ${sf1(e.sm[0] * 100)}% / ${sf1(e.sm[1] * 100)}% / ${sf1(e.sm[2] * 100)}%).${e.n < 60 ? " 타구가 적어 참고용입니다." : ""}</p>
+        <table class="rp-sm" style="margin-top:2mm"><thead><tr><th>공이 온 곳</th><th>타구</th><th>실제 당겨 침</th><th>예상 당겨 침</th><th>예상 가운데</th><th>예상 밀어 침</th></tr></thead><tbody>${crs}</tbody></table>`;
+    }
+    return `<div class="rp-sec"><h2>${isBat ? "타구 방향" : "맞은 타구 방향"} (2026 시즌)</h2>
+      <p class="rp-pv" style="margin-bottom:2mm">${isBat ? "타구" : "맞은 타구"} ${e.n}개(번트·파울플라이 제외)가 간 수비 위치입니다. 진할수록 많이 간 곳이에요.</p>
+      <div style="display:grid;grid-template-columns:88mm 1fr;gap:4mm;align-items:center">
+        <div>${fieldSvg(e, "share", { width: "88mm", label: "타구 방향 그림" })}</div>
+        <table class="rp-sm"><thead><tr><th>위치</th><th>타구</th><th>비율</th><th>리그</th><th>안타</th></tr></thead><tbody>${zr}</tbody></table></div>
+      ${batBlock}
+      <table class="rp-sm" style="margin-top:2.5mm"><thead><tr><th>공 종류</th><th>타구</th><th>당겨 침</th><th>가운데</th><th>밀어 침</th><th>안타 비율</th></tr></thead><tbody>${pg}</tbody></table>
+      <p class="rp-pv" style="margin-top:2.5mm"><b>땅볼 아웃 : 뜬공 아웃</b> ${goao} (리그 ${lgGoao}). 땅볼 아웃 ${e.ty[0]}개(${sf1(pctOf(e.ty[0], outs))}%), 뜬공 아웃 ${e.ty[1]}개(${sf1(pctOf(e.ty[1], outs))}%), 병살 ${e.dp}개.</p>
+      <p class="rp-fine">기록에 적힌 수비 위치 기준이며 정확한 좌표·타구 속도·발사각은 없습니다. 안타는 땅볼·뜬공 구분이 없어 아웃 타구만으로 비율을 셌습니다. 예상 값은 ${esc(sp.meta.model_pick)} 모델이 공 코스·구종·볼카운트까지 넣어 계산했습니다.</p></div>`;
+  }
+
+  // 팀: 타선 타구 방향, 수비 위치별 안타 허용률, 구장별 홈런
+  function teamSprayBlock(sp, rec) {
+    if (!sp || rec.season !== sp.meta.season) return "";
+    const teams = rec.result.teams.filter(t => sp.t[t.id]);
+    if (!teams.length) return "";
+    const L = sp.meta.league, ids = teams.map(t => t.id), lgHr = L.hr / L.n;
+    const w = teams.length <= 2 ? "78mm" : "52mm";
+    const figs = teams.map(t => `<div style="text-align:center"><b style="font-size:9pt">${esc(t.name)}</b>${fieldSvg(sp.t[t.id].bat, "share", { width: w, label: `${t.name} 타선의 타구 방향 그림` })}</div>`).join("");
+    const zr = ZONES.map((z, i) => `<tr><td>${z}</td><td>${sf1(pctOf(L.zh[i], L.z[i]))}%</td>${teams.map(t => { const f = sp.t[t.id].fld, v = f.z[i] ? pctOf(f.zh[i], f.z[i]) : null, d = v == null ? 0 : v - pctOf(L.zh[i], L.z[i]); return `<td class="${Math.abs(d) < 1.5 ? "" : d < 0 ? "good" : "bad"}">${v == null ? "-" : sf1(v) + "%"}</td>`; }).join("")}</tr>`).join("");
+    const parks = Object.entries(sp.s).filter(([, v]) => v.n >= 500).map(([name, v]) => ({ name, v, idx: v.hr / v.n / lgHr, mine: v.home.some(h => ids.includes(h)) })).sort((a, b) => b.idx - a.idx)
+      .map(p => `<tr><td>${esc(p.name)}${p.mine ? " *" : ""}</td><td>${esc(p.v.home.join(", "))}</td><td>${sf1(pctOf(p.v.h, p.v.n))}%</td><td>${sf1(pctOf(p.v.xb, p.v.n))}%</td><td>${sf1(pctOf(p.v.hr, p.v.n))}%</td><td>${p.idx.toFixed(2)}</td></tr>`).join("");
+    return `<div class="rp-sec"><h2>타구로 본 팀 (2026 시즌)</h2>
+      <p class="rp-pv" style="margin-bottom:2mm">타선이 친 타구가 간 수비 위치입니다(번트·파울플라이 제외). 진할수록 많이 간 곳이에요.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:3mm;justify-content:center">${figs}</div>
+      <table class="rp-sm" style="margin-top:3mm"><thead><tr><th>수비 위치 안타 허용률</th><th>리그</th>${teams.map(t => `<th>${esc(t.name)}</th>`).join("")}</tr></thead><tbody>${zr}</tbody></table>
+      <p class="rp-fine">낮을수록 좋고 초록색이 리그보다 잘 막은 곳입니다. 투수가 맞은 타구의 질도 섞여 있어 수비력만의 점수는 아닙니다.</p>
+      <table class="rp-sm" style="margin-top:3mm"><thead><tr><th>구장</th><th>홈팀</th><th>안타 비율</th><th>2루타 이상</th><th>홈런 비율</th><th>홈런 지수</th></tr></thead><tbody>${parks}</tbody></table>
+      <p class="rp-fine">홈런 지수는 리그 전체 홈런 비율을 1.00으로 둔 값입니다. * 는 선택한 팀의 홈 구장. 그 구장을 쓰는 팀의 실력이 섞여 있어 순수한 구장 효과는 아닙니다.</p></div>`;
+  }
+
   // AI 해설과 예측은 내용이 길어 각각 한 쪽으로 만든다 (없는 쪽은 만들지 않는다)
   function extraPages(extra, rec) {
     if (!extra) return [];
-    return [aiBlock(extra.ai, rec), careerBlock(extra, rec), forecastBlock(extra.fc, extra.fc && extra.fc.players[String(rec.params.target)], rec, extra.fx)].filter(Boolean).map(b => `<div style="margin-top:9mm">${b}</div>`);
+    return [aiBlock(extra.ai, rec), careerBlock(extra, rec), forecastBlock(extra.fc, extra.fc && extra.fc.players[String(rec.params.target)], rec, extra.fx), sprayBlock(extra.sp, rec)].filter(Boolean).map(b => `<div style="margin-top:9mm">${b}</div>`);
   }
 
   function playerPages(rec, d, extra) {
@@ -328,7 +376,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
   // 팀 AI 해설 + 승률 추이·예측 (있는 것만 쪽으로 만든다)
   function teamExtra(rec, extra) {
     if (!extra) return [];
-    const { tf, tc } = extra, teams = rec.result.teams, ids = teams.map(t => t.id), names = Object.fromEntries(teams.map(t => [t.id, t.name]));
+    const { tf, tc, sp } = extra, teams = rec.result.teams, ids = teams.map(t => t.id), names = Object.fromEntries(teams.map(t => [t.id, t.name]));
     const cards = ids.filter(id => tc && tc[`${rec.season}-${id}`]);
     const hasF = tf && rec.season === tf.meta.base_season && ids.some(id => tf.teams[id]);
     const out = [];
@@ -352,6 +400,8 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
         <ul class="rp-note" style="margin-top:2mm">${notes}<li>팀 성적은 선수 이동·부상 같은 변화가 커서 먼 미래일수록 평균(.500)에 가까워지며, 시험 표본(팀·시즌 80개)이 작아 참고용입니다. 예상 승수는 승률 × 144입니다.</li></ul>
         <p class="rp-fine">학습 데이터: Kaggle KBO Player Stats 1982–2026 (netsong, CC BY-NC-SA 4.0)을 팀·시즌별로 합산. 구단 이름이 바뀐 팀은 이어서 계산했습니다.</p></div>`);
     }
+    const tsb = teamSprayBlock(sp, rec);
+    if (tsb) out.push(tsb);
     return out.map(b => `<div style="margin-top:9mm">${b}</div>`);
   }
 
@@ -414,9 +464,9 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
   async function extraFor(rec) {
     if (rec.result.kind === "compare") return null;
     try {
-      if (rec.result.kind === "team") { const [tf, tc] = await Promise.all([Api.teamForecast(), Api.teamCommentary()]); return { tf, tc }; }
-      const [all, fc, career, fx] = await Promise.all([Api.commentary(), Api.forecast(), Api.career(), Api.forecastExtra()]);
-      return { ai: (all || {})[`${rec.season}-${rec.params.target}`] || null, fc, career, fx };
+      if (rec.result.kind === "team") { const [tf, tc, sp] = await Promise.all([Api.teamForecast(), Api.teamCommentary(), Api.spray()]); return { tf, tc, sp }; }
+      const [all, fc, career, fx, sp] = await Promise.all([Api.commentary(), Api.forecast(), Api.career(), Api.forecastExtra(), Api.spray()]);
+      return { ai: (all || {})[`${rec.season}-${rec.params.target}`] || null, fc, career, fx, sp };
     } catch (e) { return null; }
   }
 
