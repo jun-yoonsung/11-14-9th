@@ -208,7 +208,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
     if (!e || e.n < 1) return "";
     const L = sp.meta.league, outs = e.ty[0] + e.ty[1] + e.ty[2], lgOuts = L.ty[0] + L.ty[1] + L.ty[2];
     const goao = e.ty[1] + e.ty[2] ? (e.ty[0] / (e.ty[1] + e.ty[2])).toFixed(2) : "-", lgGoao = (L.ty[0] / (L.ty[1] + L.ty[2])).toFixed(2);
-    const zr = ZONES.map((z, i) => e.z[i] > 0 || L.z[i] > 0 ? `<tr><td>${z}</td><td>${cn(e.z[i])}</td><td>${sf1(pctOf(e.z[i], e.n))}%</td><td>${sf1(pctOf(L.z[i], L.n))}%</td><td>${e.z[i] ? sf1(pctOf(e.zh[i], e.z[i])) + "%" : "-"}</td></tr>` : "").join("");
+    const zr = ZONES.map((z, i) => pctOf(e.z[i], e.n) >= 1 || pctOf(L.z[i], L.n) >= 1 ? `<tr><td>${z}</td><td>${cn(e.z[i])}</td><td>${sf1(pctOf(e.z[i], e.n))}%</td><td>${sf1(pctOf(L.z[i], L.n))}%</td><td>${e.z[i] ? sf1(pctOf(e.zh[i], e.z[i])) + "%" : "-"}</td></tr>` : "").join("");
     const pg = e.pg.map((g, i) => `<tr><td>${esc(PGROUP_NAMES[i])}</td><td>${cn(g[0])}</td><td>${g[0] ? sf1(pctOf(g[1], g[0])) : "-"}%</td><td>${g[0] ? sf1(pctOf(g[2], g[0])) : "-"}%</td><td>${g[0] ? sf1(pctOf(g[3], g[0])) : "-"}%</td><td>${g[0] ? sf1(pctOf(g[4], g[0])) : "-"}%</td></tr>`).join("");
     let plBlock = "";
     if (e.pl) {
@@ -228,8 +228,8 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
     }
     return `<div class="rp-sec"><h2>${isBat ? "타구 방향" : "맞은 타구 방향"} (2026 시즌)</h2>
       <p class="rp-pv" style="margin-bottom:2mm">${isBat ? "타구" : "맞은 타구"} ${cn(e.n)}개(번트·파울플라이 제외, 좌중간·우중간은 두 외야수에게 절반씩)가 간 수비 위치입니다. 진할수록 많이 간 곳이에요.</p>
-      <div style="display:grid;grid-template-columns:88mm 1fr;gap:4mm;align-items:center">
-        <div>${fieldSvg(e, "share", { width: "88mm", label: "타구 방향 그림" })}</div>
+      <div style="display:grid;grid-template-columns:66mm 1fr;gap:4mm;align-items:center">
+        <div>${fieldSvg(e, "share", { width: "66mm", label: "타구 방향 그림" })}</div>
         <table class="rp-sm"><thead><tr><th>위치</th><th>타구</th><th>비율</th><th>리그</th><th>안타</th></tr></thead><tbody>${zr}</tbody></table></div>
       ${batBlock}
       ${plBlock}
@@ -240,9 +240,9 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
 
   // 팀: 타선 타구 방향, 수비 위치별 안타 허용률, 구장별 홈런
   function teamSprayBlock(sp, rec) {
-    if (!sp || rec.season !== sp.meta.season) return "";
+    if (!sp || rec.season !== sp.meta.season) return [];
     const teams = rec.result.teams.filter(t => sp.t[t.id]);
-    if (!teams.length) return "";
+    if (!teams.length) return [];
     const L = sp.meta.league, ids = teams.map(t => t.id), lgHr = L.hr / L.n;
     const w = teams.length <= 2 ? "78mm" : "52mm";
     const figs = teams.map(t => `<div style="text-align:center"><b style="font-size:9pt">${esc(t.name)}</b>${fieldSvg(sp.t[t.id].bat, "share", { width: w, label: `${t.name} 타선의 타구 방향 그림` })}</div>`).join("");
@@ -250,21 +250,23 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
     const zr = DEF_POS.map((z, i) => `<tr><td>${z}</td><td>${sf1(LD[i].rate)}%</td>${teams.map(t => { const v = TD[t.id][i].rate, d = v == null ? 0 : v - LD[i].rate; return `<td class="${Math.abs(d) < 1.5 ? "" : d < 0 ? "good" : "bad"}">${v == null ? "-" : sf1(v) + "%"}</td>`; }).join("")}</tr>`).join("");
     const parks = Object.entries(sp.s).filter(([, v]) => v.n >= 500).map(([name, v]) => ({ name, v, idx: v.hr / v.n / lgHr, mine: v.home.some(h => ids.includes(h)) })).sort((a, b) => b.idx - a.idx)
       .map(p => `<tr><td>${esc(p.name)}${p.mine ? " *" : ""}</td><td>${esc(p.v.home.join(", "))}</td><td>${sf1(pctOf(p.v.h, p.v.n))}%</td><td>${sf1(pctOf(p.v.xb, p.v.n))}%</td><td>${sf1(pctOf(p.v.hr, p.v.n))}%</td><td>${p.idx.toFixed(2)}</td></tr>`).join("");
-    return `<div class="rp-sec"><h2>타구로 본 팀 (2026 시즌)</h2>
+    const part1 = `<div class="rp-sec"><h2>타구로 본 팀 (2026 시즌)</h2>
       <p class="rp-pv" style="margin-bottom:2mm">타선이 친 타구가 간 수비 위치입니다(번트·파울플라이 제외). 진할수록 많이 간 곳이에요.</p>
       <div style="display:flex;flex-wrap:wrap;gap:3mm;justify-content:center">${figs}</div>
       <table class="rp-sm" style="margin-top:3mm"><thead><tr><th>수비 위치 안타 허용률</th><th>리그</th>${teams.map(t => `<th>${esc(t.name)}</th>`).join("")}</tr></thead><tbody>${zr}</tbody></table>
+      <p class="rp-fine">낮을수록 좋고 초록색이 리그보다 잘 막은 곳입니다. 좌중간·우중간 타구는 두 외야수에게 절반씩 나눴습니다. 투수가 맞은 타구의 질도 섞여 있어 수비력만의 점수는 아닙니다.</p></div>`;
+    const part2 = `<div class="rp-sec"><h2>타구로 본 팀 — 좌우 투수와 구장 (2026 시즌)</h2>
       ${teams.every(t => sp.t[t.id].plb) ? `<table class="rp-sm" style="margin-top:3mm"><thead><tr><th>팀</th><th>타선 vs 좌투</th><th>타선 vs 우투</th><th>투수진 vs 좌타자</th><th>투수진 vs 우타자</th></tr></thead><tbody>${teams.map(t => { const x = sp.t[t.id], c = k => slash(x.plb[k]), d = k => slash(x.plf[k]); return `<tr><td>${esc(t.name)}</td><td>${sf3(c("L") && c("L").ops)}</td><td>${sf3(c("R") && c("R").ops)}</td><td>${sf3(d("L") && d("L").ops)}</td><td>${sf3(d("R") && d("R").ops)}</td></tr>`; }).join("")}</tbody></table><p class="rp-fine">좌투·우투를 만났을 때의 OPS입니다. 투수진은 허용한 OPS라 낮을수록 좋습니다.</p>` : ""}
-      <p class="rp-fine">낮을수록 좋고 초록색이 리그보다 잘 막은 곳입니다. 좌중간·우중간 타구는 두 외야수에게 절반씩 나눴습니다. 투수가 맞은 타구의 질도 섞여 있어 수비력만의 점수는 아닙니다.</p>
       <table class="rp-sm" style="margin-top:3mm"><thead><tr><th>구장</th><th>홈팀</th><th>안타 비율</th><th>2루타 이상</th><th>홈런 비율</th><th>홈런 지수</th></tr></thead><tbody>${parks}</tbody></table>
       <p class="rp-fine">홈런 지수는 리그 전체 홈런 비율을 1.00으로 둔 값입니다. * 는 선택한 팀의 홈 구장. 그 구장을 쓰는 팀의 실력이 섞여 있어 순수한 구장 효과는 아닙니다.</p></div>`;
+    return [part1, part2];
   }
 
   // 투구 존·구종·볼카운트·상황·득점/승리 기여·피로·폼 (2026 시즌 선수, public/data/pitchlab.json·situ.json·form.json)
   function pitchlabBlock(x, rec) {
-    if (!x || !x.pl || !x.si || rec.season !== x.pl.meta.season) return "";
+    if (!x || !x.pl || !x.si || rec.season !== x.pl.meta.season) return [];
     const isBat = rec.type === "batter", id = String(rec.params.target), z = (isBat ? x.pl.b : x.pl.p)[id], s = (isBat ? x.si.b : x.si.p)[id];
-    if (!s) return "";
+    if (!s) return [];
     const lg = x.si.meta.lg, side = isBat ? "bat" : "pit", sg = isBat ? 1 : -1, sgn = (v, d = 1) => (v >= 0 ? "+" : "") + v.toFixed(d);
     const cl = (d) => (Math.abs(d) < 1e-9 ? "" : d * sg > 0 ? "good" : "bad");
     const crs = CG_NAMES.map((nm, i) => { const a = slash(s.cr[i]), l = slash(lg.cr[i]); return a ? `<tr><td>${nm}</td><td>${a.pa}</td><td>${sf3(a.avg)}</td><td>${sf3(a.obp)}</td><td>${sf3(a.slg)}</td><td class="${cl(a.ops - l.ops)}"><b>${sf3(a.ops)}</b></td><td>${sf1(a.so)}%</td><td>${sf3(l.ops)}</td></tr>` : ""; }).join("");
@@ -296,34 +298,42 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
         <p class="rp-fine">파란 선은 최근 15경기 OPS, 점선은 시즌 OPS(${sf3(all.ops)}). 최근 15경기 OPS ${rc ? sf3(rc.ops) : "-"}.${est ? ` 앞으로 기대는 타석당 출루 ${est[0].toFixed(3)}, 루타 ${est[3].toFixed(3)}이며, 시험에서 최근 폼을 섞은 모델이 시즌 누적보다 나아지지 않아 반영하지 않았습니다.` : ""}</p>`;
     }
     const w = x.si.meta.wp_models, wb = x.si.meta.wp_best;
-    return `<div class="rp-sec"><h2>${isBat ? "투구 존·볼카운트·상황별 성적" : "투구 분석·볼카운트·상황별 허용 성적"} (2026 시즌)</h2>
-      <p class="rp-pv" style="margin-bottom:2mm"><b>득점 기여(RE24)</b> ${sgn(s.re)}점${s.rk ? ` (${x.si.b ? "리그 " + s.nq + "명 중 " + s.rk.re + "위" : ""})` : ""} · <b>승리 기여(WPA)</b> ${sgn(s.wpa, 2)}승${s.rk ? ` (${s.rk.wpa}위)` : ""} · 상황 보정 ${sgn(s.wl, 2)}승 · 평균 승부처 정도 ${s.li.toFixed(2)}${isBat ? "" : " (투수는 부호를 뒤집어 플러스가 좋은 값)"}</p>
-      ${zone}${ars}
-      <p class="rp-pv" style="margin-top:3mm"><b>볼카운트별 ${isBat ? "성적" : "허용 성적"}</b> (타석의 마지막 공 기준)</p>
+    const T = isBat ? "투구 존·볼카운트·상황별 성적" : "투구 분석·볼카운트·상황별 허용 성적";
+    const sec = (h, body) => `<div class="rp-sec"><h2>${h} (2026 시즌)</h2>${body}</div>`;
+    const kpi = `<p class="rp-pv" style="margin-bottom:2mm"><b>득점 기여(RE24)</b> ${sgn(s.re)}점${s.rk ? ` (리그 ${s.nq}명 중 ${s.rk.re}위)` : ""} · <b>승리 기여(WPA)</b> ${sgn(s.wpa, 2)}승${s.rk ? ` (${s.rk.wpa}위)` : ""} · 상황 보정 ${sgn(s.wl, 2)}승 · 평균 승부처 정도 ${s.li.toFixed(2)}${isBat ? "" : " (투수는 부호를 뒤집어 플러스가 좋은 값)"}</p>`;
+    const parts = [];
+    if (zone) parts.push(sec(isBat ? "투구 존" : "투구 존", kpi + zone));
+    if (ars) parts.push(sec("구종별 구속·무브먼트·피로", ars));
+    parts.push(sec("볼카운트·상황별 " + (isBat ? "성적" : "허용 성적"), (zone ? "" : kpi) + `<p class="rp-pv"><b>볼카운트별 ${isBat ? "성적" : "허용 성적"}</b> (타석의 마지막 공 기준)</p>
       <table class="rp-sm" style="margin-top:1.5mm"><thead><tr><th>볼카운트</th><th>타석</th><th>타율</th><th>출루율</th><th>장타율</th><th>OPS</th><th>삼진%</th><th>리그 OPS</th></tr></thead><tbody>${crs}</tbody></table>
       <p class="rp-pv" style="margin-top:3mm"><b>상황별 ${isBat ? "성적" : "허용 성적"}</b></p>
       <table class="rp-sm" style="margin-top:1.5mm"><thead><tr><th>상황</th><th>타석</th><th>타율</th><th>출루율</th><th>장타율</th><th>OPS</th><th>리그 OPS</th></tr></thead><tbody>${sits}</tbody></table>
-      ${form}
-      <p class="rp-fine">득점권 등 상황별 차이는 한 시즌 표본에서는 우연의 몫이 커 "클러치 능력"으로 읽으면 안 됩니다. 승리 확률 모델은 후보 비교(경기 단위 교차검증) 결과 ${esc(wb)}을 썼습니다(손실 ${w[wb].cv}, 표 조회 ${w[Object.keys(w)[0]].cv}).${isBat ? "" : " 구위 모델은 공의 물리 값만으로는 리그 평균보다 크게 나아지지 않았습니다."}</p></div>`;
+      <p class="rp-fine">득점권 등 상황별 차이는 한 시즌 표본에서는 우연의 몫이 커 "클러치 능력"으로 읽으면 안 됩니다. 승리 확률 모델은 후보 비교(경기 단위 교차검증) 결과 ${esc(wb)}을 썼습니다(손실 ${w[wb].cv}, 표 조회 ${w[Object.keys(w)[0]].cv}).${isBat ? "" : " 구위 모델은 공의 물리 값만으로는 리그 평균보다 크게 나아지지 않았습니다."}</p>`));
+    if (form) parts.push(sec("최근 폼", form));
+    return parts;
   }
 
   function teamSituationBlock(si, rec) {
-    if (!si || rec.season !== 2026) return "";
+    if (!si || rec.season !== 2026) return [];
     const teams = rec.result.teams.filter(t => si.t[t.id]);
-    if (!teams.length) return "";
+    if (!teams.length) return [];
     const lg = si.meta.lg, sgn = (v, d = 0) => (v >= 0 ? "+" : "") + v.toFixed(d);
     const head = teams.map(t => `<tr><td>${esc(t.name)}</td><td>${sgn(si.t[t.id].bat.re)}점</td><td>${sgn(si.t[t.id].bat.wpa, 1)}승</td><td>${sgn(si.t[t.id].fld.re)}점</td><td>${sgn(si.t[t.id].fld.wpa, 1)}승</td></tr>`).join("");
     const tbl = (k, nm) => `<table class="rp-sm" style="margin-top:2.5mm"><thead><tr><th>상황별 OPS — ${nm}</th><th>리그</th>${teams.map(t => `<th>${esc(t.name)}</th>`).join("")}</tr></thead><tbody>${SIT_SHOW.map(s => { const l = slash(lg.sit[s]); return l ? `<tr><td>${SIT_LABELS[k][s]}</td><td>${sf3(l.ops)}</td>${teams.map(t => { const a = slash(si.t[t.id][k === "bat" ? "bat" : "fld"].sit[s]); return `<td>${a ? sf3(a.ops) : "-"}</td>`; }).join("")}</tr>` : ""; }).join("")}</tbody></table>`;
-    return `<div class="rp-sec"><h2>상황별 성적과 득점·승리 기여 (2026 시즌)</h2>
+    return [
+      `<div class="rp-sec"><h2>상황별 성적과 득점·승리 기여 (2026 시즌)</h2>
       <table class="rp-sm"><thead><tr><th>팀</th><th>타선 득점 기여</th><th>타선 승리 기여</th><th>투수진 득점 억제</th><th>투수진 승리 기여</th></tr></thead><tbody>${head}</tbody></table>
-      ${tbl("bat", "타선")}${tbl("pit", "투수진(허용)")}
-      <p class="rp-fine">RE24는 타석마다 늘거나 줄어든 기대 득점의 합, WPA는 이길 확률 변화의 합입니다. 투수진은 부호를 뒤집어 플러스가 좋은 값입니다. 한 시즌 표본이라 상황별 차이는 우연일 가능성이 큽니다.</p></div>`;
+      ${tbl("bat", "타선")}
+      <p class="rp-fine">RE24는 타석마다 늘거나 줄어든 기대 득점의 합, WPA는 이길 확률 변화의 합입니다. 투수진은 부호를 뒤집어 플러스가 좋은 값입니다.</p></div>`,
+      `<div class="rp-sec"><h2>상황별 투수진 허용 성적 (2026 시즌)</h2>${tbl("pit", "투수진(허용)")}
+      <p class="rp-fine">한 시즌 표본이라 상황별 차이는 우연일 가능성이 큽니다. 낮을수록 투수진에 유리합니다.</p></div>`,
+    ];
   }
 
   // AI 해설과 예측은 내용이 길어 각각 한 쪽으로 만든다 (없는 쪽은 만들지 않는다)
   function extraPages(extra, rec) {
     if (!extra) return [];
-    return [aiBlock(extra.ai, rec), careerBlock(extra, rec), forecastBlock(extra.fc, extra.fc && extra.fc.players[String(rec.params.target)], rec, extra.fx), sprayBlock(extra.sp, rec), pitchlabBlock(extra, rec)].filter(Boolean).map(b => `<div style="margin-top:9mm">${b}</div>`);
+    return [aiBlock(extra.ai, rec), careerBlock(extra, rec), forecastBlock(extra.fc, extra.fc && extra.fc.players[String(rec.params.target)], rec, extra.fx), sprayBlock(extra.sp, rec), ...pitchlabBlock(extra, rec)].filter(Boolean).map(b => `<div style="margin-top:9mm">${b}</div>`);
   }
 
   function playerPages(rec, d, extra) {
@@ -473,10 +483,8 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
         <ul class="rp-note" style="margin-top:2mm">${notes}<li>팀 성적은 선수 이동·부상 같은 변화가 커서 먼 미래일수록 평균(.500)에 가까워지며, 시험 표본(팀·시즌 80개)이 작아 참고용입니다. 예상 승수는 승률 × 144입니다.</li></ul>
         <p class="rp-fine">학습 데이터: Kaggle KBO Player Stats 1982–2026 (netsong, CC BY-NC-SA 4.0)을 팀·시즌별로 합산. 구단 이름이 바뀐 팀은 이어서 계산했습니다.</p></div>`);
     }
-    const tsb = teamSprayBlock(sp, rec);
-    if (tsb) out.push(tsb);
-    const tst = teamSituationBlock(extra && extra.si, rec);
-    if (tst) out.push(tst);
+    out.push(...teamSprayBlock(sp, rec));
+    out.push(...teamSituationBlock(extra && extra.si, rec));
     return out.map(b => `<div style="margin-top:9mm">${b}</div>`);
   }
 
