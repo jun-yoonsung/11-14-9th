@@ -78,6 +78,18 @@ def stat_row(res):
     return [1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
 
 
+def split_gaps(d):
+    """좌중간 타구는 좌익수·중견수에, 우중간 타구는 중견수·우익수에 절반(가중치 0.5)씩 나눈다. 나뉜 두 줄은 같은 타석(orig)이다."""
+    d = d.reset_index(drop=True); d["orig"] = d.index
+    parts = [d[~d.zone.isin([ZI["좌중간"], ZI["우중간"]])].assign(w=1.0)]
+    for gz, zs in ((ZI["좌중간"], ("좌익수", "중견수")), (ZI["우중간"], ("중견수", "우익수"))):
+        g = d[d.zone == gz]
+        for z in zs: parts.append(g.assign(zone=ZI[z], w=0.5))
+    d = pd.concat(parts, ignore_index=True).sort_values(["date", "orig"], kind="stable").reset_index(drop=True)
+    d["side"] = [("pull" if ZONES[z] in PULL[st] else "oppo" if ZONES[z] in OPPO[st] else "center") for z, st in zip(d.zone, d.stance)]
+    return d
+
+
 def load():
     global PA_DF
     cols = ["round_code", "game_date", "batter_id", "pitcher_id", "stance", "pa_result", "pa_last_pitch", "pa_result_text", "pitch_type", "speed_kmh",
@@ -103,7 +115,7 @@ def load():
                      r.balls, r.strikes, r.outs, int(r.on_1b > 0 or r.on_2b > 0 or r.on_3b > 0), int(r.pa_result == "병살타"), bat, fld, r.stadium, r.home_team, r.phand))
     d = pd.DataFrame(rows, columns="date batter pitcher stance zone typ bases side px pz ptype speed balls strikes outs runners dp bat fld park home phand".split())
     d["pg"] = d.ptype.map(PG).fillna("변화구")
-    return d
+    return split_gaps(d)
 
 
 SIDES = ["pull", "center", "oppo"]
@@ -120,7 +132,7 @@ def shrink(cnt, base, k):
 def counts(df, key):
     out = {}
     for k, g in df.groupby(key):
-        out[k] = np.array([(g.side == s).sum() for s in SIDES], float)
+        out[k] = np.array([g.w[g.side == s].sum() for s in SIDES], float)
     return out
 
 
@@ -140,7 +152,7 @@ def make_X(df, cs, lg, k, scale=1.0):
 def make_X_train(df, lg, k, folds=5, seed=0):
     """학습용: 자기 타구가 비율에 섞여 정답이 새지 않도록, 5조각으로 나눠 다른 조각의 기록만으로 선수 비율을 만든다."""
     rng = np.random.RandomState(seed)
-    f = rng.randint(0, folds, len(df))
+    f = rng.randint(0, folds, int(df.orig.max()) + 1)[df.orig.values]       # 같은 타석에서 나뉜 줄은 같은 조각
     parts = []
     for i in range(folds):
         cs = counts(df[f != i], ["batter", "stance"])
@@ -148,30 +160,30 @@ def make_X_train(df, lg, k, folds=5, seed=0):
     return pd.concat(parts).sort_index()
 
 
-def eval_ll(pred, y):
+def eval_ll(pred, y, w):
     p = np.clip(pred, 1e-6, 1)
-    return float(-np.mean(np.log(p[np.arange(len(y)), y])))
+    return float(-np.sum(w * np.log(p[np.arange(len(y)), y])) / w.sum())
 
 
 def compare(df):
     """시간 순으로 학습(~7월) / 검증(8월) / 시험(9월~) 으로 나눠 다음 타구 방향 맞히기."""
     tr = df[df.date < "2026-08-01"]; va = df[(df.date >= "2026-08-01") & (df.date < "2026-09-01")]; te = df[df.date >= "2026-09-01"]
     y = lambda x: x.side.map({s: i for i, s in enumerate(SIDES)}).values
-    lg = {s: np.array([(tr[tr.stance == s].side == q).mean() for q in SIDES]) for s in "LR"}
+    lg = {s: np.array([tr.w[(tr.stance == s) & (tr.side == q)].sum() / tr.w[tr.stance == s].sum() for q in SIDES]) for s in "LR"}
 
     def rate_model(train, test, k):
         cs = counts(train, ["batter", "stance"])
         return np.array([shrink(cs.get((b, s), np.zeros(3)), lg[s], k) for b, s in zip(test.batter, test.stance)])
 
     res = {}
-    res["리그 평균(타석 방향 구분만)"] = {"val": eval_ll(np.array([lg[s] for s in va.stance]), y(va)), "test": eval_ll(np.array([lg[s] for s in te.stance]), y(te))}
-    res["선수 기록 그대로"] = {"val": eval_ll(rate_model(tr, va, 1e-3), y(va)), "test": None}
+    res["리그 평균(타석 방향 구분만)"] = {"val": eval_ll(np.array([lg[s] for s in va.stance]), y(va), va.w.values), "test": eval_ll(np.array([lg[s] for s in te.stance]), y(te), te.w.values)}
+    res["선수 기록 그대로"] = {"val": eval_ll(rate_model(tr, va, 1e-3), y(va), va.w.values), "test": None}
     ks = [5, 10, 20, 40, 80, 160, 320]
-    vk = {k: eval_ll(rate_model(tr, va, k), y(va)) for k in ks}
+    vk = {k: eval_ll(rate_model(tr, va, k), y(va), va.w.values) for k in ks}
     kbest = min(vk, key=vk.get)
     full = pd.concat([tr, va])
-    res["선수 기록 + 리그 평균 보정(k=%d)" % kbest] = {"val": vk[kbest], "test": eval_ll(rate_model(full, te, kbest), y(te))}
-    res["선수 기록 그대로"]["test"] = eval_ll(rate_model(full, te, 1e-3), y(te))
+    res["선수 기록 + 리그 평균 보정(k=%d)" % kbest] = {"val": vk[kbest], "test": eval_ll(rate_model(full, te, kbest), y(te), te.w.values)}
+    res["선수 기록 그대로"]["test"] = eval_ll(rate_model(full, te, 1e-3), y(te), te.w.values)
 
     # 투구 상황까지 쓰는 기계학습 모델: 선수 보정 비율 + 공 코스·구종·구속·볼카운트
     import lightgbm as lgb
@@ -183,23 +195,23 @@ def compare(df):
         Xl, Xl2 = Xtr.copy(), Xte.copy()
         Xl["ptype"] = pd.Categorical(Xl.ptype, categories=cats); Xl2["ptype"] = pd.Categorical(Xl2.ptype, categories=cats)
         m = lgb.LGBMClassifier(n_estimators=250, learning_rate=0.03, num_leaves=15, min_child_samples=60, subsample=0.8, subsample_freq=1, colsample_bytree=0.8, reg_lambda=5, verbose=-1)
-        m.fit(Xl, yt); pl = m.predict_proba(Xl2)
+        m.fit(Xl, yt, sample_weight=train.w.values); pl = m.predict_proba(Xl2)
         cb = CatBoostClassifier(iterations=500, depth=5, learning_rate=0.04, l2_leaf_reg=8, loss_function="MultiClass", verbose=0, random_seed=0, cat_features=["ptype"])
-        cb.fit(Xtr, yt); pc = cb.predict_proba(Xte)
+        cb.fit(Xtr, yt, sample_weight=train.w.values); pc = cb.predict_proba(Xte)
         return pl, pc
     pl, pc = run(tr, va)
-    res["LightGBM(선수 보정 비율+코스·구종·구속·볼카운트)"] = {"val": eval_ll(pl, y(va))}
-    res["CatBoost(같은 입력)"] = {"val": eval_ll(pc, y(va))}
-    res["두 기계학습 모델 평균"] = {"val": eval_ll((pl + pc) / 2, y(va))}
+    res["LightGBM(선수 보정 비율+코스·구종·구속·볼카운트)"] = {"val": eval_ll(pl, y(va), va.w.values)}
+    res["CatBoost(같은 입력)"] = {"val": eval_ll(pc, y(va), va.w.values)}
+    res["두 기계학습 모델 평균"] = {"val": eval_ll((pl + pc) / 2, y(va), va.w.values)}
     pl2, pc2 = run(full, te)
-    res["LightGBM(선수 보정 비율+코스·구종·구속·볼카운트)"]["test"] = eval_ll(pl2, y(te))
-    res["CatBoost(같은 입력)"]["test"] = eval_ll(pc2, y(te))
-    res["두 기계학습 모델 평균"]["test"] = eval_ll((pl2 + pc2) / 2, y(te))
+    res["LightGBM(선수 보정 비율+코스·구종·구속·볼카운트)"]["test"] = eval_ll(pl2, y(te), te.w.values)
+    res["CatBoost(같은 입력)"]["test"] = eval_ll(pc2, y(te), te.w.values)
+    res["두 기계학습 모델 평균"]["test"] = eval_ll((pl2 + pc2) / 2, y(te), te.w.values)
     # 코스 부호 확인: inside(안쪽) 공일수록 당긴 비율이 높아야 한다
     d = df.copy(); d["inside"] = d.px * np.where(d.stance == "L", 1, -1)
     q = pd.qcut(d.inside, 3, labels=["바깥쪽", "가운데", "안쪽"])
-    sign = d.groupby(q).apply(lambda g: float((g.side == "pull").mean())).to_dict()
-    return res, kbest, vk, {k: round(v, 3) for k, v in sign.items()}, {"train": len(tr), "val": len(va), "test": len(te)}
+    sign = d.groupby(q).apply(lambda g: float(g.w[g.side == "pull"].sum() / g.w.sum())).to_dict()
+    return res, kbest, vk, {k: round(v, 3) for k, v in sign.items()}, {"train": round(tr.w.sum()), "val": round(va.w.sum()), "test": round(te.w.sum())}
 
 
 def export(df, kbest, res, sign, sizes):
@@ -209,18 +221,18 @@ def export(df, kbest, res, sign, sizes):
     df["inside"] = df.px * np.where(df.stance == "L", 1, -1)
     edges = [float(x) for x in df.inside.quantile([1 / 3, 2 / 3])]
     df["course"] = np.digitize(df.inside, edges)            # 0 바깥쪽, 1 가운데, 2 안쪽
-    lg = {s: np.array([(df[df.stance == s].side == q).mean() for q in SIDES]) for s in "LR"}
+    lg = {s: np.array([df.w[(df.stance == s) & (df.side == q)].sum() / df.w[df.stance == s].sum() for q in SIDES]) for s in "LR"}
     cats = sorted(df.ptype.dropna().astype(str).unique())
     cs = counts(df, ["batter", "stance"])
 
     ytr = df.side.map({s: i for i, s in enumerate(SIDES)}).values
     cb = CatBoostClassifier(iterations=500, depth=5, learning_rate=0.04, l2_leaf_reg=8, loss_function="MultiClass", verbose=0, random_seed=0, cat_features=["ptype"])
     Xtr = make_X_train(df, lg, kbest)
-    cb.fit(Xtr, ytr)
+    cb.fit(Xtr, ytr, sample_weight=df.w.values)
     import lightgbm as lgb
     Xl = Xtr.copy(); Xl["ptype"] = pd.Categorical(Xl.ptype, categories=cats)
     gb = lgb.LGBMClassifier(n_estimators=250, learning_rate=0.03, num_leaves=15, min_child_samples=60, subsample=0.8, subsample_freq=1, colsample_bytree=0.8, reg_lambda=5, verbose=-1)
-    gb.fit(Xl, ytr)
+    gb.fit(Xl, ytr, sample_weight=df.w.values)
     def predict(sc):
         X = make_X(sc, cs, lg, kbest); Xg = X.copy(); Xg["ptype"] = pd.Categorical(Xg.ptype, categories=cats)
         return (cb.predict_proba(X) + gb.predict_proba(Xg)) / 2
@@ -228,22 +240,26 @@ def export(df, kbest, res, sign, sizes):
     fast = df[df.ptype == "직구"]
     pz, sp = float(df.pz.median()), float(fast.speed.median())
 
+    def W(g, m=None):
+        v = float(g.w.sum() if m is None else g.w[m].sum())
+        return int(v) if v == int(v) else round(v, 1)
+
     def block(g):
-        z = [int((g.zone == i).sum()) for i in range(11)]
-        zh = [int(((g.zone == i) & (g.bases > 0)).sum()) for i in range(11)]
-        zx = [int(((g.zone == i) & (g.bases >= 2)).sum()) for i in range(11)]
-        return {"n": len(g), "z": z, "zh": zh, "zx": zx,
-                "ty": [int((g.typ == t).sum()) for t in "GFL"], "hr": int((g.bases == 4).sum()),
-                "sd": [int((g.side == s).sum()) for s in SIDES], "sh": [int(((g.side == s) & (g.bases > 0)).sum()) for s in SIDES],
-                "dp": int(g.dp.sum()), "xb": int((g.bases >= 2).sum()), "h": int((g.bases > 0).sum()),
-                "pg": [[int((g.pg == q).sum())] + [int(((g.pg == q) & (g.side == s)).sum()) for s in SIDES] + [int(((g.pg == q) & (g.bases > 0)).sum())] for q in PGROUPS]}
+        z = [W(g, g.zone == i) for i in range(11)]
+        zh = [W(g, (g.zone == i) & (g.bases > 0)) for i in range(11)]
+        zx = [W(g, (g.zone == i) & (g.bases >= 2)) for i in range(11)]
+        return {"n": W(g), "z": z, "zh": zh, "zx": zx,
+                "ty": [W(g, g.typ == t) for t in "GFL"], "hr": W(g, g.bases == 4),
+                "sd": [W(g, g.side == s) for s in SIDES], "sh": [W(g, (g.side == s) & (g.bases > 0)) for s in SIDES],
+                "dp": W(g, g.dp == 1), "xb": W(g, g.bases >= 2), "h": W(g, g.bases > 0),
+                "pg": [[W(g, g.pg == q)] + [W(g, (g.pg == q) & (g.side == s)) for s in SIDES] + [W(g, (g.pg == q) & (g.bases > 0))] for q in PGROUPS]}
     out = {"b": {}, "p": {}}
     for pid, g in df.groupby("batter"):
         e = block(g)
-        e["st"] = {s: int((g.stance == s).sum()) for s in "LR" if (g.stance == s).sum()}
-        e["cr"] = [[int(((g.course == c) & (g.side == s)).sum()) for s in SIDES] for c in range(3)]
-        e["sdh"] = {h: [int(((g.phand == h) & (g.side == s)).sum()) for s in SIDES] for h in "LR"}
-        e["hh"] = {h: [int((g.phand == h).sum()), int(((g.phand == h) & (g.bases > 0)).sum())] for h in "LR"}
+        e["st"] = {s: W(g, g.stance == s) for s in "LR" if (g.stance == s).any()}
+        e["cr"] = [[W(g, (g.course == c) & (g.side == s)) for s in SIDES] for c in range(3)]
+        e["sdh"] = {h: [W(g, (g.phand == h) & (g.side == s)) for s in SIDES] for h in "LR"}
+        e["hh"] = {h: [W(g, g.phand == h), W(g, (g.phand == h) & (g.bases > 0))] for h in "LR"}
         main = "L" if e["st"].get("L", 0) >= e["st"].get("R", 0) else "R"
         # 선수 보정 비율(타석 방향 비율이 아니라 서는 쪽별 비율을 섞는다)
         e["main"] = main
@@ -255,8 +271,8 @@ def export(df, kbest, res, sign, sizes):
         out["b"][str(pid)] = e
     for pid, g in df.groupby("pitcher"):
         e = block(g)
-        e["sds"] = {h: [int(((g.stance == h) & (g.side == s)).sum()) for s in SIDES] for h in "LR"}
-        e["hh"] = {h: [int((g.stance == h).sum()), int(((g.stance == h) & (g.bases > 0)).sum())] for h in "LR"}
+        e["sds"] = {h: [W(g, (g.stance == h) & (g.side == s)) for s in SIDES] for h in "LR"}
+        e["hh"] = {h: [W(g, g.stance == h), W(g, (g.stance == h) & (g.bases > 0))] for h in "LR"}
         out["p"][str(pid)] = e
     lgall = block(df)
     out["t"] = {t: {"bat": block(df[df.bat == t]), "fld": block(df[df.fld == t])} for t in sorted(set(df.bat))}
@@ -265,7 +281,7 @@ def export(df, kbest, res, sign, sizes):
         e = block(g)
         e["home"] = [t for t, c in g.home.value_counts().items() if c > len(g) * 0.2]      # 홈팀(잠실은 LG·두산)
         out["s"][pk] = e
-    out["meta"] = {"season": 2026, "zones": ZONES, "pgroups": PGROUPS, "sides": SIDES, "k": kbest, "edges": edges, "n": len(df), "league": lgall,
+    out["meta"] = {"season": 2026, "zones": ZONES, "pgroups": PGROUPS, "sides": SIDES, "k": kbest, "edges": edges, "n": W(df), "league": lgall,
                    "league_side": {s: [round(float(v), 4) for v in lg[s]] for s in "LR"},
                    "course_pull": sign, "sizes": sizes,
                    "models": {k: {a: (round(b, 4) if b is not None else None) for a, b in v.items()} for k, v in res.items()},
@@ -277,7 +293,7 @@ def export(df, kbest, res, sign, sizes):
 
 if __name__ == "__main__":
     df = load()
-    print("방향 분석에 쓰는 타구", len(df))
+    print("방향 분석에 쓰는 타구", round(df.w.sum()))
     res, kbest, vk, sign, sizes = compare(df)
     for k, v in res.items(): print(f"{k:55s} val {v['val']:.4f}  test {v['test']:.4f}")
     print("k별 검증 손실", {k: round(v, 4) for k, v in vk.items()}); print("코스별 당김 비율", sign, sizes)
