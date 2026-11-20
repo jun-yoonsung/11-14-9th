@@ -40,7 +40,7 @@ function Per9({ c }) {
   </>;
 }
 
-function ListCard({ title, cls, list }) {
+export function ListCard({ title, cls, list }) {
   return (
     <div className={"card2 " + cls}><h3>{title}</h3>
       {list.length ? <ul>{list.map(i => (

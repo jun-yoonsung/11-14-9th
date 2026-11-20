@@ -590,3 +590,14 @@ tr.me td { background: var(--blue-soft); font-weight: 700; }
 .cmp-bars-in { display: grid; gap: 3px; } .cmp-row { display: grid; grid-template-columns: 1fr 2.4em; gap: 8px; align-items: center; }
 .cmp-bar4 .cmp-track { height: 9px; } .cmp-bar4 .cmp-track i { top: 0; bottom: 0; }
 .cmp-bars { gap: 12px; }
+
+/* 요약 → 자세하게 보기 */
+.more-card { margin-top: 44px; display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 26px 30px; background: var(--white); border: 1px solid var(--line); border-left: 6px solid var(--blue); border-radius: var(--r-sm); }
+.more-card h2 { margin-bottom: 4px; }
+.more-list { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 6px 8px; }
+.more-list li { font-size: var(--t-sm); padding: 4px 12px; border: 1px solid var(--line); border-radius: var(--r-pill); color: var(--ink-2); background: var(--paper); }
+.more-btn { flex: none; font-size: var(--t-lg, 1.1rem); padding: 14px 28px; }
+.back-link { display: inline-block; margin-bottom: 14px; font-size: var(--t-md); color: var(--blue); text-decoration: none; font-weight: 700; }
+.back-link::before { content: "‹ "; }
+.explain li { margin-bottom: 8px; }
+@media (max-width: 720px) { .more-card { flex-direction: column; align-items: stretch; padding: 22px 20px; } .more-btn { text-align: center; } }
