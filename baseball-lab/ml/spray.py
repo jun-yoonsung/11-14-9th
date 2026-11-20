@@ -47,21 +47,61 @@ def parse(t, res):
     return z, typ, bases
 
 
+def pitcher_hands(x0):
+    """투수 번호 → 'L'/'R'. 기준은 Kaggle 선수 정보의 BatThrow(뒤쪽이 투구 손). 없으면 공 놓는 위치(x0) 중앙값의 부호(왼손 +, 오른손 -)."""
+    hands = {}
+    for f in (ROOT / "ml/raw/kbo_pitching_stats_season_1982-2026.csv", pathlib.Path("~/Downloads/archive (1)/kbo_pitching_stats_season_1982-2026.csv").expanduser()):
+        if f.exists():
+            k = pd.read_csv(f, usecols=["Id", "BatThrow", "Season"]).dropna()
+            k = k[k.Season == 2026].drop_duplicates("Id")
+            hands = {int(i): t[-1] for i, t in zip(k.Id, k.BatThrow) if t[-1] in "LR"}
+            break
+    med = x0.groupby(level=0).median()
+    for pid, v in med.items():
+        hands.setdefault(int(pid), "L" if v > 0 else "R")
+    return hands
+
+
+PA_DF = None
+STAT = ["pa", "ab", "h", "b2", "b3", "hr", "bb", "hbp", "so", "sf"]
+
+
+def stat_row(res):
+    """타석 결과 → [타석, 타수, 안타, 2루타, 3루타, 홈런, 볼넷, 사구, 삼진, 희생플라이]"""
+    h = {"1루타": (1, 0, 0, 0), "2루타": (1, 1, 0, 0), "3루타": (1, 0, 1, 0), "홈런": (1, 0, 0, 1)}.get(res)
+    if h: return [1, 1, *h, 0, 0, 0, 0]
+    if res in ("볼넷", "고의4구"): return [1, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+    if res == "사구": return [1, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+    if res == "삼진": return [1, 1, 0, 0, 0, 0, 0, 0, 1, 0]
+    if res == "희생플라이": return [1, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+    if res == "희생번트": return [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    return [1, 1, 0, 0, 0, 0, 0, 0, 0, 0]
+
+
 def load():
+    global PA_DF
     cols = ["round_code", "game_date", "batter_id", "pitcher_id", "stance", "pa_result", "pa_last_pitch", "pa_result_text", "pitch_type", "speed_kmh",
-            "plate_x", "plate_z", "balls", "strikes", "outs", "on_1b", "on_2b", "on_3b", "half", "home_team", "away_team", "stadium"]
+            "plate_x", "plate_z", "balls", "strikes", "outs", "on_1b", "on_2b", "on_3b", "half", "home_team", "away_team", "stadium", "x0"]
     d = pd.concat(pd.read_csv(f, encoding="utf-8-sig", usecols=cols) for f in sorted(glob.glob(str(SRC / "kbo_pitches/*.csv"))))
-    d = d[(d.round_code == "kbo_r") & (d.pa_last_pitch == 1)].copy()
+    d = d[d.round_code == "kbo_r"].copy()
+    hands = pitcher_hands(d.set_index("pitcher_id").x0)
+    d = d[d.pa_last_pitch == 1].copy()
+    d["phand"] = d.pitcher_id.map(hands)
+    pa = d[d.stance.isin(["L", "R"]) & d.phand.notna()].reset_index(drop=True)
+    PA_DF = pd.DataFrame([stat_row(r) for r in pa.pa_result], columns=STAT)
+    PA_DF = pd.concat([pa[["game_date", "batter_id", "pitcher_id", "stance", "phand", "half", "home_team", "away_team"]].rename(columns={"game_date": "date", "batter_id": "batter", "pitcher_id": "pitcher"}), PA_DF], axis=1)
+    PA_DF["bat"] = np.where(PA_DF.half == "top", PA_DF.away_team, PA_DF.home_team); PA_DF["fld"] = np.where(PA_DF.half == "top", PA_DF.home_team, PA_DF.away_team)
+    PA_DF = PA_DF.drop(columns=["half", "home_team", "away_team"]).reset_index(drop=True)
     rows = []
     for r in d.itertuples(index=False):
         p = parse(str(r.pa_result_text), r.pa_result)
-        if not p or r.stance not in ("L", "R"): continue
+        if not p or r.stance not in ("L", "R") or r.phand not in ("L", "R"): continue
         z, typ, b = p
         zone_side = "pull" if z in PULL[r.stance] else "oppo" if z in OPPO[r.stance] else "center"
         bat, fld = (r.away_team, r.home_team) if r.half == "top" else (r.home_team, r.away_team)
         rows.append((r.game_date, int(r.batter_id), int(r.pitcher_id), r.stance, ZI[z], typ, b, zone_side, r.plate_x, r.plate_z, r.pitch_type, r.speed_kmh,
-                     r.balls, r.strikes, r.outs, int(r.on_1b > 0 or r.on_2b > 0 or r.on_3b > 0), int(r.pa_result == "병살타"), bat, fld, r.stadium, r.home_team))
-    d = pd.DataFrame(rows, columns="date batter pitcher stance zone typ bases side px pz ptype speed balls strikes outs runners dp bat fld park home".split())
+                     r.balls, r.strikes, r.outs, int(r.on_1b > 0 or r.on_2b > 0 or r.on_3b > 0), int(r.pa_result == "병살타"), bat, fld, r.stadium, r.home_team, r.phand))
+    d = pd.DataFrame(rows, columns="date batter pitcher stance zone typ bases side px pz ptype speed balls strikes outs runners dp bat fld park home phand".split())
     d["pg"] = d.ptype.map(PG).fillna("변화구")
     return d
 
@@ -84,7 +124,7 @@ def counts(df, key):
     return out
 
 
-FEATS = "left pull oppo n inside pz speed balls strikes outs runners ptype".split()
+FEATS = "left pull oppo n inside pz speed balls strikes outs runners phand same ptype".split()
 
 
 def make_X(df, cs, lg, k, scale=1.0):
@@ -93,7 +133,7 @@ def make_X(df, cs, lg, k, scale=1.0):
     for r in df.itertuples():
         c = cs.get((r.batter, r.stance), np.zeros(3))
         p = shrink(c, lg[r.stance], k)
-        out.append([int(r.stance == "L"), p[0], p[2], c.sum() * scale, r.px * (1 if r.stance == "L" else -1), r.pz, r.speed, r.balls, r.strikes, r.outs, r.runners, str(r.ptype)])
+        out.append([int(r.stance == "L"), p[0], p[2], c.sum() * scale, r.px * (1 if r.stance == "L" else -1), r.pz, r.speed, r.balls, r.strikes, r.outs, r.runners, int(r.phand == "L"), int(r.phand == r.stance), str(r.ptype)])
     return pd.DataFrame(out, columns=FEATS)
 
 
@@ -202,16 +242,22 @@ def export(df, kbest, res, sign, sizes):
         e = block(g)
         e["st"] = {s: int((g.stance == s).sum()) for s in "LR" if (g.stance == s).sum()}
         e["cr"] = [[int(((g.course == c) & (g.side == s)).sum()) for s in SIDES] for c in range(3)]
+        e["sdh"] = {h: [int(((g.phand == h) & (g.side == s)).sum()) for s in SIDES] for h in "LR"}
+        e["hh"] = {h: [int((g.phand == h).sum()), int(((g.phand == h) & (g.bases > 0)).sum())] for h in "LR"}
         main = "L" if e["st"].get("L", 0) >= e["st"].get("R", 0) else "R"
         # 선수 보정 비율(타석 방향 비율이 아니라 서는 쪽별 비율을 섞는다)
         e["main"] = main
         base = sum(e["st"].get(s, 0) * lg[s] for s in "LR") / max(1, sum(e["st"].values()))
         e["sm"] = [round(float(v), 4) for v in shrink(e["sd"], base, kbest)]
-        sc = pd.DataFrame([dict(batter=pid, stance=main, px=mid[c] * (1 if main == "L" else -1), pz=pz, speed=sp, balls=1, strikes=1, outs=1, runners=0, ptype="직구") for c in range(3)])
-        e["md"] = [[round(float(v), 4) for v in row] for row in predict(sc)]
+        sc = pd.DataFrame([dict(batter=pid, stance=main, px=mid[c] * (1 if main == "L" else -1), pz=pz, speed=sp, balls=1, strikes=1, outs=1, runners=0, ptype="직구", phand=h) for c in range(3) for h in "RL"])
+        pr = predict(sc)    # 줄 순서: 코스(바깥·가운데·안쪽) × 투수 손(우투, 좌투)
+        e["md"] = [[[round(float(v), 4) for v in pr[c * 2 + h]] for h in range(2)] for c in range(3)]
         out["b"][str(pid)] = e
     for pid, g in df.groupby("pitcher"):
-        out["p"][str(pid)] = block(g)
+        e = block(g)
+        e["sds"] = {h: [int(((g.stance == h) & (g.side == s)).sum()) for s in SIDES] for h in "LR"}
+        e["hh"] = {h: [int((g.stance == h).sum()), int(((g.stance == h) & (g.bases > 0)).sum())] for h in "LR"}
+        out["p"][str(pid)] = e
     lgall = block(df)
     out["t"] = {t: {"bat": block(df[df.bat == t]), "fld": block(df[df.fld == t])} for t in sorted(set(df.bat))}
     out["s"] = {}
@@ -237,3 +283,14 @@ if __name__ == "__main__":
     print("k별 검증 손실", {k: round(v, 4) for k, v in vk.items()}); print("코스별 당김 비율", sign, sizes)
     json.dump({"results": res, "k": kbest, "sizes": sizes, "course_pull": sign}, open(ROOT / "ml/spray_models.json", "w"), ensure_ascii=False, indent=1)
     export(df, kbest, res, sign, sizes)
+    import platoon
+    pres, ppick, psizes = platoon.compare(PA_DF)
+    for m, r in pres.items():
+        print(m); [print(f"  {k:40s} val {v['val']:.4f} test {v['test']:.4f}") for k, v in r.items()]
+    p = ROOT / "public/data/spray.json"
+    out = json.load(open(p))
+    platoon.add_to(PA_DF, out, ppick)
+    out["meta"]["platoon"] = {"results": pres, "pick": {k: {"k": list(v["k"]), "best": v["best"]} for k, v in ppick.items()}, "sizes": psizes, "pa": int(len(PA_DF))}
+    json.dump(out, open(p, "w"), ensure_ascii=False, separators=(",", ":"))
+    json.dump({"direction": res, "platoon": pres}, open(ROOT / "ml/spray_models.json", "w"), ensure_ascii=False, indent=1)
+    print("좌우 분석 저장", round(p.stat().st_size / 1024), "KB")

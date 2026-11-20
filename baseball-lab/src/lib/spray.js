@@ -37,3 +37,13 @@ export function fieldSvg(e, mode = "share", { width = "100%", label = "타구 �
   return `<svg viewBox="0 0 400 350" width="${width}" role="img" aria-label="${esc(aria)}" xmlns="http://www.w3.org/2000/svg"><path d="M200 330 L20 150 A255 255 0 0 1 380 150 Z" fill="#e7ede3"/>${shapes}<path d="M200 330 L215 315 L200 300 L185 315 Z" fill="#fff" stroke="#8d9ab8"/></svg>`;
 }
 export const PGROUP_NAMES = ["직구계(직구·투심·커터)", "변화구(슬라이더·스위퍼·커브)", "오프스피드(체인지업·포크)"];
+
+/** [타석, 타수, 안타, 2루타, 3루타, 홈런, 볼넷, 사구, 삼진, 희생플라이] → 타율·출루율·장타율·OPS·삼진%·볼넷% */
+export function slash(a) {
+  if (!a || !a[0]) return null;
+  const [pa, ab, h, b2, b3, hr, bb, hbp, so, sf] = a, tb = h + b2 + 2 * b3 + 3 * hr;
+  const avg = ab ? h / ab : null, obpD = ab + bb + hbp + sf, obp = obpD ? (h + bb + hbp) / obpD : null, slg = ab ? tb / ab : null;
+  return { pa, avg, obp, slg, ops: obp != null && slg != null ? obp + slg : null, so: pa ? (so / pa) * 100 : null, bb: pa ? (bb / pa) * 100 : null };
+}
+export const f3 = v => (v == null ? "-" : v.toFixed(3).replace(/^0\./, "."));
+export const HAND = { L: "좌", R: "우" };

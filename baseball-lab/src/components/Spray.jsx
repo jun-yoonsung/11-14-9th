@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Api } from "../lib/api.js";
-import { ZONES, SIDE_NAMES, PGROUP_NAMES, pctOf, f1, lowSample, fieldSvg } from "../lib/spray.js";
+import { ZONES, SIDE_NAMES, PGROUP_NAMES, pctOf, f1, f3, slash, lowSample, fieldSvg } from "../lib/spray.js";
 
 const MODES = [["share", "타구가 간 비율"], ["hit", "안타가 된 비율"]];
 
@@ -11,6 +11,37 @@ const Bar = ({ label, vals, colors = ["#2146c7", "#8d9ab8", "#c9892b"], note }) 
     <div className="stk-bar">{vals.map((v, i) => v > 0 && <span key={i} style={{ width: v + "%", background: colors[i] }} title={`${SIDE_NAMES[i]} ${f1(v)}%`}>{v >= 9 ? `${SIDE_NAMES[i]} ${v.toFixed(0)}%` : ""}</span>)}</div>
   </div>
 );
+
+
+/** 좌투·우투 상대(타자) / 좌타·우타 상대(투수) */
+function Platoon({ e, isBat, meta }) {
+  if (!e.pl) return null;
+  const main = isBat ? e.main : e.hand;
+  const rows = ["L", "R"].map(k => {
+    const a = slash(e.pl[k]); const lg = slash(meta.pl[isBat ? main + k : k + main]);
+    return { k, a, lg, est: e.pe && e.pe[k], dir: isBat ? e.sdh && e.sdh[k] : e.sds && e.sds[k], hh: e.hh && e.hh[k] };
+  });
+  if (!rows.some(r => r.a)) return null;
+  const mp = meta.platoon;
+  const label = k => (isBat ? `${k === "L" ? "좌투" : "우투"} 상대` : `${k === "L" ? "좌타자" : "우타자"} 상대`);
+  const diff = (a, b) => (a == null || b == null ? "" : a - b >= 0 ? "good" : "bad");
+  return (
+    <>
+      <h3>{isBat ? "좌투·우투 상대 성적" : `좌타자·우타자 상대 성적 (${main === "L" ? "좌" : "우"}투)`}</h3>
+      <p className="sub">{isBat ? `${main === "L" ? "좌" : "우"}타 중심 선수입니다. 투수의 투구 손은 선수 정보와 공을 놓는 위치로 확인했어요.` : "타자가 서는 쪽(좌타·우타)별로 나눈 기록입니다."} 보정 값은 표본이 적어도 흔들리지 않게 고친 타석당 값이에요.</p>
+      <div className="table-wrap"><table>
+        <thead><tr><th>{isBat ? "상대 투수" : "상대 타자"}</th><th>타석</th><th>타율</th><th>출루율</th><th>장타율</th><th>OPS</th><th>삼진%</th><th>볼넷%</th><th>보정 출루/타석</th><th>보정 루타/타석</th></tr></thead>
+        <tbody>{rows.map(r => r.a ? [
+          <tr key={r.k}><td>{label(r.k)}</td><td>{r.a.pa}</td><td>{f3(r.a.avg)}</td><td>{f3(r.a.obp)}</td><td>{f3(r.a.slg)}</td><td><b>{f3(r.a.ops)}</b></td><td>{f1(r.a.so)}%</td><td>{f1(r.a.bb)}%</td><td>{r.est ? f3(r.est[0]) : "-"}</td><td>{r.est ? r.est[1].toFixed(3) : "-"}</td></tr>,
+          r.lg && <tr key={r.k + "l"} className="lg"><td>리그 평균</td><td>{r.lg.pa}</td><td>{f3(r.lg.avg)}</td><td>{f3(r.lg.obp)}</td><td>{f3(r.lg.slg)}</td><td>{f3(r.lg.ops)}</td><td>{f1(r.lg.so)}%</td><td>{f1(r.lg.bb)}%</td><td colSpan={2}>같은 조합 평균</td></tr>] : null)}</tbody></table></div>
+      {rows.every(r => r.dir) && (
+        <div className="table-wrap"><table>
+          <thead><tr><th>{isBat ? "상대 투수" : "상대 타자"}</th><th>타구</th><th>당겨 침</th><th>가운데</th><th>밀어 침</th><th>안타 비율</th></tr></thead>
+          <tbody>{rows.map(r => { const n = r.dir.reduce((a, b) => a + b, 0); return <tr key={r.k}><td>{label(r.k)}</td><td>{n}</td>{r.dir.map((v, i) => <td key={i}>{n ? f1(pctOf(v, n)) + "%" : "-"}</td>)}<td>{r.hh && r.hh[0] ? f1(pctOf(r.hh[1], r.hh[0])) + "%" : "-"}</td></tr>; })}</tbody></table></div>)}
+      <p className="legend">{isBat ? "같은 쪽에 서는 타자가 같은 손 투수를 만나면 보통 더 어려워서 리그 평균도 갈립니다." : "투수도 마찬가지로 같은 쪽 타자를 상대할 때 유리한 경우가 많습니다."} 개인의 좌우 차이는 한 시즌 표본에서는 우연이 커서, 보정 값은 리그 평균 차이를 바탕으로 이 선수의 차이를 아주 조금만 반영했습니다(비교 결과는 아래 "이 분석은 어떻게 만들었나").</p>
+    </>
+  );
+}
 
 /** 타구 방향·타구 유형 (2026 시즌만). 투구별 기록 문장에서 뽑은 수비 위치 기준이라 정확한 좌표는 아니다. */
 export default function Spray({ rec }) {
@@ -49,9 +80,9 @@ export default function Spray({ rec }) {
 
           <h3>공 코스에 따라 방향이 달라질까?</h3>
           <div className="table-wrap"><table>
-            <thead><tr><th>공이 온 곳</th><th>실제 타구 수</th><th>실제 당겨 친 비율</th><th>모델이 예상한 당겨 침</th><th>가운데</th><th>밀어 침</th></tr></thead>
+            <thead><tr><th>공이 온 곳</th><th>실제 타구 수</th><th>실제 당겨 친 비율</th><th>예상 당겨 침(우투 상대)</th><th>예상 당겨 침(좌투 상대)</th><th>예상 밀어 침(우투)</th><th>예상 밀어 침(좌투)</th></tr></thead>
             <tbody>{["바깥쪽", "가운데", "안쪽"].map((nm, c) => { const n = e.cr[c].reduce((a, b) => a + b, 0); return (
-              <tr key={nm}><td>{nm}</td><td>{n}</td><td>{n ? f1(pctOf(e.cr[c][0], n)) + "%" : "-"}</td><td><b>{f1(e.md[c][0] * 100)}%</b></td><td>{f1(e.md[c][1] * 100)}%</td><td>{f1(e.md[c][2] * 100)}%</td></tr>); })}</tbody></table></div>
+              <tr key={nm}><td>{nm}</td><td>{n}</td><td>{n ? f1(pctOf(e.cr[c][0], n)) + "%" : "-"}</td><td><b>{f1(e.md[c][0][0] * 100)}%</b></td><td><b>{f1(e.md[c][1][0] * 100)}%</b></td><td>{f1(e.md[c][0][2] * 100)}%</td><td>{f1(e.md[c][1][2] * 100)}%</td></tr>); })}</tbody></table></div>
           <p className="legend">리그 전체로 보면 안쪽 공은 {f1(m.course_pull["안쪽"] * 100)}%가 당겨 쳐지고 바깥쪽 공은 {f1(m.course_pull["바깥쪽"] * 100)}%만 당겨 쳐집니다. "모델이 예상한 당겨 침"은 {m.model_pick} 모델이 이 선수의 평소 경향과 직구·1볼 1스트라이크 기준 공 코스를 넣어 계산한 값입니다.</p>
         </>
       )}
@@ -63,6 +94,8 @@ export default function Spray({ rec }) {
           <tr key={i}><td className="l">{PGROUP_NAMES[i]}</td><td>{g[0]}</td><td>{g[0] ? f1(pctOf(g[1], g[0])) + "%" : "-"}</td><td>{g[0] ? f1(pctOf(g[2], g[0])) + "%" : "-"}</td><td>{g[0] ? f1(pctOf(g[3], g[0])) + "%" : "-"}</td>
             <td>{g[0] ? f1(pctOf(g[4], g[0])) + "%" : "-"}</td><td>{f1(pctOf(L.pg[i][4], L.pg[i][0]))}%</td></tr>))}</tbody></table></div>
       <p className="legend">{isBat ? "마지막 공" : "타구가 된 공"}의 종류 기준입니다. 당겨 침 기준은 위와 같고, 타구 수가 적은 칸은 우연의 영향이 큽니다.</p>
+
+      <Platoon e={e} isBat={isBat} meta={m} />
 
       <h3>{isBat ? "땅볼·뜬공 성향" : "땅볼·뜬공을 얼마나 만들까?"}</h3>
       <div className="kpis kpis-sm">
@@ -84,6 +117,11 @@ export default function Spray({ rec }) {
           다음 타구의 방향(당김·가운데·밀기)을 맞히는 모델 여러 개를 시즌 앞부분으로 학습하고 9월 이후 타구로 시험해 비교했습니다. 손실이 작을수록 좋습니다(로그손실).</p>
         <div className="table-wrap"><table><thead><tr><th>모델</th><th>검증(8월)</th><th>시험(9월 이후)</th></tr></thead>
           <tbody>{Object.entries(m.models).map(([k, v]) => <tr key={k}><td className="l">{k}</td><td>{v.val.toFixed(4)}</td><td>{v.test == null ? "-" : v.test.toFixed(4)}</td></tr>)}</tbody></table></div>
+        {m.platoon && <>
+          <p className="sub">좌우 상대 성적은 아래 후보들을 같은 방식으로 비교했습니다(출루 여부는 로그손실, 타석당 루타는 평균제곱오차, 모두 낮을수록 좋음).</p>
+          <div className="table-wrap"><table><thead><tr><th>후보</th><th>출루 검증</th><th>출루 시험</th><th>루타 검증</th><th>루타 시험</th></tr></thead>
+            <tbody>{Object.keys(m.platoon.results["출루"]).map(k => { const a = m.platoon.results["출루"][k], b = m.platoon.results["루타"][k]; return <tr key={k}><td className="l">{k}</td><td>{a.val.toFixed(4)}</td><td>{a.test.toFixed(4)}</td><td>{b.val.toFixed(4)}</td><td>{b.test.toFixed(4)}</td></tr>; })}</tbody></table></div>
+          <p className="sub">상대 투수 실력까지 반영한 보정 모델이 가장 좋았고, 기계학습 모델은 이 문제에서는 오히려 못했습니다(입력이 적고 타석 결과의 우연이 커서 과적합). 선수별 좌우 차이를 거의 반영하지 않는 쪽이 정확했다는 것은 한 시즌 표본으로는 개인의 좌우 성향이 대부분 우연이라는 뜻이에요.</p></>}
         <p className="sub">선수 개인 기록만 쓴 모델은 리그 평균보다 조금만 나아졌습니다(한 시즌 표본에서 타자의 방향 성향은 약하게만 드러나요). 공이 들어온 코스·구종·구속·볼카운트를 함께 넣은 기계학습 모델은 훨씬 잘 맞혔고, CatBoost와 LightGBM은 거의 같은 수준이라 둘의 평균을 코스별 예상에 사용했습니다. 학습할 때 선수 비율에 정답이 섞여 들어가지 않게 5조각으로 나눠 계산했어요.</p></details>
     </section>
   );

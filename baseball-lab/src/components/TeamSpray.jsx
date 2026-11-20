@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Api } from "../lib/api.js";
-import { ZONES, fieldSvg, pctOf, f1 } from "../lib/spray.js";
+import { ZONES, fieldSvg, pctOf, f1, f3, slash } from "../lib/spray.js";
 
 const Field = ({ e, mode, label }) => <div className="spray-svg sm" dangerouslySetInnerHTML={{ __html: fieldSvg(e, mode, { label }) }} />;
 
@@ -38,6 +38,14 @@ export default function TeamSpray({ rec }) {
           <tr key={z}><td>{z}</td><td>{f1(pctOf(L.zh[i], L.z[i]))}%</td>{teams.map(t => { const f = sp.t[t.id].fld; const v = f.z[i] ? pctOf(f.zh[i], f.z[i]) : null, d = v == null ? null : v - pctOf(L.zh[i], L.z[i]);
             return <td key={t.id} className={d == null || Math.abs(d) < 1.5 ? undefined : d < 0 ? "good" : "bad"}>{v == null ? "-" : f1(v) + "%"}</td>; })}</tr>))}
           <tr className="lg"><td>전체</td><td>{f1(pctOf(L.h, L.n))}%</td>{teams.map(t => { const f = sp.t[t.id].fld, d = pctOf(f.h, f.n) - pctOf(L.h, L.n); return <td key={t.id} className={Math.abs(d) < 0.8 ? undefined : d < 0 ? "good" : "bad"}>{f1(pctOf(f.h, f.n))}%</td>; })}</tr></tbody></table></div>
+      {teams.every(t => sp.t[t.id].plb) && <>
+        <h3>좌투·우투를 만났을 때</h3>
+        <p className="sub">타선은 좌투·우투 상대 OPS, 투수진은 좌타자·우타자에게 허용한 OPS입니다. 투수진은 낮을수록 좋아요.</p>
+        <div className="table-wrap"><table>
+          <thead><tr><th>팀</th><th>타선 vs 좌투</th><th>타선 vs 우투</th><th>투수진 vs 좌타자</th><th>투수진 vs 우타자</th></tr></thead>
+          <tbody>{teams.map(t => { const x = sp.t[t.id], c = k => slash(x.plb[k]), d = k => slash(x.plf[k]); return (
+            <tr key={t.id}><td>{t.name}</td><td>{f3(c("L")?.ops)} <small className="muted">({c("L")?.pa}타석)</small></td><td>{f3(c("R")?.ops)} <small className="muted">({c("R")?.pa}타석)</small></td><td>{f3(d("L")?.ops)}</td><td>{f3(d("R")?.ops)}</td></tr>); })}
+            <tr className="lg"><td>리그 평균</td><td>{f3(slash(["L", "R"].map(s => sp.meta.pl[s + "L"]).reduce((a, b) => a.map((v, i) => v + b[i])))?.ops)}</td><td>{f3(slash(["L", "R"].map(s => sp.meta.pl[s + "R"]).reduce((a, b) => a.map((v, i) => v + b[i])))?.ops)}</td><td>{f3(slash(["L", "R"].map(h => sp.meta.pl["L" + h]).reduce((a, b) => a.map((v, i) => v + b[i])))?.ops)}</td><td>{f3(slash(["L", "R"].map(h => sp.meta.pl["R" + h]).reduce((a, b) => a.map((v, i) => v + b[i])))?.ops)}</td></tr></tbody></table></div></>}
       <h3>구장별 타구 결과</h3>
       <p className="sub">구장마다 타구가 어떻게 끝났는지 모았습니다. 홈런 지수는 리그 전체의 홈런 비율을 1.00으로 둔 값이라 높을수록 홈런이 많이 나온 구장이에요. 그 구장을 쓰는 팀의 타선과 투수진 실력이 섞여 있어서 순수한 구장 효과는 아닙니다.</p>
       <div className="table-wrap"><table>
