@@ -10,6 +10,8 @@ import Forecast from "../components/Forecast.jsx";
 import Spray from "../components/Spray.jsx";
 import Career from "../components/Career.jsx";
 import TeamSpray from "../components/TeamSpray.jsx";
+import PitchLab from "../components/PitchLab.jsx";
+import TeamSituation from "../components/TeamSituation.jsx";
 import TeamExtras from "../components/TeamExtras.jsx";
 import { useScene } from "../context/SceneContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
@@ -43,6 +45,7 @@ function PlayerDetail({ rec, r }) {
       {rep ? <DetailReport rep={rep} /> : <p className="sub">상세 보고서를 만드는 중...</p>}
       <SimilarPlayers rec={rec} />
       <Spray rec={rec} />
+      <PitchLab rec={rec} />
       <Career rec={rec} />
       <Forecast rec={rec} />
       <Explain r={r} rec={rec} />
@@ -57,6 +60,7 @@ function TeamDetail({ rec, r }) {
     <>
       <TeamExtras rec={rec} />
       <TeamSpray rec={rec} />
+      <TeamSituation rec={rec} />
       <section className="sec"><h2>지표별 비교</h2>
         {r.metrics.map(m => {
           const max = Math.max(...m.items.map(i => Math.abs(i.value)).concat([Math.abs(m.league)]), 1);

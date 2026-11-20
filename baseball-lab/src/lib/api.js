@@ -47,5 +47,8 @@ export const Api = {
   pitchmix(pid, season = LATEST) { return season !== LATEST ? Promise.resolve([]) : this.csv("pitchmix").then(l => l.filter(x => x.pid === pid)); },
   records() { if (!cache.records) cache.records = file("records", "json").catch(() => null); return cache.records; },
   spray() { if (!cache.spray) cache.spray = file("spray", "json").catch(() => null); return cache.spray; },
+  pitchlab() { if (!cache.pitchlab) cache.pitchlab = file("pitchlab", "json").catch(() => null); return cache.pitchlab; },
+  situ() { if (!cache.situ) cache.situ = file("situ", "json").catch(() => null); return cache.situ; },
+  form() { if (!cache.form) cache.form = file("form", "json").catch(() => null); return cache.form; },
   forecastExtra() { if (!cache.forecastExtra) cache.forecastExtra = file("forecast_extra", "json").catch(() => null); return cache.forecastExtra; },
 };

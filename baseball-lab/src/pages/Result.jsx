@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 
 const kpiNote = l => (l.value == null ? "기록 없음" : l.tone === "even" ? "리그 평균과 같음" : `리그보다 ${l.diffDisplay}`);
 
-const PLAYER_PARTS = ["종합 평가·강점과 보완점", "능력 프로필", "지표 전체 표와 계산식", "월별 추이", "비슷한 선수", "타구 방향(2026 시즌)", "통산 커리어", "앞으로 5년 예측", "지표별 해설", "기록 원자료"];
+const PLAYER_PARTS = ["종합 평가·강점과 보완점", "능력 프로필", "지표 전체 표와 계산식", "월별 추이", "비슷한 선수", "타구 방향(2026 시즌)", "투구 존·구종 무브먼트·볼카운트·상황별 성적·득점/승리 기여(2026 시즌)", "통산 커리어", "앞으로 5년 예측", "지표별 해설", "기록 원자료"];
 
 /** 요약 아래의 "자세하게 보기" 안내 */
 function MoreCard({ id, parts, label }) {
@@ -66,7 +66,7 @@ function TeamSummary({ rec, r }) {
           ))}</tbody></table></div>
         <p className="note">초록색 굵은 글씨는 선택한 팀 중 가장 좋은 기록입니다.</p>
         <div className="insight">{r.insight}</div></section>
-      <MoreCard id={rec.id} parts={["지표별 막대 비교(리그 평균선 포함)", "팀 역대 요약과 순위 흐름", ...(rec.season === 2026 ? ["타구로 본 팀(타선·수비·구장)"] : [])]} label="더 자세히 알고 싶다면" />
+      <MoreCard id={rec.id} parts={["지표별 막대 비교(리그 평균선 포함)", "팀 역대 요약과 순위 흐름", ...(rec.season === 2026 ? ["타구로 본 팀(타선·수비·구장)", "상황별 성적과 득점·승리 기여"] : [])]} label="더 자세히 알고 싶다면" />
     </>
   );
 }

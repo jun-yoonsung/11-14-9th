@@ -615,3 +615,8 @@ tr.me td { background: var(--blue-soft); font-weight: 700; }
 .spray-grid figure { margin: 0; } .spray-grid figcaption { font-weight: 700; text-align: center; }
 tr.mine td { background: var(--blue-soft); font-weight: 700; }
 td.bad { color: var(--red); font-weight: 700; }
+
+/* 투구 분석·상황별 성적 */
+.seg-row .sep { flex: 0 0 12px; }
+tr.lowrow td { color: var(--muted); }
+.spray small { color: var(--muted); font-weight: 400; }
