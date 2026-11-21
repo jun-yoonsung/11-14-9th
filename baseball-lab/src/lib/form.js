@@ -129,6 +129,28 @@ export function confidence(frames /*, events */) {
   return ratio >= 0.9 && v >= 0.7 ? "높음" : ratio >= 0.7 && v >= 0.5 ? "보통" : "낮음";
 }
 
+const LR_PAIRS = [["lsho", "rsho"], ["lelb", "relb"], ["lwri", "rwri"], ["lhip", "rhip"], ["lkne", "rkne"], ["lank", "rank"]];
+/** 몸이 돌 때 MediaPipe가 왼쪽·오른쪽 이름을 바꿔 붙이는 프레임을 되돌린다(좌표가 한꺼번에 반대쪽으로 튐).
+ *  이전 프레임과의 거리를 어깨·엉덩이·무릎·발목 8개로 재서, 이름을 바꾸는 쪽이 훨씬 가깝고(60% 미만) 그대로일 때 많이 움직였으면(평균 0.12m 초과) 바꾼다.
+ *  손목·팔꿈치는 빠르게 움직여 판단에서 뺀다(바꿀 때는 12개 모두 함께 바꾼다). */
+const LR_JUDGE = ["lsho", "rsho", "lhip", "rhip", "lkne", "rkne", "lank", "rank"];
+export function fixLeftRight(frames) {
+  const out = []; let prev = null;
+  for (const f of frames) {
+    if (!f.j) { out.push(f); continue; }
+    let cur = f;
+    if (prev) {
+      const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+      const swapName = n => { for (const [a, b] of LR_PAIRS) { if (n === a) return b; if (n === b) return a; } return n; };
+      const keep = LR_JUDGE.reduce((s, n) => s + dist(prev.j[n], f.j[n]), 0) / LR_JUDGE.length;
+      const swap = LR_JUDGE.reduce((s, n) => s + dist(prev.j[n], f.j[swapName(n)]), 0) / LR_JUDGE.length;
+      if (keep > 0.12 && swap < 0.6 * keep) { const j = { ...f.j }; for (const [a, b] of LR_PAIRS) { j[a] = f.j[b]; j[b] = f.j[a]; } cur = { ...f, j }; }
+    }
+    out.push(cur); prev = cur;
+  }
+  return out;
+}
+
 const BONES = [["lsho", "lelb"], ["lelb", "lwri"], ["rsho", "relb"], ["relb", "rwri"], ["lhip", "lkne"], ["lkne", "lank"], ["rhip", "rkne"], ["rkne", "rank"]];
 export const BONE_CV_MAX = 0.15;   // 이 값을 넘으면 "낮음": 모의 실험에서 0.13→0.17 사이에 믿을 만한 지표가 12개 중 7개→2개로 무너짐
 export const BONE_CV_CAP = 0.10;   // 이 값을 넘으면 최대 "보통"

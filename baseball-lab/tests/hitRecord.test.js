@@ -87,3 +87,15 @@ test("findEvents: a foot plant that would come after the release is not accepted
   assert.ok(ev.br != null && ev.br < 20);
   assert.equal(ev.fp, null);
 });
+
+import { fixLeftRight } from "../src/lib/form.js";
+test("fixLeftRight: undoes a left/right label swap that starts mid-clip and leaves a clean clip untouched", () => {
+  const c = FX.find(x => x.name === "real_side_R"), clean = rawFrames(c).filter((_, i) => i % 12 === 0);   // 30fps 정도
+  const pairs = [["lsho", "rsho"], ["lelb", "relb"], ["lwri", "rwri"], ["lhip", "rhip"], ["lkne", "rkne"], ["lank", "rank"]];
+  const same = (a, b) => JOINTS.every(n => Math.hypot(a.j[n].x - b.j[n].x, a.j[n].y - b.j[n].y, a.j[n].z - b.j[n].z) < 1e-9);
+  assert.ok(fixLeftRight(clean).every((f, i) => same(f, clean[i])), "깨끗한 영상은 그대로");
+  const k = Math.floor(clean.length * 0.6);
+  const bad = clean.map((f, i) => { if (i < k) return f; const j = { ...f.j }; for (const [a, b] of pairs) { j[a] = f.j[b]; j[b] = f.j[a]; } return { ...f, j }; });
+  const fixed = fixLeftRight(bad), wrong = fixed.filter((f, i) => !same(f, clean[i])).length;
+  assert.ok(wrong <= 1, `복원 못 한 프레임 ${wrong}`);
+});

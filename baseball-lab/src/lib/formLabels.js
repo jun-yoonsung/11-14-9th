@@ -21,7 +21,7 @@ export function lowReasons(r) {
   if (!r || r.conf !== "낮음") return [];
   const tx = T(r.sport), out = [];
   if (r.bone && r.bone.ok === false) out.push(`관절 사이 길이가 프레임마다 많이 달라 3D 추정이 불안정해요(흔들림 ${r.bone.cv != null && isFinite(r.bone.cv) ? r.bone.cv.toFixed(2) : "측정 불가"}, 한계 0.15). 카메라가 움직이거나, 몸 일부가 화면 밖이거나 가려졌을 수 있어요.`);
-  if (r.events?.fp == null && r.sport !== "hitting") out.push("앞발 착지를 찾지 못했어요. 발이 화면 밖이거나 가려졌거나, 발을 거의 들지 않았을 수 있어요.");
+  if (r.events?.fp == null && r.sport !== "hitting") out.push("앞발 착지를 찾지 못했어요. 영상의 3D 좌표는 엉덩이를 기준으로 해서 착지 순간을 찾기 어려운 알려진 한계가 있어요(발이 화면 밖이거나 가려졌을 때도 못 찾아요).");
   if (r.events?.br == null) out.push(`${tx.end}를 찾지 못했어요. 동작이 구간 안에 다 들어오게 막대를 맞춰 보세요.`);
   if (!out.length) out.push("영상 속 사람이 자주 가려지거나 관절 인식 신뢰도가 낮았어요. 전신이 보이고 카메라가 고정된 영상이 가장 잘 맞아요.");
   return out;

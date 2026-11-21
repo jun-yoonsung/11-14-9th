@@ -1,6 +1,6 @@
 /* 영상 분석 결과(투구 폼) 만들기: 따라간 프레임(월드 좌표) → 정렬 → 순간·특징·신뢰도 → 카드·구속 범위 → 저장할 기록.
  * 영상 픽셀은 담지 않는다. 3D 관절 좌표만 저장해 영상 없이도 스켈레톤을 다시 볼 수 있다. */
-import { JOINTS, align, findEvents, features3d, confidence, boneCheck, BONE_CV_CAP } from "./form.js";
+import { JOINTS, align, findEvents, features3d, confidence, boneCheck, BONE_CV_CAP, fixLeftRight } from "./form.js";
 import { findEventsHit, featuresHit } from "./hit.js";
 import { buildHitCards } from "./hitCards.js";
 import { buildCards } from "./cards.js";
@@ -20,8 +20,9 @@ export function finalConf(conf, { sport, events, wristMax, boneCv = null }) {
 }
 
 /** @param frames {t,j|null}[] 월드 좌표(정렬 전) @param opts {view, hand, heightCm, clip:{start,end}, ref(form_ref.json), model(form_model.json)|null} */
-export function buildResult(frames, { view, hand, heightCm = null, ref, model = null, sport = "pitching" }) {
+export function buildResult(rawFrames, { view, hand, heightCm = null, ref, model = null, sport = "pitching" }) {
   const hit = sport === "hitting";
+  const frames = fixLeftRight(rawFrames);
   const aligned = align(frames, hand), ev = hit ? findEventsHit(aligned) : findEvents(aligned), bone = boneCheck(aligned);
   let conf = confidence(aligned, ev);
   if (!bone.ok) conf = "낮음";                                   // 뼈 길이가 흔들리면 3D 추정이 불안정한 영상
