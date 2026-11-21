@@ -47,9 +47,9 @@ test("cards skip values barely outside the reference range (deviation < 0.3 of i
 
 import { lowReasons } from "../src/lib/formLabels.js";
 test("lowReasons explains a low-confidence result (unstable bones, missing foot plant) and is empty otherwise", () => {
-  const low = { conf: "낮음", sport: "hitting", bone: { ok: false }, events: { fp: null, br: 5 } };
+  const low = { conf: "낮음", sport: "hitting", bone: { ok: false, cv: 0.199 }, events: { fp: null, br: 5 } };
   const out = lowReasons(low);
-  assert.equal(out.length, 2); assert.match(out[0], /길이/); assert.match(out[1], /착지/);
+  assert.equal(out.length, 2); assert.match(out[0], /길이/); assert.match(out[0], /0\.20/); assert.match(out[1], /착지/);
   assert.match(lowReasons({ conf: "낮음", sport: "pitching", bone: { ok: true }, events: { fp: 3, br: null } })[0], /릴리스/);
   assert.equal(lowReasons({ conf: "높음", bone: { ok: true }, events: { fp: 1, br: 2 } }).length, 0);
 });

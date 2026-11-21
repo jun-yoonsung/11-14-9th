@@ -50,7 +50,7 @@ export default function VideoLab() {
     } catch (e) { fail(e, e.message === "SHORT" ? "영상이 너무 짧거나 길이를 알 수 없어요. 투구 한 번이 담긴 영상(1초 이상)을 골라 주세요." : null); }
   };
 
-  const ensureLm = async () => { if (!S.current.lm) { setNote("관절 인식 모델을 불러오는 중이에요 (처음 한 번, 약 10MB)"); S.current.lm = await loadLandmarker(); setNote(""); } return S.current.lm; };
+  const ensureLm = async () => { if (!S.current.lm) { setNote("관절 인식 모델을 불러오는 중이에요 (처음 한 번, 약 30MB)"); S.current.lm = await loadLandmarker(); setNote(""); } return S.current.lm; };
 
   const toPerson = async () => {
     const span = range.end - range.start;

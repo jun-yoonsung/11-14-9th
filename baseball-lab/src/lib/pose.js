@@ -21,18 +21,22 @@ export function toScreen(landmarks) {
   return Object.fromEntries(JOINTS.map(n => { const p = landmarks[MP_INDEX[n]]; return [n, { x: p.x, y: p.y, v: p.visibility ?? 1 }]; }));
 }
 
-const isSlow = () => typeof navigator !== "undefined" && (navigator.hardwareConcurrency || 8) <= 4;
-
-/** 관절 추적기. GPU가 안 되면 CPU로 다시 시도하고, 느린 기기로 보이면 가벼운(lite) 모델을 쓴다. */
+/** 관절 추적기. 가장 정확한 heavy 모델을 쓴다(느려도 정확도 우선). GPU가 안 되면 CPU로 다시 시도하고,
+ *  모델 파일을 못 읽으면 full → lite 순으로 물러난다. 비교용으로 주소에 ?pose=full|lite|heavy를 주면 그 모델을 쓴다. */
 export async function loadLandmarker(opts = {}) {
   const { FilesetResolver, PoseLandmarker } = await import("@mediapipe/tasks-vision");
   const fileset = await FilesetResolver.forVisionTasks(`${BASE}wasm`);
-  const lite = opts.lite ?? isSlow();
-  const modelAssetPath = `${BASE}models/pose_landmarker_${lite ? "lite" : "full"}.task`;
-  const make = delegate => PoseLandmarker.createFromOptions(fileset, { baseOptions: { modelAssetPath, delegate }, runningMode: "VIDEO", numPoses: 3 });
-  let lm, delegate = "GPU";
-  try { lm = await make("GPU"); } catch { delegate = "CPU"; lm = await make("CPU"); }
-  return { lm, lite, delegate, ts: 0 };
+  const asked = opts.model || (typeof location !== "undefined" ? new URLSearchParams((location.hash.split("?")[1] || "")).get("pose") : null);
+  const order = ["heavy", "full", "lite"], first = order.includes(asked) ? asked : "heavy";
+  const tries = [first, ...order.filter(m => m !== first)];
+  let lm, delegate = "GPU", model = null, lastErr;
+  for (const m of tries) {
+    const make = d => PoseLandmarker.createFromOptions(fileset, { baseOptions: { modelAssetPath: `${BASE}models/pose_landmarker_${m}.task`, delegate: d }, runningMode: "VIDEO", numPoses: 3 });
+    try { lm = await make("GPU"); delegate = "GPU"; } catch (e) { try { lm = await make("CPU"); delegate = "CPU"; } catch (e2) { lastErr = e2; continue; } }
+    model = m; break;
+  }
+  if (!lm) throw lastErr;
+  return { lm, model, lite: model === "lite", delegate, ts: 0 };
 }
 
 /** 영상 파일 열기. 이 브라우저가 재생하지 못하는 코덱(예: HEVC)이면 Error("UNPLAYABLE") */
