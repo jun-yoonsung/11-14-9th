@@ -10,6 +10,14 @@ export const MAX_RECORD_CHARS = 300_000;
 const MIN_WRIST_MPS = 2.0;   // 던지는 손목 최고 속도가 이보다 느리면 투구가 아니다(segment.js와 같은 기준)
 const r1 = v => Math.round(v * 10) / 10, r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000;
 
+/** 동작을 못 찾았거나 움직임이 너무 작으면 신뢰도를 "낮음"으로 내린다.
+ *  앞발 착지는 투구에서만 필수다. 타격은 착지를 못 찾아도 착지 기준 지표만 비우고, 나머지로 신뢰도를 정하되 최대 "보통"으로 제한한다. */
+export function finalConf(conf, { sport, events, wristMax }) {
+  if (events.br == null || wristMax < MIN_WRIST_MPS) return "낮음";
+  if (events.fp == null) return sport === "hitting" && conf === "높음" ? "보통" : sport === "hitting" ? conf : "낮음";
+  return conf;
+}
+
 /** @param frames {t,j|null}[] 월드 좌표(정렬 전) @param opts {view, hand, heightCm, clip:{start,end}, ref(form_ref.json), model(form_model.json)|null} */
 export function buildResult(frames, { view, hand, heightCm = null, ref, model = null, sport = "pitching" }) {
   const hit = sport === "hitting";
@@ -22,7 +30,7 @@ export function buildResult(frames, { view, hand, heightCm = null, ref, model = 
   const T = k => (events[k] == null ? null : valid[events[k]].t);
   const features = hit ? featuresHit(aligned) : features3d(aligned);
   const s = angleSeries(valid);
-  if (events.fp == null || events.br == null || Math.max(0, ...s.wrist) < MIN_WRIST_MPS) conf = "낮음";   // 투구 동작(착지·릴리스)을 못 찾은 영상
+  conf = finalConf(conf, { sport, events, wristMax: Math.max(0, ...s.wrist) });   // 동작을 못 찾은 영상
   const { cards, message, speed } = hit ? buildHitCards({ features, view, ref, conf, model }) : buildCards({ features, view, hand, heightCm, ref, conf, model });
   const joints = f => JOINTS.flatMap(n => [r2(f.j[n].x), r2(f.j[n].y), r2(f.j[n].z)]);
   const pick = [[hit ? "앞발 들기" : "발 들기", T("lift")], ["앞발 착지", T("fp")], ["몸통 회전", T("fp") != null && T("br") != null ? (T("fp") + T("br")) / 2 : null], [hit ? "타격 순간" : "릴리스", T("br")]].filter(x => x[1] != null);

@@ -47,9 +47,23 @@ test("cards skip values barely outside the reference range (deviation < 0.3 of i
 
 import { lowReasons } from "../src/lib/formLabels.js";
 test("lowReasons explains a low-confidence result (unstable bones, missing foot plant) and is empty otherwise", () => {
-  const low = { conf: "낮음", sport: "hitting", bone: { ok: false, cv: 0.199 }, events: { fp: null, br: 5 } };
+  const low = { conf: "낮음", sport: "pitching", bone: { ok: false, cv: 0.199 }, events: { fp: null, br: 5 } };
   const out = lowReasons(low);
   assert.equal(out.length, 2); assert.match(out[0], /길이/); assert.match(out[0], /0\.20/); assert.match(out[1], /착지/);
   assert.match(lowReasons({ conf: "낮음", sport: "pitching", bone: { ok: true }, events: { fp: 3, br: null } })[0], /릴리스/);
   assert.equal(lowReasons({ conf: "높음", bone: { ok: true }, events: { fp: 1, br: 2 } }).length, 0);
+});
+
+import { finalConf } from "../src/lib/formRecord.js";
+test("finalConf: a missing foot plant lowers confidence for pitching but not for hitting (its landmark-dependent features are simply left blank)", () => {
+  const ok = { fp: null, br: 5 };
+  assert.equal(finalConf("높음", { sport: "pitching", events: ok, wristMax: 9 }), "낮음");
+  assert.equal(finalConf("높음", { sport: "hitting", events: ok, wristMax: 9 }), "보통");   // 착지 기준 지표가 비므로 최대 보통
+  assert.equal(finalConf("보통", { sport: "hitting", events: ok, wristMax: 9 }), "보통");
+  assert.equal(finalConf("높음", { sport: "hitting", events: { fp: 3, br: null }, wristMax: 9 }), "낮음");   // 타격 순간을 못 찾으면 낮음
+  assert.equal(finalConf("높음", { sport: "hitting", events: { fp: 3, br: 5 }, wristMax: 1 }), "낮음");      // 움직임이 너무 작으면 낮음
+});
+test("lowReasons does not blame a missing foot plant for hitting", () => {
+  const r = lowReasons({ conf: "낮음", sport: "hitting", bone: { ok: false, cv: 0.2 }, events: { fp: null, br: 5 } });
+  assert.equal(r.length, 1); assert.doesNotMatch(r[0], /착지/);
 });
