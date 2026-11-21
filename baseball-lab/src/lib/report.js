@@ -8,6 +8,7 @@ import { qualFor } from "./season.js";
 import { paginate } from "./paginate.js";
 import { ZONES, SIDE_NAMES, PGROUP_NAMES, cn, fieldSvg, pctOf, f1 as sf1, f3 as sf3, slash, DEF_POS, defense } from "./spray.js";
 import { zoneSvg, zoneStats, arsRow, rollSvg, rolling, sumGames, SIT_LABELS, SIT_SHOW, CG_NAMES } from "./pitchlab.js";
+import { CAT_NAMES, PREV_NAMES, NEXT_NAMES, MU_B, MU_P, pc, per100, fx, sx, muStats, bipStats, isStarter, linesSvg, TEAM_LINE } from "./more.js";
 import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamview.js";
   const T = () => TYPES;
 
@@ -330,10 +331,81 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
     ];
   }
 
+  // 추가 분석(공 가치·매치업·공 연결·부하·타구 유형) — public/data/more.json
+  function moreBlocks(x, rec) {
+    const m = x && x.more; if (!m || rec.season !== 2026) return [];
+    const isBat = rec.type === "batter", id = String(rec.params.target), e = (isBat ? m.b : m.p)[id];
+    if (!e) return [];
+    const sec = (h, body) => `<div class="rp-sec"><h2>${h} (2026 시즌)</h2>${body}</div>`, pv = t => `<p class="rp-pv" style="margin-top:3mm"><b>${t}</b></p>`, tb = (head, rows) => `<table class="rp-sm" style="margin-top:1.5mm"><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>`;
+    const out = [];
+    let a = "";
+    if (e.rv && isBat) {
+      a += pv("공 가치: 같은 볼카운트 평균 대비") + tb(["공이 온 곳과 내 선택", "공", "100구당 득점"], CAT_NAMES.map((n, i) => { const [c, v] = e.rv[i]; return c ? `<tr><td>${n}</td><td>${c}</td><td>${sx(per100(v, c), 2)}</td></tr>` : ""; }).join(""))
+        + `<p class="rp-fine">공 하나가 그 타석의 기대 득점을 얼마나 바꿨는지의 합이며 양수가 이득입니다. 시즌 총합 ${sx(e.rv[4][1], 1)}점.</p>`;
+    }
+    if (e.rv && !isBat) {
+      const lg = m.meta.rv.lg_p;
+      a += pv("구종별 공 가치(100구당 득점 억제, 플러스가 투수에게 이득)") + tb(["구종", "투구", "이 투수", "리그 같은 구종", "차이"], Object.entries(e.rv).sort((x, y) => y[1][0] - x[1][0]).map(([t, [n, s]]) => { const v = per100(s, n), L = lg[t] && per100(lg[t][1], lg[t][0]); return `<tr><td>${esc(t)}</td><td>${n}</td><td>${sx(v, 2)}</td><td>${L == null ? "-" : sx(L, 2)}</td><td>${L == null ? "-" : sx(v - L, 2)}</td></tr>`; }).join(""));
+    }
+    if (e.mu) {
+      const lg = muStats(m.meta.mu.lg), names = isBat ? MU_B : MU_P;
+      a += pv(isBat ? "이런 투수를 만나면(예상 타석 결과)" : "이런 타자를 만나면(예상 타석 결과)") + tb([isBat ? "상대 투수" : "상대 타자", "삼진", "볼넷·사구", "안타", "홈런", "출루"], names.filter(n => e.mu[n]).map(n => { const q = muStats(e.mu[n]); return `<tr><td>${n}</td><td>${sf1(q.so)}%</td><td>${sf1(q.bb)}%</td><td>${sf1(q.hit)}%</td><td>${sf1(q.hr)}%</td><td><b>${sf1(q.obp)}%</b></td></tr>`; }).join("") + `<tr><td>리그 평균</td><td>${sf1(lg.so)}%</td><td>${sf1(lg.bb)}%</td><td>${sf1(lg.hit)}%</td><td>${sf1(lg.hr)}%</td><td>${sf1(lg.obp)}%</td></tr>`)
+        + `<p class="rp-fine">모델: ${esc(m.meta.mu.best)}. 리그 평균 예측보다 아주 조금 나아지는 수준이라 큰 차이를 말하는 값은 아닙니다.</p>`;
+    }
+    if (e.bip) {
+      const q = bipStats(e.bip), l = bipStats(m.meta.bip.lg);
+      a += pv("타구 유형·병살") + tb(["구분", isBat ? "이 선수" : "이 투수", "리그"], `<tr><td>땅볼 아웃 : 뜬공 아웃</td><td>${fx(q.gbfb, 2)}</td><td>${fx(l.gbfb, 2)}</td></tr><tr><td>라인드라이브 아웃 비율</td><td>${sf1(q.ld)}%</td><td>${sf1(l.ld)}%</td></tr><tr><td>병살 기회 대비 병살타(${e.bip[1]}번 중 ${e.bip[2]}번)</td><td>${sf1(q.gdp)}%</td><td>${sf1(l.gdp)}%</td></tr><tr><td>실책 출루 / 야수선택</td><td>${q.roe} / ${q.fc}</td><td>-</td></tr>`);
+    }
+    out.push(sec(isBat ? "공 가치·매치업·타구 유형" : "공 가치·매치업·타구 유형", a));
+    if (!isBat) {
+      let b = "";
+      if (e.seq) {
+        const cell = (arr, i, j) => arr.slice((i * 3 + j) * 4, (i * 3 + j) * 4 + 4);
+        b += pv("공 연결: 직전 공에 따른 다음 공의 CSW%") + tb(["직전 공", ...NEXT_NAMES.map(n => "다음 " + n)], PREV_NAMES.map((nm, i) => `<tr><td>${nm}</td>${NEXT_NAMES.map((_, j) => { const c = cell(e.seq.t, i, j), L = cell(m.meta.seq.lg, i, j); return `<td>${c[0] ? sf1(pc(c[3], c[0])) + "%" : "-"} <span style="color:#5c667d">(${c[0]}구, 리그 ${sf1(pc(L[3], L[0]))}%)</span></td>`; }).join("")}</tr>`).join(""))
+          + `<p class="rp-fine">${m.meta.seq.best.startsWith("공 하나만") ? "시험에서 직전 공 정보가 스트라이크 예측을 좋아지게 하지 못해, 차이는 습관을 보여 줄 뿐 효과가 입증된 것은 아닙니다." : "직전 공 정보가 예측을 좋아지게 했습니다."}${e.seq.d[1] >= 20 ? ` 직구계 다음 오프스피드의 평균 구속 차이 ${fx(e.seq.d[0] / e.seq.d[1], 1)} km/h.` : ""}</p>`;
+      }
+      if (e.vaa) {
+        const lv = m.meta.seq.lg_vaa;
+        b += pv("수직 접근각과 터널링") + tb(["구종", "투구", "접근각", "리그 같은 구종"], Object.entries(e.vaa).sort((x, y) => y[1][1] - x[1][1]).map(([t, [v, n]]) => `<tr><td>${esc(t)}</td><td>${n}</td><td>${fx(v, 2)}°</td><td>${lv[t] ? fx(lv[t][0], 2) + "°" : "-"}</td></tr>`).join(""));
+        if (e.tun && e.tun.rows.length) b += tb([`${e.tun.fb}과 비교`, "투구", "놓는 위치 차이(cm)", "0.2초 뒤 차이(인치)", "홈플레이트 차이(인치)"], e.tun.rows.map(r => `<tr><td>${esc(r[0])}</td><td>${r[1]}</td><td>${fx(r[2], 1)}</td><td>${fx(r[3], 1)}</td><td>${fx(r[4], 1)}</td></tr>`).join("")) + `<p class="rp-fine">접근각·터널링은 속도·가속도에서 계산한 근사치입니다.</p>`;
+      }
+      if (e.work) {
+        const lgw = m.meta.work.lg[isStarter(e.work) ? "sp" : "rel"], names = m.meta.work.rest;
+        b += pv("휴식일에 따른 성적과 구속") + tb(["휴식", "등판", "9이닝 자책점", "직구 구속(평소 대비)", "리그 구속 변화"], e.work.map((r, i) => r[0] ? `<tr><td>${names[i]}</td><td>${r[0]}</td><td>${r[1] >= 9 ? fx((r[2] * 27) / r[1], 2) : "-"}</td><td>${r[4] ? sx(r[3] / r[4], 2) : "-"}</td><td>${lgw[i][4] ? sx(lgw[i][3] / lgw[i][4], 2) : "-"}</td></tr>` : "").join(""))
+          + `<p class="rp-fine">시험에서 휴식일·최근 투구 수는 구속을 설명하지 못했습니다(${esc(m.meta.work.best)}이 가장 좋음).</p>`;
+      }
+      if (e.tto) {
+        const lt = m.meta.work.tto_lg, nm = ["첫 대결", "두 번째 대결", "세 번째 이상"];
+        b += pv("같은 타자를 몇 번째 만나는가") + tb(["구분", "타석", "OPS 허용", "리그 OPS"], e.tto.map((x, i) => { const q = slash(x), l = slash(lt[i]); return q ? `<tr><td>${nm[i]}</td><td>${q.pa}</td><td>${sf3(q.ops)}</td><td>${sf3(l.ops)}</td></tr>` : ""; }).join(""));
+      }
+      if (b) out.push(sec("공 연결·접근각·부하", b));
+    }
+    return out;
+  }
+
+  function teamMoreBlocks(m, rec) {
+    if (!m || rec.season !== 2026) return [];
+    const teams = rec.result.teams.filter(t => m.t[t.id] && m.t[t.id].lineup);
+    if (!teams.length) return [];
+    const g = m.meta.game, lg = m.meta.lineup.lg_slot, sec = (h, body) => `<div class="rp-sec"><h2>${h} (2026 시즌)</h2>${body}</div>`;
+    const tb = (head, rows) => `<table class="rp-sm" style="margin-top:2mm"><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>`;
+    const slots = tb(["타순", "리그", ...teams.map(t => esc(t.name))], [1, 2, 3, 4, 5, 6, 7, 8, 9].map(s => { const l = slash(lg[s][0]); return `<tr><td>${s}번</td><td>${sf3(l.ops)}</td>${teams.map(t => { const a = slash(m.t[t.id].lineup.slots[s][0]); return `<td>${a ? sf3(a.ops) : "-"}</td>`; }).join("")}</tr>`; }).join(""));
+    const lus = teams.map(t => { const L = m.t[t.id].lineup.lineups, base = L["실제 라인업(평균 타순)"].runs; return tb([esc(t.name), "기대 득점", "실제 대비", "1~9번"], Object.entries(L).map(([k, v]) => `<tr><td>${k}</td><td>${fx(v.runs, 2)}</td><td>${sx(v.runs - base, 2)}</td><td style="font-size:7.5pt">${v.order.map(esc).join(" → ")}</td></tr>`).join("")); }).join("");
+    const p1 = sec("타순별 OPS와 라인업 시뮬레이션", `<p class="rp-pv">타순별 OPS(타석 수가 적은 칸은 참고용)</p>${slots}<p class="rp-pv" style="margin-top:3mm">9이닝 기대 득점: 팀의 주전 9명 기록(보정)에 아웃·주자별 진루 패턴을 이어 붙인 마르코프 계산</p>${lus}<p class="rp-fine">수비·주루·상대 투수는 반영하지 못했고, 타순 차이는 대개 경기당 0.1점 안팎이라 참고용입니다.</p>`);
+    const rank = Object.entries(g.elo).sort((a, b) => b[1] - a[1]).map(([t]) => t);
+    const chart = linesSvg(teams.map((t, i) => ({ name: t.name, color: TEAM_LINE[i % 4], pts: g.traj[t.id] })), { width: "150mm", label: "팀 Elo 추이" });
+    const leg = `<div class="rp-leg2">${teams.map((t, i) => `<span><i style="border-color:${TEAM_LINE[i % 4]}"></i>${esc(t.name)}</span>`).join("")}</div>`;
+    const h2h = teams.length >= 2 ? tb(["홈팀 \\ 원정팀", ...teams.map(t => esc(t.name))], teams.map(h => `<tr><td>${esc(h.name)}(홈)</td>${teams.map(a => `<td>${h.id === a.id ? "-" : sf1(g.matrix[h.id][a.id] * 100) + "%"}</td>`).join("")}</tr>`).join("")) : "";
+    const err = tb(["팀", ...m.meta.bip.pos, "합계"], teams.map(t => { const e = m.t[t.id].bip && m.t[t.id].bip.err; return e ? `<tr><td>${esc(t.name)}</td>${e.map(v => `<td>${v}</td>`).join("")}<td><b>${e.reduce((a, b) => a + b, 0)}</b></td></tr>` : ""; }).join(""));
+    const mods = tb(["모델", "로그손실", "정확도"], Object.entries(g.models).map(([k, v]) => `<tr><td>${esc(k)}${k === g.best ? " (선택)" : ""}</td><td>${v.logloss}</td><td>${sf1(v.acc * 100)}%</td></tr>`).join(""));
+    const p2 = sec("팀 전력(Elo)·경기 예측·수비 실책", `${tb(["팀", "Elo", "순위(10팀 중)"], teams.map(t => `<tr><td>${esc(t.name)}</td><td>${fx(g.elo[t.id], 0)}</td><td>${rank.indexOf(t.id) + 1}위</td></tr>`).join(""))}${chart}${leg}${h2h}<p class="rp-fine">행의 팀이 홈에서 열의 팀을 이길 확률(선발·최근 폼은 평균으로 둠). 7~10월 ${g.n_eval}경기를 앞으로 걸으며 검증했고 모델 비교는 아래와 같습니다.</p>${mods}<p class="rp-pv" style="margin-top:3mm"><b>수비 실책을 낸 위치</b>(실책출루만)</p>${err}`);
+    return [p1, p2];
+  }
+
   // AI 해설과 예측은 내용이 길어 각각 한 쪽으로 만든다 (없는 쪽은 만들지 않는다)
   function extraPages(extra, rec) {
     if (!extra) return [];
-    return [aiBlock(extra.ai, rec), careerBlock(extra, rec), forecastBlock(extra.fc, extra.fc && extra.fc.players[String(rec.params.target)], rec, extra.fx), sprayBlock(extra.sp, rec), ...pitchlabBlock(extra, rec)].filter(Boolean).map(b => `<div style="margin-top:9mm">${b}</div>`);
+    return [aiBlock(extra.ai, rec), careerBlock(extra, rec), forecastBlock(extra.fc, extra.fc && extra.fc.players[String(rec.params.target)], rec, extra.fx), sprayBlock(extra.sp, rec), ...pitchlabBlock(extra, rec), ...moreBlocks(extra, rec)].filter(Boolean).map(b => `<div style="margin-top:9mm">${b}</div>`);
   }
 
   function playerPages(rec, d, extra) {
@@ -485,6 +557,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
     }
     out.push(...teamSprayBlock(sp, rec));
     out.push(...teamSituationBlock(extra && extra.si, rec));
+    out.push(...teamMoreBlocks(extra && extra.more, rec));
     return out.map(b => `<div style="margin-top:9mm">${b}</div>`);
   }
 
@@ -547,9 +620,9 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
   async function extraFor(rec) {
     if (rec.result.kind === "compare") return null;
     try {
-      if (rec.result.kind === "team") { const [tf, tc, sp, si] = await Promise.all([Api.teamForecast(), Api.teamCommentary(), Api.spray(), Api.situ()]); return { tf, tc, sp, si }; }
-      const [all, fc, career, fx, sp, pl, si, fo] = await Promise.all([Api.commentary(), Api.forecast(), Api.career(), Api.forecastExtra(), Api.spray(), Api.pitchlab(), Api.situ(), Api.form()]);
-      return { ai: (all || {})[`${rec.season}-${rec.params.target}`] || null, fc, career, fx, sp, pl, si, fo };
+      if (rec.result.kind === "team") { const [tf, tc, sp, si, more] = await Promise.all([Api.teamForecast(), Api.teamCommentary(), Api.spray(), Api.situ(), Api.more()]); return { tf, tc, sp, si, more }; }
+      const [all, fc, career, fx, sp, pl, si, fo, more] = await Promise.all([Api.commentary(), Api.forecast(), Api.career(), Api.forecastExtra(), Api.spray(), Api.pitchlab(), Api.situ(), Api.form(), Api.more()]);
+      return { ai: (all || {})[`${rec.season}-${rec.params.target}`] || null, fc, career, fx, sp, pl, si, fo, more };
     } catch (e) { return null; }
   }
 
