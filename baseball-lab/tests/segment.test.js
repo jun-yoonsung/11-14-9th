@@ -96,3 +96,25 @@ test("soleSeed: exactly one person gives that person's screen center, otherwise 
   assert.ok(Math.abs(one[0] - 0.4) < 1e-9 && one[1] > 0.2 && one[1] < 0.35);
   assert.equal(soleSeed([]), null); assert.equal(soleSeed([{ img }, { img }]), null); assert.equal(soleSeed(undefined), null);
 });
+
+import { cropRect } from "../src/lib/segment.js";
+test("cropRect: small person gets a padded, clamped crop box around where they move; large or missing person gets null", () => {
+  const person = (cx, cy, h) => Object.fromEntries(JOINTS.map((n, i) => [n, { x: cx + ((i % 3) - 1) * 0.02, y: cy - h / 2 + (i / (JOINTS.length - 1)) * h, v: 1 }]));
+  const small = [0, 1, 2].map(k => ({ t: k * 0.2, img: person(0.3 + k * 0.02, 0.5, 0.25) }));
+  const r = cropRect(small, { aspect: 1 });
+  assert.ok(r.x < 0.28 && r.x + r.w > 0.36 && r.y < 0.375 && r.y + r.h > 0.625, "사람 움직임 전체를 감싼다");
+  assert.ok(r.x >= 0 && r.y >= 0 && r.x + r.w <= 1 && r.y + r.h <= 1, "화면 안");
+  assert.ok(r.h < 0.9, "화면 전체가 아니다");
+  assert.equal(cropRect([{ t: 0, img: person(0.5, 0.5, 0.8) }], { aspect: 1 }), null);       // 이미 큼
+  assert.equal(cropRect([], { aspect: 1 }), null); assert.equal(cropRect([{ t: 0, img: null }], { aspect: 1 }), null);
+  const edge = cropRect([{ t: 0, img: person(0.02, 0.95, 0.1) }], { aspect: 1 });            // 가장자리: 화면 밖으로 나가지 않음
+  assert.ok(edge.x >= 0 && edge.y >= 0 && edge.x + edge.w <= 1 + 1e-9 && edge.y + edge.h <= 1 + 1e-9);
+});
+
+import { uncrop } from "../src/lib/segment.js";
+test("uncrop maps crop-relative screen coordinates back to the full frame", () => {
+  const img = Object.fromEntries(JOINTS.map(n => [n, { x: 0.5, y: 0.25, z: 0.1, v: 1 }]));
+  const r = uncrop(img, { x: 0.2, y: 0.4, w: 0.2, h: 0.4 });
+  assert.ok(Math.abs(r.lsho.x - 0.3) < 1e-9 && Math.abs(r.lsho.y - 0.5) < 1e-9 && r.lsho.v === 1);
+  assert.equal(uncrop(null, { x: 0, y: 0, w: 1, h: 1 }), null);
+});

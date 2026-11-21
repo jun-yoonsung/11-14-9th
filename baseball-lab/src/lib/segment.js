@@ -14,6 +14,29 @@ const wristName = hand => (hand === "L" ? "lwri" : "rwri");
 /** 첫 장면에서 사람이 정확히 1명일 때 그 사람의 화면 중심 [x,y]. 0명 또는 2명 이상이면 null (all 항목은 {j, img}) */
 export function soleSeed(all) { return all && all.length === 1 ? center(all[0].img) : null; }
 
+/** 사람이 화면에서 작을 때(키가 화면의 45% 미만) 그 사람이 움직이는 범위를 여유 있게 감싼 잘라내기 상자 {x,y,w,h}(화면 비율). 크거나 못 찾으면 null.
+ *  aspect = 영상 가로/세로 픽셀 비. 상자는 화소로 정사각형에 가깝게 만들고 화면 안으로 밀어 넣는다. 작은 사람은 이 상자만 확대해 다시 추정하면 관절이 더 정확하다. */
+export function cropRect(frames, { aspect = 1, pad = 0.35, maxHeight = 0.45 } = {}) {
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, tall = 0, any = false;
+  for (const f of frames || []) {
+    if (!f.img) continue;
+    let a = Infinity, b = -Infinity;
+    for (const n of JOINTS) { const p = f.img[n]; x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); a = Math.min(a, p.y); b = Math.max(b, p.y); any = true; }
+    tall = Math.max(tall, b - a);
+  }
+  if (!any || tall >= maxHeight) return null;
+  const side = Math.min(1, Math.max((x1 - x0) * aspect, y1 - y0) * (1 + 2 * pad));   // 세로 비율 단위의 한 변
+  const w = Math.min(1, side / aspect), h = Math.min(1, side);
+  const x = Math.min(Math.max((x0 + x1) / 2 - w / 2, 0), 1 - w), y = Math.min(Math.max((y0 + y1) / 2 - h / 2, 0), 1 - h);
+  return { x, y, w, h };
+}
+
+/** 잘라낸 화면 기준 좌표(0~1)를 전체 화면 좌표로 되돌린다 */
+export function uncrop(img, c) {
+  if (!img) return img;
+  return Object.fromEntries(Object.entries(img).map(([n, p]) => [n, { ...p, x: c.x + p.x * c.w, y: c.y + p.y * c.h }]));
+}
+
 /** 클릭한 위치(화면 비율)에 가장 가까운 사람의 번호. 사람이 없으면 -1 */
 export function pickPerson(first, x, y) {
   let best = -1, bd = Infinity;

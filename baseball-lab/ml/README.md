@@ -122,27 +122,27 @@
 
 | 시점 | Ridge | ExtraTrees | XGBoost | CatBoost | MLP | 선택 | 깨끗한 입력 RMSE |
 |---|---|---|---|---|---|---|---|
-| side | 4.49 | 4.73 | 4.79 | 5.02 | 5.80 | **ridge** | 4.60 |
-| front | 4.52 | 4.70 | 4.81 | 5.03 | 5.75 | **ridge** | 4.60 |
-| back | 4.57 | 4.79 | 4.88 | 5.26 | 5.68 | **ridge** | 4.60 |
-| broadcast | 4.52 | 4.71 | 4.82 | 4.93 | 6.01 | **ridge** | 4.60 |
+| side | 4.67 | 4.79 | 4.76 | 4.90 | 5.77 | **ridge** | 4.69 |
+| front | 4.64 | 4.74 | 4.74 | 4.86 | 6.10 | **ridge** | 4.69 |
+| back | 4.66 | 4.76 | 4.77 | 4.87 | 5.21 | **ridge** | 4.69 |
+| broadcast | 4.61 | 4.73 | 4.73 | 4.84 | 5.99 | **ridge** | 4.69 |
 
 (중첩 교차검증 RMSE, 단위 mph. 구속 표준편차 대비 개선이 크지 않아 구속 예측은 참고용이다.)
 
 | 특징 | 옆 | 정면 | 뒤 | 중계 | 중요도 |
 |---|---|---|---|---|---|
-| stride_torso | 높음 | 높음 | 높음 | 높음 | 0.070 |
-| trunk_lean_deg | 보통 | 보통 | 보통 | 보통 | 0.018 |
-| knee_fp_deg | 보통 | 보통 | 보통 | 보통 | 0.095 |
-| knee_br_deg | 높음 | 높음 | 높음 | 높음 | 0.200 |
-| arm_angle_deg | 보통 | 보통 | 보통 | 보통 | 0.085 |
-| elbow_h_fp | 높음 | 높음 | 높음 | 높음 | 0.001 |
-| release_h_torso | 보통 | 보통 | 보통 | 보통 | 0.068 |
-| hip_shoulder_sep_deg | 보통 | 보통 | 보통 | 보통 | 0.118 |
-| trunk_rot_lag_ms | 낮음 | 낮음 | 낮음 | 낮음 | 0.004 |
+| stride_torso | 높음 | 높음 | 높음 | 높음 | 0.097 |
+| trunk_lean_deg | 보통 | 보통 | 보통 | 보통 | 0.008 |
+| knee_fp_deg | 높음 | 높음 | 높음 | 높음 | 0.084 |
+| knee_br_deg | 높음 | 보통 | 높음 | 높음 | 0.117 |
+| arm_angle_deg | 보통 | 보통 | 보통 | 보통 | 0.025 |
+| elbow_h_fp | 높음 | 높음 | 높음 | 높음 | 0.000 |
+| release_h_torso | 보통 | 보통 | 보통 | 보통 | 0.065 |
+| hip_shoulder_sep_deg | 보통 | 보통 | 보통 | 보통 | 0.073 |
+| trunk_rot_lag_ms | 보통 | 보통 | 보통 | 보통 | 0.187 |
 | pelvis_trunk_gap_ms | 낮음 | 낮음 | 낮음 | 낮음 | 0.009 |
-| trunk_arm_gap_ms | 낮음 | 낮음 | 낮음 | 낮음 | 0.188 |
-| fp_to_br_ms | 낮음 | 낮음 | 낮음 | 낮음 | 0.144 |
+| trunk_arm_gap_ms | 낮음 | 낮음 | 낮음 | 낮음 | 0.198 |
+| fp_to_br_ms | 낮음 | 낮음 | 낮음 | 낮음 | 0.136 |
 
 - 신뢰도 = 잡음 입힌 특징과 깨끗한 특징의 평균 절대 차이 ÷ 참조 IQR (<0.25 높음, <0.5 보통, 그 이상 낮음). 조정 방향 카드는 신뢰도가 "낮음"이 아닌 특징에서만 나온다.
 - KBO 릴리스: 2026 투수별 평균 궤적에서 y=54.5ft 위치(`pitchers.csv`의 hand로 우투·좌투 구분).
@@ -151,14 +151,14 @@
 - 입력: OpenBiomechanics `baseball_hitting`의 `full_sig/hitting_landmarks.zip`(릴리스 dataset-v1, 체크섬 확인) 관절 중심 12개, 677스윙·98명. 목표 = 배트 최고 속도(bat_speed_mph_max_x, 표준편차 4.86). 투구용 `form_ref.py`의 좌표 맞추기·잡음 모사·모델·내보내기를 그대로 쓴다(`hit_ref.py`가 가져다 씀).
 - 실행: 튜닝 `python3 -u ml/hit_tune.py run --view side --budget-min 72 --nj 1 --tag h2`(시점마다 하나씩 4개 동시) → `python3 -u ml/hit_tune.py assemble --tag h2`(/tmp/x/tune_hit/h2에 hit_ref.json·hit_model.json 생성) → `public/data/`로 복사. 튜닝 없이는 `python3 -u ml/hit_ref.py`. 시험 `python3 -m pytest ml/test_hit_ref.py`.
 - 타격 순간 = 양 손 평균 위치 속도 정점 + 0.067초(OBP 정답 접촉 시각과 비교해 정한 보정, 중앙 오차 0초·75%가 0.011초 이내). 앞발 착지 = 앞발목 높이 규칙(중앙 −0.033초).
-- 모델 비교(중첩 교차검증, 선수 단위): 바깥 평가 입력에는 시점별 잡음(측정한 떨림 기준)을 입혔다. RMSE(mph): ridge 4.90, extratrees 4.89, xgboost 4.89, catboost 4.87, mlp 5.27 (옆 시점). 아래 표 전체.
+- 모델 비교(중첩 교차검증, 선수 단위): 바깥 평가 입력에는 시점별 잡음(측정한 떨림 기준)을 입혔다. RMSE(mph): ridge 4.80, extratrees 4.93, xgboost 4.89, catboost 4.93, mlp 5.11 (옆 시점). 아래 표 전체.
 
 | 시점 | ridge | extratrees | xgboost | catboost | mlp | 선택 | 깨끗한 입력 |
 |---|---|---|---|---|---|---|---|
-| side | 4.90 | 4.89 | 4.89 | 4.87 | 5.27 | **catboost** | 4.81 |
-| front | 4.87 | 4.87 | 4.90 | 4.90 | 5.24 | **ridge** | 4.88 |
-| back | 4.85 | 4.87 | 4.88 | 4.86 | 5.20 | **ridge** | 4.88 |
-| broadcast | 4.90 | 4.87 | 4.86 | 4.89 | 5.18 | **xgboost** | 4.83 |
+| side | 4.80 | 4.93 | 4.89 | 4.93 | 5.11 | **ridge** | 4.63 |
+| front | 4.84 | 4.90 | 4.90 | 4.95 | 5.11 | **ridge** | 4.63 |
+| back | 4.84 | 4.89 | 4.88 | 4.93 | 5.06 | **ridge** | 4.63 |
+| broadcast | 4.84 | 4.92 | 4.92 | 4.97 | 5.14 | **ridge** | 4.63 |
 
 - **이 12개 지표로는 배트 속도를 거의 맞히지 못한다**(RMSE ≈ 표준편차 4.86, 깨끗한 입력도 같음). 튜닝으로도 좋아지지 않았다. 그래서 화면은 배트 속도 범위를 보여 주지 않는다(교차검증 오차가 표준편차의 95% 아래일 때만 보임: sideX, frontX, backX, broadcastX).
 - 신뢰도(잡음 입힌 값과 깨끗한 값의 평균 절대 차이 ÷ 참조 IQR: <0.25 높음, <0.5 보통):
@@ -166,13 +166,13 @@
 | 지표 | 옆 | 정면 | 뒤 | 중계 |
 |---|---|---|---|---|
 | stride_torso | 높음 | 높음 | 높음 | 높음 |
-| trunk_lean_deg | 높음 | 높음 | 높음 | 높음 |
-| knee_fp_deg | 보통 | 낮음 | 보통 | 낮음 |
-| knee_ct_deg | 높음 | 높음 | 높음 | 높음 |
+| trunk_lean_deg | 낮음 | 낮음 | 낮음 | 낮음 |
+| knee_fp_deg | 보통 | 보통 | 보통 | 보통 |
+| knee_ct_deg | 낮음 | 낮음 | 낮음 | 낮음 |
 | hip_shoulder_sep_deg | 낮음 | 낮음 | 낮음 | 낮음 |
 | pelvis_rot_deg | 낮음 | 낮음 | 낮음 | 낮음 |
 | trunk_rot_deg | 낮음 | 낮음 | 낮음 | 낮음 |
-| trunk_rot_lag_ms | 낮음 | 낮음 | 낮음 | 낮음 |
+| trunk_rot_lag_ms | 보통 | 보통 | 보통 | 보통 |
 | pelvis_trunk_gap_ms | 낮음 | 낮음 | 낮음 | 낮음 |
 | trunk_hands_gap_ms | 낮음 | 낮음 | 낮음 | 낮음 |
 | fp_to_ct_ms | 낮음 | 낮음 | 낮음 | 낮음 |

@@ -1,6 +1,7 @@
 /* 브라우저 관절 추적 (MediaPipe Pose Landmarker). 영상은 서버로 보내지 않고 이 브라우저 안에서만 처리한다.
  * 영상 파일은 통째로 읽지 않고 object URL로 재생기에 연결해, 필요한 시각만 건너뛰며(seek) 프레임을 읽는다. */
 import { JOINTS, MP_INDEX, toFrame } from "./form.js";
+import { uncrop } from "./segment.js";
 
 export const MAX_UNTRIMMED_SEC = 600;
 const BASE = (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.BASE_URL) || "/";
@@ -93,14 +94,20 @@ const yieldToUi = () => new Promise(r => setTimeout(r, 0));
 
 /** 구간을 fps 간격으로 훑는다. 월드 좌표 프레임 {t, j, img, all}; all은 찾은 모든 사람 [{j, img}].
  *  취소(signal)하면 지금까지의 프레임을 돌려준다. 프레임마다 화면에 양보해 탭이 멈추지 않는다. */
-export async function scan(landmarker, video, { from, to, fps, signal, onProgress } = {}) {
+export async function scan(landmarker, video, { from, to, fps, signal, onProgress, crop } = {}) {
   const times = frameTimes(from, to, fps), frames = [];
+  let cv = null, cx = null, src = video;
+  if (crop) {   // 사람이 작을 때: 그 부분만 잘라 확대해서 추정한다(월드 좌표는 미터라 그대로 쓰고, 화면 좌표만 전체 기준으로 되돌린다)
+    const vw = video.videoWidth, vh = video.videoHeight, sw = crop.w * vw, sh = crop.h * vh, k = 640 / Math.max(sw, sh);
+    cv = document.createElement("canvas"); cv.width = Math.round(sw * k); cv.height = Math.round(sh * k); cx = cv.getContext("2d"); src = cv;
+  }
   for (let i = 0; i < times.length; i++) {
     if (signal?.aborted) break;
     await seek(video, times[i]);
+    if (cx) cx.drawImage(video, crop.x * video.videoWidth, crop.y * video.videoHeight, crop.w * video.videoWidth, crop.h * video.videoHeight, 0, 0, cv.width, cv.height);
     landmarker.ts += 1000 / fps + 1;
-    const res = landmarker.lm.detectForVideo(video, landmarker.ts);
-    const all = (res.worldLandmarks || []).map((w, k) => ({ j: toFrame(times[i], w).j, img: toScreen(res.landmarks[k]) }));
+    const res = landmarker.lm.detectForVideo(src, landmarker.ts);
+    const all = (res.worldLandmarks || []).map((w, k) => ({ j: toFrame(times[i], w).j, img: crop ? uncrop(toScreen(res.landmarks[k]), crop) : toScreen(res.landmarks[k]) }));
     frames.push({ t: times[i], j: all[0]?.j ?? null, img: all[0]?.img ?? null, all });
     onProgress?.((i + 1) / times.length);
     await yieldToUi();

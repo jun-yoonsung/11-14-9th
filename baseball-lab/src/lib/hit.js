@@ -1,10 +1,10 @@
 /* 타격 자세 3D 특징 계산 — 순수 함수. ml/hit_ref.py와 같은 알고리즘이다(tests/hit.test.js가 tests/fixtures/hit_parity.json으로 일치를 검증한다).
  * 좌표는 form.js와 같다(맞춘 좌표계 X = 투수 방향, Y = 위, Z = X×Y). 앞쪽(투수 쪽) = 우타자의 왼쪽(l), 좌타자는 align()이 좌우를 뒤집어 우타자처럼 만든다. */
-import { JOINTS, FP_HEIGHT, MIN_CLIP_S, MIN_ROT_DPS, PEAK_PAD_S, prep, speed, argmax, sub, ang, wrap, unwrap, gradient1 } from "./form.js";
+import { JOINTS, MIN_CLIP_S, MIN_ROT_DPS, PEAK_PAD_S, prep, speed, argmax, sub, ang, wrap, unwrap, gradient1 } from "./form.js";
 
 export const HIT_KEYS = ["stride_torso", "trunk_lean_deg", "knee_fp_deg", "knee_ct_deg", "hip_shoulder_sep_deg", "pelvis_rot_deg", "trunk_rot_deg",
   "trunk_rot_lag_ms", "pelvis_trunk_gap_ms", "trunk_hands_gap_ms", "fp_to_ct_ms", "hands_reach_torso"];
-export const CT_SHIFT_S = 0.067;   // 손 속도 정점 + 0.067초 = 타격 순간 (OBP 실측 비교로 정한 값)
+export const CT_SHIFT_S = 0.017, FP_SHIFT_HIT_S = 0.095;   // 엉덩이 기준 손 속도 정점 + 0.017초 = 타격 순간, 앞발목 보폭 최대 + 0.095초 = 착지 (OBP 실측 비교로 정한 값, ml/hit_ref.py와 같음)
 const DEG = 180 / Math.PI;
 
 const handsOf = S => S.lwri.map((p, k) => [0, 1, 2].map(c => (p[c] + S.rwri[k][c]) / 2));
@@ -16,10 +16,11 @@ export function findEventsHit(frames) {
   if (t.length < 5 || t[t.length - 1] - t[0] < MIN_CLIP_S || !(L > 1e-6)) return none;
   const pk = argmax(speed(handsOf(S), t, L));
   let ct = 0; { const target = t[pk] + CT_SHIFT_S; for (let i = 1; i < t.length; i++) if (Math.abs(t[i] - target) < Math.abs(t[ct] - target)) ct = i; }
-  const ly = S.lank.map(p => p[1]);
-  let lift = 0; for (let i = 1; i <= ct; i++) if (ly[i] > ly[lift]) lift = i;
-  const lim = Math.min(...ly) + FP_HEIGHT * L;
-  let fp = null; for (let i = lift + 1; i <= ct; i++) if (ly[i] <= lim) { fp = i; break; }
+  const fx = i => S.lank[i][0] - (S.lhip[i][0] + S.rhip[i][0]) / 2, rel = i => S.lank[i][1] - (S.lhip[i][1] + S.rhip[i][1]) / 2;
+  let pks = 0; for (let i = 1; i <= ct; i++) if (fx(i) > fx(pks)) pks = i;      // 앞발목이 엉덩이 앞으로 가장 멀리 뻗은 순간
+  let lift = 0; for (let i = 1; i <= pks; i++) if (rel(i) > rel(lift)) lift = i;
+  let fi = 0; { const target = t[pks] + FP_SHIFT_HIT_S; for (let i = 1; i < t.length; i++) if (Math.abs(t[i] - target) < Math.abs(t[fi] - target)) fi = i; }
+  const fp = pks < fi && fi < ct ? fi : null;
   return { lift: idx[lift], fp: fp === null ? null : idx[fp], br: idx[ct] };
 }
 

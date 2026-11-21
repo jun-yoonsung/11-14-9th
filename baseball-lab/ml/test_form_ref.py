@@ -50,7 +50,10 @@ def test_align_forward_is_plus_x_and_keeps_vertical():
         a = F.align(j, hand)
         assert abs(_horiz_dir_deg(a)) < 1.0
         for n in F.JOINTS:
-            np.testing.assert_allclose(a[n][:, 1], j[n][:, 1] if hand == "R" else j[n if hand == "R" else F.swap(n)][:, 1], atol=1e-9)
+            src = j if hand == "R" else {m: j[F.swap(m)] for m in F.JOINTS}
+            hip_y = (src["lhip"][:, 1] + src["rhip"][:, 1]) / 2          # 엉덩이 가운데를 원점으로 옮기므로 높이는 그만큼 빠진다
+            np.testing.assert_allclose(a[n][:, 1], src[n][:, 1] - hip_y, atol=1e-9)
+            np.testing.assert_allclose((a["lhip"] + a["rhip"]) / 2, 0.0, atol=1e-9)
 
 
 def test_align_throwing_hand_on_right_side():
@@ -89,11 +92,13 @@ def _still(T=4000):
 
 def test_noise_depth_larger_side_view():
     out = F.add_estimation_noise(_still(), "side", np.random.default_rng(0))
-    sd = np.std(out["rwri"], axis=0)       # 시험용 정지 자세 → 잡음 그대로
-    assert abs(sd[0] - F.NOISE["screen_m"]) < 0.1 * F.NOISE["screen_m"] and abs(sd[1] - F.NOISE["screen_m"]) < 0.1 * F.NOISE["screen_m"]
-    assert abs(sd[2] - F.NOISE["depth_m"]) < 0.1 * F.NOISE["depth_m"]       # side 시점: 카메라 축 = Z
+    sd = np.std(out["rwri"], axis=0)       # 시험용 정지 자세 → 잡음 + 엉덩이 가운데를 원점으로 옮기며 생기는 공통 성분(분산 +0.5배)
+    g = np.sqrt(1.5)
+    assert abs(sd[0] - g * F.NOISE["screen_m"]) < 0.1 * g * F.NOISE["screen_m"] and abs(sd[1] - g * F.NOISE["screen_m"]) < 0.1 * g * F.NOISE["screen_m"]
+    assert abs(sd[2] - g * F.NOISE["depth_m"]) < 0.1 * g * F.NOISE["depth_m"]       # side 시점: 카메라 축 = Z
     out = F.add_estimation_noise(_still(), "front", np.random.default_rng(0))
-    assert abs(np.std(out["rwri"], axis=0)[0] - F.NOISE["depth_m"]) < 0.1 * F.NOISE["depth_m"]   # front/back: 카메라 축 = X
+    assert abs(np.std(out["rwri"], axis=0)[0] - g * F.NOISE["depth_m"]) < 0.1 * g * F.NOISE["depth_m"]   # front/back: 카메라 축 = X
+    assert np.allclose((out["lhip"] + out["rhip"]) / 2, 0.0)          # 영상 추정기처럼 엉덩이 가운데가 원점
 
 
 def test_noise_seeded_repeatable():
@@ -113,7 +118,8 @@ def test_noise_larger_on_fast_wrist_frames():
     fast = sp > np.percentile(sp, 80)
     res = (out["rwri"] - j["rwri"])[:, 0]
     ratio = res[fast].std() / res[~fast].std()
-    assert 0.9 * F.NOISE["fast_x"] < ratio < 1.1 * F.NOISE["fast_x"]
+    expected = np.sqrt((F.NOISE["fast_x"] ** 2 + 0.5) / 1.5)      # 엉덩이 공통 성분(분산 0.5)은 빠른 프레임에서도 그대로
+    assert 0.9 * expected < ratio < 1.1 * expected
 
 
 # ---------------- Task 3: 3D 특징 ----------------
@@ -147,7 +153,8 @@ def _synth(T=200, fps=60.0, shoulder_deg=None, pelvis_deg=None, rot=False):
 def test_events_on_synthetic():
     J, t = _synth()
     ev = F.find_events(J, t)
-    assert abs(ev["br"] - 120) <= 1 and abs(ev["lift"] - 40) <= 1 and abs(ev["fp"] - 80) <= 3
+    # 릴리스 = 손목 속도 정점(120) − 0.036초, 착지 = 보폭 최대(약 80) + 0.108초 (60fps에서 각각 약 2·6.5프레임)
+    assert abs(ev["br"] - 118) <= 1.5 and abs(ev["lift"] - 40) <= 1 and abs(ev["fp"] - 86) <= 4
     assert ev["lift"] < ev["fp"] < ev["br"]
 
 
@@ -161,8 +168,8 @@ def test_rotation_timing_known():
     ev, ft = F.find_events(J, t), F.features3d(J, t)
     assert abs(ft["trunk_rot_lag_ms"] - (105 - ev["fp"]) / 60 * 1000) < 12
     assert abs(ft["pelvis_trunk_gap_ms"] - 10 / 60 * 1000) < 12      # 골반 정점 f=95 → 몸통 정점 f=105
-    assert abs(ft["trunk_arm_gap_ms"] - 15 / 60 * 1000) < 12          # 몸통 정점 f=105 → 릴리스 f=120
-    assert abs(ft["fp_to_br_ms"] - (120 - ev["fp"]) / 60 * 1000) < 1e-6
+    assert abs(ft["trunk_arm_gap_ms"] - 13 / 60 * 1000) < 12          # 몸통 정점 f=105 → 릴리스 f=118(손목 속도 정점 120 − 0.036초)
+    assert abs(ft["fp_to_br_ms"] - (ev["br"] - ev["fp"]) / 60 * 1000) < 1e-6
 
 
 def test_separation_known():
@@ -344,3 +351,11 @@ def test_find_events_rejects_foot_plant_after_release():
          "rwri": P(np.where(np.arange(T) < 10, 0.0, 1.5), 0.6), "lkne": P(0, 0.3), "rkne": P(0, 0.3), "lank": P(0, np.where(np.arange(T) < 20, 0.5, 0.0)), "rank": P(0, 0.0)}
     ev = F.find_events(J, t)
     assert ev["br"] is not None and ev["br"] < 20 and ev["fp"] is None
+
+
+def test_find_events_finds_foot_plant_when_lead_ankle_never_peaks_before_stride_max():
+    """앞발목 높이가 보폭 최대 직전까지 계속 올라가기만 하는 투구(슬로모션 등): 앞발 들기 꼭대기가 없어도 착지는 찾아야 한다."""
+    J, t = _synth()
+    J["lank"][:, 1] = 0.1 + 0.5 * np.clip(np.arange(len(t)) / 80, 0, 1)      # 높이가 f=80(보폭 최대)까지 단조 증가
+    ev = F.find_events(J, t)
+    assert ev["fp"] is not None and ev["fp"] < ev["br"]

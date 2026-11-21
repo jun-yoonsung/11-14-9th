@@ -15,7 +15,8 @@ LANDMARKS = os.path.join(HROOT, "full_sig", "hitting_landmarks.zip")
 FPS = 360.0
 SOURCE = "Driveline OpenBiomechanics Project — baseball_hitting (https://github.com/drivelineresearch/openbiomechanics)"
 LICENSE = F.LICENSE
-CT_SHIFT_S = 0.067   # 손 속도 정점은 OBP의 타격 순간보다 중앙값 0.067초 앞선다(실측 비교) → 정점 + 0.067초를 타격 순간으로 본다
+CT_SHIFT_S = 0.017   # 엉덩이 기준 손 속도 정점은 OBP의 타격 순간보다 중앙값 0.017초 앞선다(실측 비교, 편차 약 11ms) → 정점 + 0.017초를 타격 순간으로 본다
+FP_SHIFT_HIT_S = 0.095   # 앞발목이 엉덩이 앞으로 가장 멀리 뻗은 순간 → OBP 앞발 착지(fp_100)까지의 중앙값(편차 약 36ms: 투구보다 덜 정확)
 RAW = {"lsho": "lsjc", "rsho": "rsjc", "lelb": "lejc", "relb": "rejc", "lwri": "lwjc", "rwri": "rwjc", "lhip": "lhjc", "rhip": "rhjc",
        "lkne": "lkjc", "rkne": "rkjc", "lank": "lajc", "rank": "rajc"}
 HIT_KEYS = ["stride_torso", "trunk_lean_deg", "knee_fp_deg", "knee_ct_deg", "hip_shoulder_sep_deg", "pelvis_rot_deg", "trunk_rot_deg",
@@ -60,9 +61,12 @@ def find_events_hit(J: dict, t: np.ndarray) -> dict:
         return none
     pk = int(np.argmax(_speed(_hands(S), t, L)))
     ct = min(int(np.argmin(np.abs(t - (t[pk] + CT_SHIFT_S)))), len(t) - 1)
-    lift = int(np.argmax(S["lank"][: ct + 1, 1]))
-    low = S["lank"][:, 1] <= S["lank"][:, 1].min() + FP_HEIGHT * L
-    fp = next((i for i in range(lift + 1, ct + 1) if low[i]), None)
+    hm = (S["lhip"] + S["rhip"]) / 2
+    # 좌표가 엉덩이 중심이라 지면 높이를 모른다 → 앞발목이 엉덩이 앞으로 가장 멀리 뻗은 순간 + 보정을 착지로 본다(투구와 같은 방식)
+    pks = int(np.argmax(S["lank"][: ct + 1, 0] - hm[: ct + 1, 0]))
+    lift = int(np.argmax(S["lank"][: pks + 1, 1] - hm[: pks + 1, 1]))
+    i = int(np.argmin(np.abs(t - (t[pks] + FP_SHIFT_HIT_S))))
+    fp = i if pks < i < ct else None
     return {"lift": lift, "fp": fp, "ct": ct}
 
 

@@ -70,14 +70,20 @@ def align(j3d: dict, hand: str) -> dict:
     h = np.hypot(d[:, 0], d[:, 2])
     i = int(np.argmax(h))
     if h[i] < 1e-6:
-        return {n: j3d[n].copy() for n in JOINTS}
+        return _hip_center({n: j3d[n].copy() for n in JOINTS})
     th = np.arctan2(d[i, 2], d[i, 0])
     c, s = np.cos(th), np.sin(th)
     out = {}
     for n in JOINTS:
         v = j3d[n]
         out[n] = np.stack([v[:, 0] * c + v[:, 2] * s, v[:, 1], -v[:, 0] * s + v[:, 2] * c], axis=1)
-    return out
+    return _hip_center(out)
+
+
+def _hip_center(J: dict) -> dict:
+    """프레임마다 두 엉덩이의 가운데를 원점으로 옮긴다. MediaPipe 월드 좌표가 이미 이렇게 나오므로(지면·이동 정보 없음) 모의 자료도 같은 조건으로 만든다."""
+    hm = (J["lhip"] + J["rhip"]) / 2
+    return {n: v - hm for n, v in J.items()}
 
 
 NOISE = {"screen_m": 0.012, "depth_m": 0.02, "depth_unknown_m": 0.016, "fast_x": 2.0}   # 실제 MediaPipe 프레임 간 떨림을 잰 값에 맞춤(2026-11-21 시험 영상 181프레임, 관절별 중앙 절대편차 0.006~0.024m). 떨림만 잰 것이라 하한이며 시스템 오차·빠른 동작의 번짐은 못 잼
@@ -105,7 +111,7 @@ def add_estimation_noise(j3d: dict, view: str, rng: np.random.Generator, scale: 
             sp = np.r_[0.0, np.linalg.norm(np.diff(j3d[n], axis=0), axis=1)]
             noise[sp > np.percentile(sp, 80)] *= NOISE["fast_x"]
         out[n] = j3d[n] + noise
-    return out
+    return _hip_center(out)   # 영상 추정기는 추정한 엉덩이 가운데를 원점으로 내보낸다
 
 
 # ---------------- Task 3: 순간 찾기와 3D 특징 (브라우저 src/lib/form.js와 같은 알고리즘) ----------------
@@ -113,6 +119,9 @@ FEATURE_KEYS = ["stride_torso", "trunk_lean_deg", "knee_fp_deg", "knee_br_deg", 
                 "hip_shoulder_sep_deg", "trunk_rot_lag_ms", "pelvis_trunk_gap_ms", "trunk_arm_gap_ms", "fp_to_br_ms"]
 SMOOTH_S = 0.10       # 위치를 이 시간 창(초)으로 이동평균
 MIN_CLIP_S = 0.8      # 이보다 짧은 구간은 순간을 찾지 않는다
+MIN_STRIDE_L = 0.25     # 앞발목이 몸통 길이의 이만큼도 앞으로 뻗지 않으면 보폭이 없는 것으로 보고 착지를 만들지 않는다
+BR_SHIFT_S = 0.036     # 엉덩이 기준 손목 속도 정점 → 실제 릴리스는 이만큼 앞(OBP 정답과 비교한 중앙값, 편차 약 6ms)
+FP_SHIFT_S = 0.108     # 앞발목이 엉덩이 앞으로 가장 멀리 뻗은 순간 → 실제 착지까지(OBP 정답과 비교한 중앙값, 아래 보정 시험 참고)
 FP_HEIGHT = 0.08      # 앞발 착지: 발 들기 이후 앞발목 높이가 구간 최저점 + 이 값(몸통길이) 안으로 처음 내려온 프레임 (속도 조건은 쓰지 않는다: 착지 순간에도 발목 관절 중심이 계속 움직여 늦게 잡히고, 30fps 잡음에서는 실패함)
 MIN_ROT_DPS = 30.0    # 회전 속도 정점이 이보다 작으면 "회전이 없음"으로 보고 시각 지표를 비운다
 PEAK_PAD_S = 0.05     # 회전 정점을 찾는 창: [착지 - 0.05초, 릴리스 + 0.05초]
@@ -148,12 +157,15 @@ def find_events(J: dict, t: np.ndarray) -> dict:
     S, L = _prep(J, t)
     if not L > 1e-6:
         return none
-    br = int(np.argmax(_speed(S["rwri"], t, L)))
-    lift = int(np.argmax(S["lank"][: br + 1, 1]))
-    low = S["lank"][:, 1] <= S["lank"][:, 1].min() + FP_HEIGHT * L
-    fp = next((i for i in range(lift + 1, len(t)) if low[i]), None)
-    if fp is not None and fp >= br:
-        fp = None   # 착지는 릴리스보다 먼저여야 한다(저각도 영상에서 착지가 릴리스 뒤로 잡힌 적 있음)
+    pkw = int(np.argmax(_speed(S["rwri"], t, L)))
+    br = int(np.argmin(np.abs(t - (t[pkw] - BR_SHIFT_S))))   # 엉덩이 기준 손목 속도 정점은 실제 릴리스보다 늦다
+    hm = (S["lhip"] + S["rhip"]) / 2
+    # 좌표가 엉덩이 중심이라 지면 높이를 알 수 없다. 앞발목이 엉덩이 앞으로 가장 멀리 뻗은 순간(보폭 최대)은 착지보다 일정하게 앞서므로(모션캡처로 보정한 FP_SHIFT_S) 그것으로 착지를 잡는다.
+    pk = int(np.argmax(S["lank"][: br + 1, 0] - hm[: br + 1, 0]))
+    lift = int(np.argmax((S["lank"][: pk + 1, 1] - hm[: pk + 1, 1])))
+    i = int(np.argmin(np.abs(t - (t[pk] + FP_SHIFT_S))))
+    reach = (S["lank"][pk, 0] - hm[pk, 0]) - (S["lank"] - hm)[: pk + 1, 0].min()   # 앞발목이 실제로 앞으로 뻗었는가
+    fp = i if pk < i < br and reach > MIN_STRIDE_L * L else None   # 착지는 보폭 최대 뒤, 릴리스 앞이어야 한다(앞발 들기 꼭대기가 뚜렷하지 않은 영상도 있다)
     return {"lift": lift, "fp": fp, "br": br}
 
 

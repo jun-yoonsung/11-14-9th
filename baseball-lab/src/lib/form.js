@@ -6,6 +6,7 @@ export const JOINTS = ["lsho", "rsho", "lelb", "relb", "lwri", "rwri", "lhip", "
 export const MP_INDEX = { lsho: 11, rsho: 12, lelb: 13, relb: 14, lwri: 15, rwri: 16, lhip: 23, rhip: 24, lkne: 25, rkne: 26, lank: 27, rank: 28 };
 export const FEATURE_KEYS = ["stride_torso", "trunk_lean_deg", "knee_fp_deg", "knee_br_deg", "arm_angle_deg", "elbow_h_fp", "release_h_torso",
   "hip_shoulder_sep_deg", "trunk_rot_lag_ms", "pelvis_trunk_gap_ms", "trunk_arm_gap_ms", "fp_to_br_ms"];
+export const MIN_STRIDE_L = 0.25, FP_SHIFT_S = 0.108, BR_SHIFT_S = 0.036;   // 모션캡처로 보정(ml/form_ref.py와 같은 값)
 export const SMOOTH_S = 0.1, MIN_CLIP_S = 0.8, FP_HEIGHT = 0.08, MIN_ROT_DPS = 30, PEAK_PAD_S = 0.05;
 
 const swap = n => (n[0] === "l" ? "r" : "l") + n.slice(1);
@@ -18,6 +19,15 @@ export function toFrame(t, world) {
   return { t, j };
 }
 
+/** 프레임마다 두 엉덩이의 가운데를 원점으로 옮긴다(파이썬 _hip_center와 같음). MediaPipe 월드 좌표는 이미 이렇게 나오므로 영상에서는 변화가 없다. */
+export function hipCenter(frames) {
+  return frames.map(f => {
+    if (!f.j) return f;
+    const hx = (f.j.lhip.x + f.j.rhip.x) / 2, hy = (f.j.lhip.y + f.j.rhip.y) / 2, hz = (f.j.lhip.z + f.j.rhip.z) / 2;
+    return { ...f, j: Object.fromEntries(JOINTS.map(n => { const p = f.j[n]; return [n, { ...p, x: p.x - hx, y: p.y - hy, z: p.z - hz }]; })) };
+  });
+}
+
 /** 좌표를 "수직축 Y + 투구 방향 +X"로 맞춘다. 좌투는 몸 좌우 이름을 바꾸고 Z를 뒤집어 우투와 같은 규칙으로 통일.
  *  투구 방향 = 두 발의 수평 거리가 가장 벌어진 프레임에서 뒷발(rank)→앞발(lank) 방향. */
 export function align(frames, hand) {
@@ -26,9 +36,9 @@ export function align(frames, hand) {
     : f));
   let best = -1, bi = -1;
   mir.forEach((f, i) => { if (!f.j) return; const h = Math.hypot(f.j.lank.x - f.j.rank.x, f.j.lank.z - f.j.rank.z); if (h > best) { best = h; bi = i; } });
-  if (bi < 0 || best < 1e-6) return mir;
+  if (bi < 0 || best < 1e-6) return hipCenter(mir);
   const d = mir[bi].j, th = Math.atan2(d.lank.z - d.rank.z, d.lank.x - d.rank.x), c = Math.cos(th), s = Math.sin(th);
-  return mir.map(f => (!f.j ? f : { t: f.t, j: Object.fromEntries(JOINTS.map(n => { const p = f.j[n]; return [n, { x: p.x * c + p.z * s, y: p.y, z: -p.x * s + p.z * c, v: p.v }]; })) }));
+  return hipCenter(mir.map(f => (!f.j ? f : { t: f.t, j: Object.fromEntries(JOINTS.map(n => { const p = f.j[n]; return [n, { x: p.x * c + p.z * s, y: p.y, z: -p.x * s + p.z * c, v: p.v }]; })) })));
 }
 
 // ---- 수치 도우미 (numpy와 같은 정의) ----
@@ -75,12 +85,16 @@ export function findEvents(frames) {
   const none = { lift: null, fp: null, br: null };
   const { idx, t, S, L } = prep(frames);
   if (t.length < 5 || t[t.length - 1] - t[0] < MIN_CLIP_S || !(L > 1e-6)) return none;
-  const br = argmax(speed(S.rwri, t, L));
-  const ly = S.lank.map(p => p[1]);
-  let lift = 0; for (let i = 1; i <= br; i++) if (ly[i] > ly[lift]) lift = i;
-  const lim = Math.min(...ly) + FP_HEIGHT * L;
-  let fp = null; for (let i = lift + 1; i < t.length; i++) if (ly[i] <= lim) { fp = i; break; }
-  if (fp !== null && fp >= br) fp = null;   // 착지는 릴리스보다 먼저여야 한다(저각도 영상에서 착지가 릴리스 뒤로 잡힌 적 있음)
+  const pkw = argmax(speed(S.rwri, t, L));
+  const near = x => { let b = 0; for (let i = 1; i < t.length; i++) if (Math.abs(t[i] - x) < Math.abs(t[b] - x)) b = i; return b; };
+  const br = near(t[pkw] - BR_SHIFT_S);   // 엉덩이 기준 손목 속도 정점은 실제 릴리스보다 늦다
+  // 좌표가 엉덩이 중심이라 지면 높이를 알 수 없다: 앞발목이 엉덩이 앞으로 가장 멀리 뻗은 순간(보폭 최대) + FP_SHIFT_S 를 착지로 본다
+  let pk = 0; for (let i = 1; i <= br; i++) if (S.lank[i][0] - (S.lhip[i][0] + S.rhip[i][0]) / 2 > S.lank[pk][0] - (S.lhip[pk][0] + S.rhip[pk][0]) / 2) pk = i;
+  const rel = i => S.lank[i][1] - (S.lhip[i][1] + S.rhip[i][1]) / 2;
+  let lift = 0; for (let i = 1; i <= pk; i++) if (rel(i) > rel(lift)) lift = i;
+  const fx = i => S.lank[i][0] - (S.lhip[i][0] + S.rhip[i][0]) / 2;
+  let lo = fx(0); for (let i = 1; i <= pk; i++) lo = Math.min(lo, fx(i));
+  const fi = near(t[pk] + FP_SHIFT_S), fp = pk < fi && fi < br && fx(pk) - lo > MIN_STRIDE_L * L ? fi : null;   // 착지는 보폭 최대 뒤, 릴리스 앞(앞발 들기 꼭대기가 뚜렷하지 않은 영상도 있다)
   return { lift: idx[lift], fp: fp === null ? null : idx[fp], br: idx[br] };
 }
 

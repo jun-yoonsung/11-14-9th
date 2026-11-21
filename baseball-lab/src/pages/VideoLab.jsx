@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Api } from "../lib/api.js";
 import { Store } from "../lib/storage.js";
 import { loadLandmarker, openVideo, scan, detectFps, fineFps, needsTrim, MAX_UNTRIMMED_SEC } from "../lib/pose.js";
-import { pickPerson, soleSeed, follow, detectHand, suggestWindow, detectSide, suggestSwingWindow, center } from "../lib/segment.js";
+import { pickPerson, soleSeed, follow, detectHand, suggestWindow, detectSide, suggestSwingWindow, center, cropRect } from "../lib/segment.js";
 import { T } from "../lib/formLabels.js";
 import { buildResult, buildRecord } from "../lib/formRecord.js";
 import { useScene } from "../context/SceneContext.jsx";
@@ -76,7 +76,17 @@ export default function VideoLab() {
       const fr = await scan(S.current.lm, S.current.vid.video, { from: range.start, to: range.end, fps: COARSE_FPS, signal: ab.signal, onProgress: setProgress });
       if (ab.signal.aborted) { setStage("setup"); return; }
       const first = pickPerson(fr[0], S.current.seed[0], S.current.seed[1]);
-      const flw = follow(fr, first < 0 ? 0 : first), h = hit ? detectSide(flw) : detectHand(flw), w = hit ? suggestSwingWindow(flw, COARSE_FPS) : suggestWindow(flw, h, COARSE_FPS);
+      let flw = follow(fr, first < 0 ? 0 : first);
+      const v = S.current.vid.video, box = /[?&]crop=0/.test(location.href) ? null : cropRect(flw, { aspect: v.videoWidth / v.videoHeight });   // ?crop=0 은 확대 없이 비교하는 시험용
+      S.current.crop = null;
+      if (box) {   // 사람이 작다 → 움직이는 범위만 확대해 다시 훑는다
+        const c0 = center(flw.find(f => f.img).img);
+        const fr2 = await scan(S.current.lm, v, { from: range.start, to: range.end, fps: COARSE_FPS, signal: ab.signal, onProgress: setProgress, crop: box });
+        if (ab.signal.aborted) { setStage("setup"); return; }
+        const f2 = follow(fr2, Math.max(0, pickPerson(fr2[0], c0[0], c0[1])));
+        if (f2.filter(f => f.j).length >= flw.filter(f => f.j).length) { flw = f2; S.current.crop = box; }
+      }
+      const h = hit ? detectSide(flw) : detectHand(flw), w = hit ? suggestSwingWindow(flw, COARSE_FPS) : suggestWindow(flw, h, COARSE_FPS);
       S.current.coarse = flw; setHand(h); setWin(w);
       if (!w) setNote("찾지 못했어요. 막대로 직접 골라 주세요.");
       else setNote("");
@@ -97,7 +107,7 @@ export default function VideoLab() {
       const [ref, model] = await Promise.all(hit ? [Api.hitRef(), Api.hitModel()] : [Api.formRef(), Api.formModel()]);
       if (!ref) throw new Error("REF");
       const near = S.current.coarse.reduce((b, f) => (f.img && Math.abs(f.t - m.start) < Math.abs(b.t - m.start) ? f : b), S.current.coarse.find(f => f.img) || S.current.coarse[0]);
-      const fr = await scan(S.current.lm, S.current.vid.video, { from: m.start, to: m.end, fps: S.current.fps || 30, signal: ab.signal, onProgress: setProgress });
+      const fr = await scan(S.current.lm, S.current.vid.video, { from: m.start, to: m.end, fps: S.current.fps || 30, signal: ab.signal, onProgress: setProgress, crop: S.current.crop });
       if (ab.signal.aborted) { setStage("window"); return; }
       const c = near.img ? center(near.img) : S.current.seed, flw = follow(fr, Math.max(0, pickPerson(fr[0], c[0], c[1])));
       const heightCm = Number(height) >= 120 && Number(height) <= 230 ? Number(height) : null;
