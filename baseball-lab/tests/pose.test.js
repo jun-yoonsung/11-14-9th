@@ -25,3 +25,16 @@ test("toScreen keeps 12 joints as normalized x,y plus visibility", () => {
   assert.equal(Object.keys(s).length, 12);
   assert.deepEqual(s.lsho, { x: 0.11, y: 0.89, v: 0.9 });
 });
+
+import { nativeFps, fineFps } from "../src/lib/pose.js";
+test("nativeFps: median frame spacing snapped to a common frame rate; nothing usable gives null", () => {
+  assert.equal(nativeFps([1 / 30, 1 / 30, 0.0334, 1 / 30]), 30);
+  assert.equal(nativeFps([1 / 60, 1 / 60, 1 / 59.9, 1 / 60, 0.05]), 60);          // 튀는 간격 하나는 중앙값이 무시
+  assert.equal(nativeFps([1 / 29.97, 1 / 29.97, 1 / 29.97]), 30);
+  assert.equal(nativeFps([1 / 240, 1 / 240, 1 / 240]), 240);
+  assert.equal(nativeFps([]), null); assert.equal(nativeFps([0, 0]), null);
+});
+test("fineFps: analyze at 60 fps when the video has it, otherwise 30 (unknown stays at 30)", () => {
+  assert.equal(fineFps(240), 60); assert.equal(fineFps(120), 60); assert.equal(fineFps(60), 60); assert.equal(fineFps(50), 60);
+  assert.equal(fineFps(30), 30); assert.equal(fineFps(25), 30); assert.equal(fineFps(24), 30); assert.equal(fineFps(null), 30);
+});

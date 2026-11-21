@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Api } from "../lib/api.js";
 import { Store } from "../lib/storage.js";
-import { loadLandmarker, openVideo, scan, needsTrim, MAX_UNTRIMMED_SEC } from "../lib/pose.js";
+import { loadLandmarker, openVideo, scan, detectFps, fineFps, needsTrim, MAX_UNTRIMMED_SEC } from "../lib/pose.js";
 import { pickPerson, soleSeed, follow, detectHand, suggestWindow, detectSide, suggestSwingWindow, center } from "../lib/segment.js";
 import { T } from "../lib/formLabels.js";
 import { buildResult, buildRecord } from "../lib/formRecord.js";
@@ -13,7 +13,7 @@ const VIEWS = {
   pitching: [["side", "옆에서", "투수의 옆모습(1루나 3루 쪽)"], ["front", "정면", "투수가 나를 향해 던짐(타자 쪽 시점)"], ["back", "뒤에서", "투수 뒤(포수 뒤쪽 반대, 외야 쪽)"], ["broadcast", "중계 화면", "중계처럼 뒤쪽 높은 곳에서 비스듬히"]],
   hitting: [["side", "옆에서", "타자의 옆모습(타석 옆, 1루나 3루 쪽)"], ["front", "정면", "타자가 나를 향함(투수 쪽에서 본 시점)"], ["back", "뒤에서", "타자 뒤(포수 쪽에서 본 시점)"], ["broadcast", "중계 화면", "중계처럼 뒤쪽 높은 곳에서 비스듬히"]],
 };
-const COARSE_FPS = 5, FINE_FPS = 30, MAX_CLIP_S = 6, MIN_CLIP_S = 0.8;
+const COARSE_FPS = 5, MAX_CLIP_S = 6, MIN_CLIP_S = 0.8;
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 /** 영상 분석 (투구 폼): 올리기 → 시점·키 → 사람 고르기 → 구간 고르기 → 3D 분석 → 결과. 영상은 이 브라우저 안에서만 처리한다. */
@@ -45,7 +45,7 @@ export default function VideoLab() {
     try {
       const vid = await openVideo(file);
       if (!Number.isFinite(vid.duration) || vid.duration < MIN_CLIP_S) { vid.close(); throw new Error("SHORT"); }
-      S.current.vid = vid; setInfo({ name: file.name, duration: vid.duration });
+      S.current.vid = vid; S.current.fps = fineFps(await detectFps(vid.video)); setInfo({ name: file.name, duration: vid.duration });
       setRange({ start: 0, end: Math.min(vid.duration, MAX_UNTRIMMED_SEC) }); setStage("setup");
     } catch (e) { fail(e, e.message === "SHORT" ? "영상이 너무 짧거나 길이를 알 수 없어요. 투구 한 번이 담긴 영상(1초 이상)을 골라 주세요." : null); }
   };
@@ -97,7 +97,7 @@ export default function VideoLab() {
       const [ref, model] = await Promise.all(hit ? [Api.hitRef(), Api.hitModel()] : [Api.formRef(), Api.formModel()]);
       if (!ref) throw new Error("REF");
       const near = S.current.coarse.reduce((b, f) => (f.img && Math.abs(f.t - m.start) < Math.abs(b.t - m.start) ? f : b), S.current.coarse.find(f => f.img) || S.current.coarse[0]);
-      const fr = await scan(S.current.lm, S.current.vid.video, { from: m.start, to: m.end, fps: FINE_FPS, signal: ab.signal, onProgress: setProgress });
+      const fr = await scan(S.current.lm, S.current.vid.video, { from: m.start, to: m.end, fps: S.current.fps || 30, signal: ab.signal, onProgress: setProgress });
       if (ab.signal.aborted) { setStage("window"); return; }
       const c = near.img ? center(near.img) : S.current.seed, flw = follow(fr, Math.max(0, pickPerson(fr[0], c[0], c[1])));
       const heightCm = Number(height) >= 120 && Number(height) <= 230 ? Number(height) : null;
