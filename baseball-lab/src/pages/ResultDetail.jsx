@@ -92,10 +92,11 @@ function TeamDetail({ rec, r }) {
 }
 
 /** 자세하게 보기: 요약에서 다룬 내용을 가능한 한 전부 펼쳐 보여 준다 */
-function Inner() {
+function Inner({ shared }) {
   const { id } = useParams();
   const toast = useToast();
-  const { rec, loaded } = useRecord(id);
+  const { rec, loaded } = useRecord(id, shared);
+  const base = shared ? `/s/${encodeURIComponent(id)}` : `/result/${id}`;
   const [busy, setBusy] = useState(false);
   useScene(rec && (rec.type === "batter" || rec.type === "pitcher") ? rec.type : "stadium");
   useEffect(() => { if (rec) document.title = rec.title + " 자세히 | 야구 분석 랩"; }, [rec]);
@@ -103,7 +104,7 @@ function Inner() {
 
   if (!rec) {
     if (!loaded) return <div className="wrap"><p className="sub">불러오는 중...</p></div>;
-    return <div className="wrap"><div className="err-box" role="alert"><b>이 분석 결과를 찾을 수 없습니다.</b></div><div className="act-row"><Link className="btn" to="/history">분석 기록 보기</Link></div></div>;
+    return <div className="wrap"><div className="err-box" role="alert"><b>이 분석 결과를 찾을 수 없습니다.</b></div><div className="act-row">{shared ? <Link className="btn" to="/analyze">새 분석 시작하기</Link> : <Link className="btn" to="/history">분석 기록 보기</Link>}</div></div>;
   }
   if (rec.result.kind === "compare") return <Navigate to={rec.result.path} replace />;
   const r = rec.result;
@@ -115,19 +116,19 @@ function Inner() {
   };
   return (
     <div className="wrap">
-      <Link className="back-link" to={`/result/${rec.id}`}>요약으로 돌아가기</Link>
+      <Link className="back-link" to={base}>요약으로 돌아가기</Link>
       <div className="result-head"><h1>{rec.title} 자세히 보기</h1><p className="sub">{rec.season} 시즌, {dateKo(rec.createdAt)} 분석. 요약에 없던 내용까지 모두 담았어요.</p></div>
       {r.kind === "team" ? <TeamDetail rec={rec} r={r} /> : <PlayerDetail rec={rec} r={r} />}
       <div className="act-row">
         <button className="btn pri" type="button" disabled={busy} aria-busy={busy} onClick={savePdf}>{busy ? "보고서를 만드는 중" : "PDF로 저장"}</button>
-        <Link className="btn ghost" to={`/result/${rec.id}`}>요약으로 돌아가기</Link>
-        <Link className="btn ghost" to="/history">분석 기록 보기</Link>
+        <Link className="btn ghost" to={base}>요약으로 돌아가기</Link>
+        {!shared && <Link className="btn ghost" to="/history">분석 기록 보기</Link>}
       </div>
     </div>
   );
 }
 
-export default function ResultDetail() {
+export default function ResultDetail({ shared = false }) {
   const { id } = useParams();
-  return <Inner key={id} />;
+  return <Inner key={id} shared={shared} />;
 }

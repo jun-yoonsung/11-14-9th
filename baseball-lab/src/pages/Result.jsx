@@ -6,6 +6,7 @@ import { dateKo } from "../lib/format.js";
 import { useRecord, useReport } from "../lib/useRecord.js";
 import PctBlock from "../components/PctBlock.jsx";
 import AiCommentary from "../components/AiCommentary.jsx";
+import ShareCard from "../components/ShareCard.jsx";
 import { ListCard } from "../components/DetailReport.jsx";
 import { useScene } from "../context/SceneContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
@@ -16,7 +17,7 @@ const kpiNote = l => (l.value == null ? "기록 없음" : l.tone === "even" ? "�
 const PLAYER_PARTS = ["종합 평가·강점과 보완점", "능력 프로필", "지표 전체 표와 계산식", "월별 추이", "비슷한 선수", "타구 방향(2026 시즌)", "투구 존·구종 무브먼트·볼카운트·상황별 성적·득점/승리 기여(2026 시즌)", "공 가치·매치업 예상·공 연결·부하·타구 유형(2026 시즌)", "통산 커리어", "앞으로 5년 예측", "지표별 해설", "기록 원자료"];
 
 /** 요약 아래의 "자세하게 보기" 안내 */
-function MoreCard({ id, parts, label }) {
+function MoreCard({ id, parts, label, base }) {
   return (
     <section className="more-card" aria-label="자세하게 보기">
       <div>
@@ -24,12 +25,12 @@ function MoreCard({ id, parts, label }) {
         <p className="sub">요약에서 다룬 내용을 지표 하나하나까지 풀어서 보여 드려요. 아래 내용이 들어 있습니다.</p>
         <ul className="more-list">{parts.map(x => <li key={x}>{x}</li>)}</ul>
       </div>
-      <Link className="btn pri more-btn" to={`/result/${id}/detail`}>자세하게 보기</Link>
+      <Link className="btn pri more-btn" to={`${base}/detail`}>자세하게 보기</Link>
     </section>
   );
 }
 
-function PlayerSummary({ rec, r }) {
+function PlayerSummary({ rec, r, base }) {
   const rep = useReport(rec);
   const TY = TYPES[rec.type];
   const parts = PLAYER_PARTS.filter(x => !(x === "월별 추이" && rep && !rep.trend) && !(x.startsWith("타구 방향") && rec.season !== 2026));
@@ -50,12 +51,12 @@ function PlayerSummary({ rec, r }) {
           <p className="headline" dangerouslySetInnerHTML={{ __html: rep.headline }} />
           <div className="two-cards"><ListCard title="강점" cls="pos" list={rep.strengths.slice(0, 3)} /><ListCard title="보완할 점" cls="neg" list={rep.weaknesses.slice(0, 3)} /></div></section>
       )}
-      <MoreCard id={rec.id} parts={parts} label="더 자세히 알고 싶다면" />
+      <MoreCard base={base} parts={parts} label="더 자세히 알고 싶다면" />
     </>
   );
 }
 
-function TeamSummary({ rec, r }) {
+function TeamSummary({ rec, r, base }) {
   return (
     <>
       <section className="sec" style={{ marginTop: 0 }}><h2>팀별 기록 요약</h2>
@@ -66,17 +67,20 @@ function TeamSummary({ rec, r }) {
           ))}</tbody></table></div>
         <p className="note">초록색 굵은 글씨는 선택한 팀 중 가장 좋은 기록입니다.</p>
         <div className="insight">{r.insight}</div></section>
-      <MoreCard id={rec.id} parts={["지표별 막대 비교(리그 평균선 포함)", "팀 역대 요약과 순위 흐름", ...(rec.season === 2026 ? ["타구로 본 팀(타선·수비·구장)", "상황별 성적과 득점·승리 기여", "타순·라인업 시뮬레이션·팀 Elo와 경기 예측"] : [])]} label="더 자세히 알고 싶다면" />
+      <MoreCard base={base} parts={["지표별 막대 비교(리그 평균선 포함)", "팀 역대 요약과 순위 흐름", ...(rec.season === 2026 ? ["타구로 본 팀(타선·수비·구장)", "상황별 성적과 득점·승리 기여", "타순·라인업 시뮬레이션·팀 Elo와 경기 예측"] : [])]} label="더 자세히 알고 싶다면" />
     </>
   );
 }
 
 /** 분석 결과: 저장된 결과 요약으로 그린다 (분석 당시와 같은 값이 나오게 하려고 다시 계산하지 않는다) */
-function ResultInner() {
+function ResultInner({ shared }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const { rec, loaded } = useRecord(id);
+  const { rec: loadedRec, loaded, owner } = useRecord(id, shared);
+  const [local, setLocal] = useState(null);
+  const rec = local || loadedRec;
+  const base = shared ? `/s/${encodeURIComponent(id)}` : `/result/${id}`;
   const [busy, setBusy] = useState(false);
   useScene(rec && (rec.type === "batter" || rec.type === "pitcher") ? rec.type : "stadium");
 
@@ -86,8 +90,8 @@ function ResultInner() {
     if (!loaded) return <div className="wrap"><p className="sub">불러오는 중...</p></div>;
     return (
       <div className="wrap">
-        <div className="err-box" role="alert"><b>이 분석 결과를 찾을 수 없습니다.</b><br />삭제되었거나 다른 브라우저에서 만든 분석일 수 있어요.</div>
-        <div className="act-row"><Link className="btn" to="/history">분석 기록 보기</Link><Link className="btn pri" to="/analyze">새 분석 시작하기</Link></div>
+        <div className="err-box" role="alert"><b>이 분석 결과를 찾을 수 없습니다.</b><br />{shared ? "만든 사람이 비공개로 바꿨거나 삭제했을 수 있어요." : "삭제되었거나 다른 브라우저에서 만든 분석일 수 있어요."}</div>
+        <div className="act-row">{!shared && <Link className="btn" to="/history">분석 기록 보기</Link>}<Link className="btn pri" to="/analyze">새 분석 시작하기</Link></div>
       </div>
     );
   }
@@ -108,19 +112,22 @@ function ResultInner() {
 
   return (
     <div className="wrap">
-      <div className="result-head"><h1>{rec.title}</h1><p className="sub">{sub}. {dateKo(rec.createdAt)} 분석, KBO {rec.season} 정규시즌 실제 기록</p></div>
-      {r.kind === "team" ? <TeamSummary rec={rec} r={r} /> : <PlayerSummary rec={rec} r={r} />}
+      <div className="result-head">{shared && <p className="shared-banner">{owner}님이 공유한 분석입니다. 읽기만 할 수 있어요.</p>}<h1>{rec.title}</h1><p className="sub">{sub}. {dateKo(rec.createdAt)} 분석, KBO {rec.season} 정규시즌 실제 기록</p></div>
+      {r.kind === "team" ? <TeamSummary rec={rec} r={r} base={base} /> : <PlayerSummary rec={rec} r={r} base={base} />}
+      {!shared && <ShareCard rec={rec} onChange={setLocal} />}
       <div className="act-row">
         <button className="btn pri" type="button" disabled={busy} aria-busy={busy} onClick={savePdf}>{busy ? "보고서를 만드는 중" : "PDF로 저장"}</button>
-        <button className="btn ghost" type="button" onClick={again}>조건 바꿔 다시 분석</button>
-        <Link className="btn ghost" to="/history">분석 기록 보기</Link>
+        {shared
+          ? <Link className="btn ghost" to="/analyze">나도 분석해 보기</Link>
+          : <><button className="btn ghost" type="button" onClick={again}>조건 바꿔 다시 분석</button>
+            <Link className="btn ghost" to="/history">분석 기록 보기</Link></>}
       </div>
     </div>
   );
 }
 
 /** 결과 주소가 바뀌면(다른 기록으로 이동) 화면 상태를 새로 시작한다 */
-export default function Result() {
+export default function Result({ shared = false }) {
   const { id } = useParams();
-  return <ResultInner key={id} />;
+  return <ResultInner key={id} shared={shared} />;
 }

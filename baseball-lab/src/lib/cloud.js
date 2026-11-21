@@ -28,6 +28,14 @@ export const errMsg = e => ({
   "auth/network-request-failed": "인터넷 연결을 확인해 주세요.",
 }[(e && e.code) || ""] || "처리하지 못했습니다. 잠시 뒤 다시 시도해 주세요.");
 
+// 공유(공개 분석): 계정 연결(Firebase)이 있어야 다른 사람이 볼 수 있다.
+// 연결이 없을 때는 개발용 PC(localhost)에서만 이 브라우저 안의 "시험 공유"로 화면을 확인할 수 있다.
+const demoShare = !cloudEnabled && typeof location !== "undefined" && /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+export const shareAvailable = cloudEnabled || demoShare;
+const DEMO_KEY = "bl_shared_demo";
+const demoGet = () => { try { return JSON.parse(localStorage.getItem(DEMO_KEY) || "{}"); } catch (e) { return {}; } };
+const demoSet = o => { try { localStorage.setItem(DEMO_KEY, JSON.stringify(o)); return true; } catch (e) { return false; } };
+
 const toUser = u => ({ uid: u.uid, name: u.displayName || (u.email || "").split("@")[0] || "회원" });
 
 export const cloud = {
@@ -65,6 +73,29 @@ export const cloud = {
       snap.forEach(d => { ids.add(d.id); try { records.push(JSON.parse(d.data().json)); } catch (e) { /* 깨진 기록은 건너뜀 */ } });
       return { records, ids };
     } catch (e) { return null; }
+  },
+
+  // 공유: shared/{id} (누구나 읽기, 만든 사람만 쓰기·삭제). 성공하면 true
+  async publish(rec, uid, ownerName) {
+    const doc = { json: JSON.stringify(rec), ownerUid: uid || "demo", ownerName: ownerName || "회원", createdAt: rec.createdAt };
+    if (demoShare) { const o = demoGet(); o[rec.id] = doc; return demoSet(o); }
+    if (!cloudEnabled || !uid) return false;
+    try { const { fs, db } = await sdk(); await fs.setDoc(fs.doc(db, "shared", rec.id), doc); return true; } catch (e) { return false; }
+  },
+  async unpublish(id, uid) {
+    if (demoShare) { const o = demoGet(); delete o[id]; return demoSet(o); }
+    if (!cloudEnabled || !uid) return false;
+    try { const { fs, db } = await sdk(); await fs.deleteDoc(fs.doc(db, "shared", id)); return true; } catch (e) { return false; }
+  },
+  // 공개된 분석 한 개를 읽는다. 없거나(비공개·삭제) 실패하면 null
+  async getShared(id) {
+    let d = null;
+    if (demoShare) d = demoGet()[id] || null;
+    else if (cloudEnabled) {
+      try { const { fs, db } = await sdk(); const snap = await fs.getDoc(fs.doc(db, "shared", id)); d = snap.exists() ? snap.data() : null; } catch (e) { d = null; }
+    }
+    if (!d) return null;
+    try { return { rec: JSON.parse(d.json), owner: d.ownerName || "회원" }; } catch (e) { return null; }
   },
 
   // KBO 데이터: datasets/{이름}/chunks/{번호} 의 CSV 텍스트 조각 (모두 공개 읽기)

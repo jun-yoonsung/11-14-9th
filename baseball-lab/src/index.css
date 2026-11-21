@@ -632,3 +632,14 @@ td.bad { color: var(--red); font-weight: 700; }
 .seg-row .sep { flex: 0 0 12px; }
 tr.lowrow td { color: var(--muted); }
 .spray small { color: var(--muted); font-weight: 400; }
+
+/* 공유(공개 설정) */
+.share-card { margin-top: 36px; padding: 22px 26px; background: var(--white); border: 1px solid var(--line); border-left: 6px solid var(--green); border-radius: var(--r-sm); }
+.share-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.share-head h2 { margin-bottom: 2px; }
+.share-card .seg2 button:disabled { opacity: .5; cursor: not-allowed; }
+.share-link { display: flex; gap: 8px; margin-top: 14px; }
+.share-link input { flex: 1; min-width: 0; font: inherit; font-size: var(--t-sm); padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--bg, #fff); color: var(--ink); }
+.shared-banner { display: inline-block; margin-bottom: 10px; padding: 4px 12px; border-radius: var(--r-pill); background: var(--blue-soft, #e6efff); color: var(--blue); font-weight: 700; font-size: var(--t-sm); }
+.pubtag { margin-left: 8px; padding: 1px 8px; border: 1px solid var(--green); color: var(--green); border-radius: var(--r-pill); font-size: var(--t-xs); font-weight: 700; }
+@media (max-width: 560px) { .share-head { flex-direction: column; align-items: stretch; } .share-link { flex-direction: column; } .share-link .btn { width: 100%; } }

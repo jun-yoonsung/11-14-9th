@@ -63,7 +63,7 @@ export default function History() {
                 <button className="linkbtn quiet" type="button" aria-label={`${rec.title} 삭제`} onClick={() => setConfirmId(rec.id)}>삭제</button>
               )}
             </div>
-            <div className="meta"><span className={"tag " + TAG[rec.type]}>{rec.type === "compare" ? "비교" : TYPES[rec.type].short}</span>{dateKo(rec.createdAt)}, {metricLabels(rec)}</div>
+            <div className="meta"><span className={"tag " + TAG[rec.type]}>{rec.type === "compare" ? "비교" : TYPES[rec.type].short}</span>{dateKo(rec.createdAt)}, {metricLabels(rec)}{rec.visibility === "public" && <span className="pubtag">공개</span>}</div>
           </li>
         ))}
       </ul>

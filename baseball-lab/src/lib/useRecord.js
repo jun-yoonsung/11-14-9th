@@ -1,18 +1,21 @@
 import { useEffect, useState } from "react";
 import { Api } from "./api.js";
 import { Store } from "./storage.js";
+import { cloud } from "./cloud.js";
 import { build } from "./detail.js";
 import { qualFor } from "./season.js";
 
 /** 저장된 분석 기록을 가져온다 (다른 기기에서 만든 기록이면 계정에서 불러온다) */
-export function useRecord(id) {
-  const [rec, setRec] = useState(() => Store.get(id));
-  const [loaded, setLoaded] = useState(!!Store.get(id));
+export function useRecord(id, shared = false) {
+  const [rec, setRec] = useState(() => (shared ? null : Store.get(id)));
+  const [owner, setOwner] = useState("");
+  const [loaded, setLoaded] = useState(!shared && !!Store.get(id));
   useEffect(() => {
     if (rec) return;
+    if (shared) { cloud.getShared(id).then(r => { if (r) { setRec(r.rec); setOwner(r.owner); } setLoaded(true); }); return; }
     Store.pull().then(() => { setRec(Store.get(id)); setLoaded(true); });
-  }, [id, rec]);
-  return { rec, loaded };
+  }, [id, rec, shared]);
+  return { rec, loaded, owner };
 }
 
 /** 상세 보고서: 저장된 것이 있으면 그대로, 이전에 만든 기록이면 지금 만든다 */

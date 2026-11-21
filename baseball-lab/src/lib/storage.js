@@ -1,5 +1,5 @@
 /* 브라우저 저장소(막혀 있으면 이 페이지 안에서만 임시 사용), 체험·실제 로그인 표시, 분석 기록 */
-import { cloud } from "./cloud.js";
+import { cloud, shareAvailable } from "./cloud.js";
 
 const mem = {};
 export const Safe = {
@@ -29,7 +29,22 @@ export const Store = {
   list() { const l = Safe.getJSON(KEY, []); return Array.isArray(l) ? l : []; },
   add(rec) { const l = this.list(); l.push(rec); Safe.setJSON(KEY, l); cloud.saveRecord(rec, Auth.uid()); return rec; },
   get(id) { return this.list().find(r => r.id === id) || null; },
-  remove(id) { Safe.setJSON(KEY, this.list().filter(r => r.id !== id)); cloud.deleteRecord(id, Auth.uid()); },
+  remove(id) {
+    const rec = this.get(id);
+    Safe.setJSON(KEY, this.list().filter(r => r.id !== id)); cloud.deleteRecord(id, Auth.uid());
+    if (rec && rec.visibility === "public") cloud.unpublish(id, Auth.uid() || "demo");   // 삭제하면 공유 링크도 닫는다
+  },
+  // 공유: 기록을 공개/비공개로 바꾼다. 서버에 반영되면 true (실패하면 설정을 바꾸지 않는다)
+  canShare() { return shareAvailable && (!!Auth.uid() || !cloud.enabled); },
+  async setVisibility(id, vis) {
+    const rec = this.get(id); if (!rec || rec.result.kind === "compare") return false;
+    const uid = Auth.uid() || "demo", next = { ...rec, visibility: vis };
+    const ok = vis === "public" ? await cloud.publish(next, uid, Auth.name()) : await cloud.unpublish(id, uid);
+    if (!ok) return false;
+    Safe.setJSON(KEY, this.list().map(r => (r.id === id ? next : r)));
+    cloud.saveRecord(next, Auth.uid());
+    return true;
+  },
   newId() { return "a" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); },
   wizard() { return Safe.getJSON(WIZ, {}) || {}; },
   saveWizard(w) { Safe.setJSON(WIZ, w); },

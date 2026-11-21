@@ -49,7 +49,7 @@ python3 build_data.py ~/Downloads/kbo_2026_data
 
 1. Firebase 콘솔에서 프로젝트를 만들고 Authentication(이메일/비밀번호, Google)과 Firestore를 켭니다.
 2. 프로젝트 설정의 `firebaseConfig` 값을 `src/config.js`의 `firebase`에 붙여 넣습니다. (공개 식별값이라 비밀이 아닙니다)
-3. Firestore 규칙에 `firestore.rules` 내용을 붙여 넣습니다. (KBO 데이터는 누구나 읽기, 분석 기록은 본인만)
+3. Firestore 규칙에 `firestore.rules` 내용을 붙여 넣습니다. (KBO 데이터는 누구나 읽기, 분석 기록은 본인만, 공유한(공개) 분석 `shared`는 누구나 읽기·만든 사람만 쓰기). 분석 공유(공개/비공개)는 이 연결이 있어야 다른 사람에게 보입니다.
 4. 서비스 계정 키(비밀 파일)를 받아 CSV를 올립니다. 키 파일은 GitHub에 올리지 마세요.
 ```
 pip install firebase-admin
@@ -57,7 +57,7 @@ python3 tools/upload_firestore.py ~/keys/service-account.json
 ```
 5. Authentication 설정의 "승인된 도메인"에 사이트 주소(jun-yoonsung.github.io)를 추가합니다.
 
-## 첫 버전 범위
+## 첫 버전 범위 (이후 버전에서 늘어난 내용은 PRD.md 참고)
 - 로그인은 버튼만 누르면 되는 체험 로그인, 회원가입은 화면만 있음
 - 영상 분석과 데이터 업로드는 "다음 버전" 안내만 표시
 - 분석 기록은 이 브라우저(localStorage)에만 저장
