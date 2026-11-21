@@ -91,18 +91,12 @@ function PitcherExtra({ e, m }) {
     const lv = sq.lg_vaa, rows = Object.entries(e.vaa).sort((a, b) => b[1][1] - a[1][1]);
     ex.push(
       <div key="vaa">
-        <h3>수직 접근각(VAA)과 터널링</h3>
+        <h3>수직 접근각(VAA)</h3>
         <div className="table-wrap"><table>
           <thead><tr><th>구종</th><th>투구</th><th>접근각</th><th>리그 같은 구종</th></tr></thead>
           <tbody>{rows.map(([t, [v, n]]) => <tr key={t}><td>{t}</td><td>{n}</td><td>{fx(v, 2)}°</td><td>{lv[t] ? fx(lv[t][0], 2) + "°" : "-"}</td></tr>)}</tbody>
         </table></div>
-        {e.tun && e.tun.rows.length > 0 && (
-          <div className="table-wrap"><table>
-            <thead><tr><th>{e.tun.fb}과 비교한 구종</th><th>투구</th><th>놓는 위치 차이</th><th>0.2초 뒤 위치 차이</th><th>홈플레이트 위치 차이</th></tr></thead>
-            <tbody>{e.tun.rows.map(r => <tr key={r[0]}><td>{r[0]}</td><td>{r[1]}</td><td>{fx(r[2], 1)} cm</td><td>{fx(r[3], 1)} 인치</td><td>{fx(r[4], 1)} 인치</td></tr>)}</tbody>
-          </table></div>
-        )}
-        <p className="legend">접근각은 공이 홈플레이트로 내려오는 각도라, 같은 위치라도 0에 가까울수록(덜 가파를수록) 위쪽 공이 더 위로 뜨는 것처럼 보입니다. 터널링은 같은 직구와 다른 구종이 얼마나 비슷하게 시작해 늦게 갈라지는지를 보는 근사로, 놓는 위치·0.2초 뒤 위치 차이가 작고 홈플레이트 차이가 클수록 속이기 좋다고 봅니다. 모두 측정값 기반 근사예요.</p>
+        <p className="legend">접근각은 공이 홈플레이트로 내려오는 각도라, 같은 위치라도 0에 가까울수록(덜 가파를수록) 위쪽 공이 더 위로 뜨는 것처럼 보입니다. 구종끼리 얼마나 늦게 갈라지는지는 아래 "구종 비교"에서 볼 수 있어요. 측정값 기반 근사입니다.</p>
       </div>
     );
   }

@@ -13,6 +13,7 @@ import TeamSpray from "../components/TeamSpray.jsx";
 import PitchLab from "../components/PitchLab.jsx";
 import TeamSituation from "../components/TeamSituation.jsx";
 import MoreLab from "../components/MoreLab.jsx";
+import FlightLab from "../components/FlightLab.jsx";
 import TeamMore from "../components/TeamMore.jsx";
 import TeamExtras from "../components/TeamExtras.jsx";
 import { useScene } from "../context/SceneContext.jsx";
@@ -49,6 +50,7 @@ function PlayerDetail({ rec, r }) {
       <Spray rec={rec} />
       <PitchLab rec={rec} />
       <MoreLab rec={rec} />
+      <FlightLab rec={rec} />
       <Career rec={rec} />
       <Forecast rec={rec} />
       <Explain r={r} rec={rec} />

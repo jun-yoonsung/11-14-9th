@@ -50,6 +50,8 @@ export const Api = {
   pitchlab() { if (!cache.pitchlab) cache.pitchlab = file("pitchlab", "json").catch(() => null); return cache.pitchlab; },
   situ() { if (!cache.situ) cache.situ = file("situ", "json").catch(() => null); return cache.situ; },
   form() { if (!cache.form) cache.form = file("form", "json").catch(() => null); return cache.form; },
+  flight() { if (!cache.flight) cache.flight = file("flight", "json").catch(() => null); return cache.flight; },
+  traj() { if (!cache.traj) cache.traj = file("traj", "json").catch(() => null); return cache.traj; },
   more() { if (!cache.more) cache.more = file("more", "json").catch(() => null); return cache.more; },
   forecastExtra() { if (!cache.forecastExtra) cache.forecastExtra = file("forecast_extra", "json").catch(() => null); return cache.forecastExtra; },
 };

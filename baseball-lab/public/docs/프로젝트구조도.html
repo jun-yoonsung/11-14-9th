@@ -127,6 +127,7 @@
           <div class="sub"><b>components/AiCommentary.jsx · Forecast.jsx</b>미리 만든 AI 해설 상자, 앞으로 5년 예측(그래프·표·현역 확률)</div>
           <div class="sub"><b>pages/Records.jsx · lib/season.js</b>역대 통산 순위·시즌 최고 기록·선수 기록 검색(1982~2026), 과거 시즌 분석에서 계산 가능한 지표만 골라 주는 규칙(<code>usableDefs</code>), 시즌별 규정 타석·이닝 기준</div>
           <div class="sub"><b>pages/Compare.jsx · lib/compare.js</b>선수 2~4명 비교(영역별 막대, 지표 표, 나이별 커리어, 5년 예측), 비교 저장·PDF</div>
+          <div class="sub"><b>components/FlightLab.jsx · lib/flight.js</b>2026 투수의 공의 움직임(궤적 재생), 구종 비교(터널링), 다음 공 예측(구종·코스·헛스윙). 예측은 flight.json에 미리 계산해 둔 표를 읽음</div>
           <div class="sub"><b>components/MoreLab.jsx · TeamMore.jsx · lib/more.js</b>2026 공 가치(런 밸류), 매치업 예상, 공 연결·접근각·터널링, 휴식·부하, 타구 유형, 팀 타순·라인업·Elo·경기 예측. 그림은 화면과 PDF가 같이 씀</div>
           <div class="sub"><b>components/PitchLab.jsx · TeamSituation.jsx · lib/pitchlab.js</b>2026 투구 존 히트맵, 구종 무브먼트·릴리스, 볼카운트·상황별 성적, RE24·WPA, 피로·최근 폼. 그림은 화면과 PDF가 같이 씀</div>
           <div class="sub"><b>components/Spray.jsx · TeamSpray.jsx · lib/spray.js</b>2026 타구 방향(그림·공 종류·땅볼 뜬공), 좌투·우투 상대 성적, 팀 수비 안타 허용률, 구장별 결과. 그림은 화면과 PDF가 같이 씀</div>
@@ -176,7 +177,7 @@
         <h3>📊 KBO 데이터 파일 (CSV) <span class="tag pub">🌐 공개</span></h3>
         <p class="do">데이터베이스 대신 쓰는 표 파일입니다. KBO 2026 정규시즌 720경기를 선수·팀·월별로 요약한 값이며, 브라우저가 내려받아 읽기만 합니다.</p>
         <dl class="kv">
-          <dt>대표 파일</dt><dd><code>public/data/batters.csv</code> (타자 364명)<br><code>public/data/pitchers.csv</code> (투수 296명)<br><code>public/data/batters_hist.csv</code> <code>pitchers_hist.csv</code> <code>teams_hist.csv</code> (1982~2026 시즌 기록, 과거 시즌 분석용) · <code>records.json</code> (역대 기록) · <code>career.json</code> · <code>spray.json</code> (2026 타구 방향) · <code>pitchlab.json</code> <code>situ.json</code> <code>form.json</code> <code>more.json</code> (2026 투구·상황·폼·추가 분석) · <code>forecast.json</code> <code>forecast_extra.json</code> <code>team_forecast.json</code> (예측) · <code>commentary.json</code> <code>team_commentary.json</code> (AI 해설)<br><code>public/data/teams.csv</code> <code>*_monthly.csv</code> <code>pitchmix.csv</code> <code>meta.json</code><br>타자·투수 파일에는 선구안 지표용 열(스윙, 헛스윙, 존 안·밖 투구와 스윙 수)이 들어 있습니다.</dd>
+          <dt>대표 파일</dt><dd><code>public/data/batters.csv</code> (타자 364명)<br><code>public/data/pitchers.csv</code> (투수 296명)<br><code>public/data/batters_hist.csv</code> <code>pitchers_hist.csv</code> <code>teams_hist.csv</code> (1982~2026 시즌 기록, 과거 시즌 분석용) · <code>records.json</code> (역대 기록) · <code>career.json</code> · <code>spray.json</code> (2026 타구 방향) · <code>pitchlab.json</code> <code>situ.json</code> <code>form.json</code> <code>more.json</code> <code>flight.json</code> <code>traj.json</code> (2026 투구·상황·폼·추가 분석·궤적과 예측) · <code>forecast.json</code> <code>forecast_extra.json</code> <code>team_forecast.json</code> (예측) · <code>commentary.json</code> <code>team_commentary.json</code> (AI 해설)<br><code>public/data/teams.csv</code> <code>*_monthly.csv</code> <code>pitchmix.csv</code> <code>meta.json</code><br>타자·투수 파일에는 선구안 지표용 열(스윙, 헛스윙, 존 안·밖 투구와 스윙 수)이 들어 있습니다.</dd>
         </dl>
         <p class="term"><b>CSV</b>: 쉼표로 칸을 나눈 표 형식의 글자 파일. 엑셀로도 열립니다.</p>
       </div>

@@ -107,3 +107,9 @@
 - 입력: `kbo_pitches/*.csv`, `kbo_games/batting.csv`·`pitching.csv`. 실행: `python3 ml/more.py [원본_폴더]`(약 5분). 출력: `public/data/more.json`, `ml/more_models.json`. `pitchlab.py`의 불러오기·기대 득점·승리 확률 함수를 가져다 쓴다.
 - 1 런 밸류: 볼카운트·아웃·주자 → 타석 끝 득점 변화(RE24) 예측(표/LightGBM/CatBoost 비교, 시간 순)으로 공 전후 차이. 2 부하: 휴식·최근 투구 수로 구속 편차 예측(도움 안 됨), 같은 타자 상대 횟수·등판 때 승부처 정도. 3 매치업: 6가지 결과 로그손실 비교(타자·투수 보정, log5, LightGBM, CatBoost, 평균). 4 공 연결: 직전 공 정보 유무 비교(도움 안 됨), VAA·터널링은 속도·가속도 근사. 5 라인업: 마르코프(24개 아웃·주자 상황 × 타순 9칸)로 9이닝 기대 득점, 교환 탐색. 6 경기 예측: Elo + 선발 실점 + 최근 폼, 매달 앞으로 걸으며 검증. 7 타구 유형: `pa_result` 종류와 병살 기회.
 - 환경: Python 3.14에서 `pandas.to_datetime`이 비정상 종료(segfault)해 날짜는 numpy `datetime64[D]`로 처리한다.
+
+## 공의 움직임·구종 비교·다음 공 예측 (flight.py)
+- 입력: `kbo_pitches/*.csv`. 실행: `python3 ml/flight.py [원본_폴더]`(약 30분, CatBoost 학습이 대부분). 개발 중에는 `FLIGHT_CACHE=폴더`로 단계별 결과를 저장해 실패한 단계부터 다시 돌릴 수 있다. 출력: `public/data/flight.json`(예측 표), `traj.json`(궤적), `ml/flight_models.json`.
+- 궤적: 선수·구종 평균 9-파라미터와 개별 투구 표본을 저장한다. 그리기와 터널링 계산(홈 도착 전 같은 시간에 맞춘 거리, 판단 시점 0.167초)은 화면(`src/lib/flight.js`)이 한다.
+- 예측: 구종(투수·카운트 12·타자 좌우·직전 구종), 코스 13칸, 헛스윙 확률을 각각 여러 모델(평균 → 계층형 빈도/로지스틱 → CatBoost)로 비교한다. 학습 8월 이전, 검증 8월, 시험 9~10월. 검증에서 가장 좋은 모델로 전체 기록을 다시 학습해 (투수 × 카운트 × 좌우 × 직전 구종) 격자를 미리 계산한다. 결과(세 가지 모두 CatBoost가 선택됨)는 PRD v1.9.9에 있다.
+- 참고 코드: BallCombination 저장소의 `kbo_crawler/physics.py`, `predict.py`, `web/index.html`의 터널링.

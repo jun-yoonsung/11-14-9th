@@ -8,6 +8,7 @@ import { qualFor } from "./season.js";
 import { paginate } from "./paginate.js";
 import { ZONES, SIDE_NAMES, PGROUP_NAMES, cn, fieldSvg, pctOf, f1 as sf1, f3 as sf3, slash, DEF_POS, defense } from "./spray.js";
 import { zoneSvg, zoneStats, arsRow, rollSvg, rolling, sumGames, SIT_LABELS, SIT_SHOW, CG_NAMES } from "./pitchlab.js";
+import { trajSvg, tunnelStats, tunnelSvg, tcol, COUNTS, typeProbs, zoneProbs, whiffProb, evidence, zoneProbSvg } from "./flight.js";
 import { CAT_NAMES, PREV_NAMES, NEXT_NAMES, MU_B, MU_P, pc, per100, fx, sx, muStats, bipStats, isStarter, linesSvg, TEAM_LINE } from "./more.js";
 import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamview.js";
   const T = () => TYPES;
@@ -331,6 +332,39 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
     ];
   }
 
+  // 공의 움직임·구종 비교(터널링)·다음 공 예측 — public/data/flight.json, traj.json (2026 시즌 투수)
+  function flightBlocks(x, rec) {
+    if (rec.type !== "pitcher" || rec.season !== 2026 || !x || !x.flight || !x.traj) return [];
+    const id = String(rec.params.target), f = x.flight.p[id], te = x.traj.p[id], meta = x.flight.meta;
+    if (!f || !te) return [];
+    const types = meta.types, sec = (h, body) => `<div class="rp-sec"><h2>${h} (2026 시즌)</h2>${body}</div>`, pv = t => `<p class="rp-pv" style="margin-top:3mm"><b>${t}</b></p>`;
+    const tb = (head, rows) => `<table class="rp-sm" style="margin-top:1.5mm"><thead><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>`;
+    const means = Object.entries(te.m).map(([ti, v]) => ({ t: types[+ti], n: v[0], m: v.slice(1) })).filter(m => m.n >= 10).sort((a, b) => b.n - a.n);
+    if (!means.length) return [];
+    const views = [["catcher", "포수 시점"], ["side", "옆에서"], ["top", "위에서"]];
+    const fig = (v, nm, wd, h, fs, lw) => `<div style="text-align:center"><b style="font-size:9pt">${nm}</b>${trajSvg({ means, view: v, width: wd, w: 520, h, fs, lw, label: nm + " 구종별 궤적" })}</div>`;
+    const figs = `<div style="display:flex;gap:5mm;justify-content:center;align-items:flex-start"><div style="width:84mm">${fig("catcher", "포수 시점", "84mm", 400, 20, 4)}</div><div style="width:84mm;display:flex;flex-direction:column;gap:3mm">${fig("side", "옆에서", "84mm", 190, 22, 4)}${fig("top", "위에서", "84mm", 190, 22, 4)}</div></div>`;
+    const leg = `<div class="rp-leg2">${means.map(m => `<span><i style="border-color:${tcol(m.t)}"></i>${esc(m.t)} ${m.n}구</span>`).join("")}</div>`;
+    const base = means.filter(m => m.n >= 30)[0];
+    const rows = base ? means.filter(m => m.t !== base.t && m.n >= 30).map(m => ({ t: m.t, n: m.n, s: tunnelStats(base.m, m.m) })).filter(r => r.s) : [];
+    let b1 = `${figs}${leg}<p class="rp-fine">구종 평균 궤적(릴리스~홈플레이트). 점선은 측정 시작 전 추정 구간, 네모는 스트라이크존입니다. 속도·가속도 측정값에서 계산한 근사예요.</p>`;
+    if (rows.length) b1 += pv(`구종 비교: ${base.t}과 얼마나 늦게 갈라지나`) + tb([`${base.t}과 비교`, "투구", "릴리스 차이", "판단 시점 차이", "홈 도착 차이", "갈라짐 배율"], rows.map(r => `<tr><td>${esc(r.t)}</td><td>${r.n}</td><td>${r.s.release.toFixed(1)}cm</td><td>${r.s.decision.toFixed(1)}cm</td><td>${r.s.plate.toFixed(1)}cm</td><td><b>${r.s.ratio.toFixed(1)}배</b></td></tr>`).join(""))
+      + `<div style="display:flex;justify-content:center;margin-top:2mm">${tunnelSvg(rows, { width: "125mm", w: 520, h: 240, fs: 14, label: "구종 사이 거리 변화" })}</div><p class="rp-fine">두 구종의 평균 궤적을 홈 도착 전 같은 시간에 맞춰 비교했습니다. 판단 시점은 홈 도착 0.167초 전이며, 갈라짐 배율이 클수록 늦게 갈라져 타자를 속이기 좋습니다.</p>`;
+    const out = [sec("공의 움직임·구종 비교", b1)];
+    // 다음 공 예측
+    const top3 = (c, st) => typeProbs(f, c, st, -1).sort((a, b) => b.p - a.p).slice(0, 3).map(q => `${esc(types[q.t])} ${Math.round(q.p * 100)}%`).join(", ");
+    const keyCounts = [0, 3, 1, 4, 2].map(c => COUNTS[c]);
+    const L = "style=\"text-align:left\"";
+    const t1 = tb(["카운트", "우타자 상대 예상 구종", "좌타자 상대 예상 구종"], keyCounts.map(k => `<tr><td>${k.name}</td><td ${L}>${top3(k.c, 0)}</td><td ${L}>${top3(k.c, 1)}</td></tr>`).join("")).replace(/<th>(우타자|좌타자)/g, `<th ${L}>$1`);
+    const zmax = (j, st, c) => { const z = zoneProbs(f, j, st, c); const k = z.indexOf(Math.max(...z)); return `${esc(meta.zone[k])} ${Math.round(z[k] * 100)}%`; };
+    const t2 = tb(["구종", "투구", "예상 헛스윙(초구)", "예상 헛스윙(2스트라이크)", "초구 가장 많이 가는 곳(우타)", "2스트라이크 가장 많이 가는 곳(우타)"], f.ty.map((t, j) => `<tr><td>${esc(types[t])}</td><td>${f.n[j]}</td><td>${Math.round(whiffProb(f, j, 0, 0) * 100)}%</td><td>${Math.round(whiffProb(f, j, 0, 2) * 100)}%</td><td ${L}>${zmax(j, 0, 0)}</td><td ${L}>${zmax(j, 0, 2)}</td></tr>`).join(""));
+    const zfig = `<div style="display:flex;gap:4mm;justify-content:center;margin-top:2mm">${f.ty.slice(0, 3).map((t, j) => `<div style="text-align:center"><b style="font-size:8.5pt">${esc(types[t])} 예상 코스(%)</b>${zoneProbSvg(zoneProbs(f, j, 0, 0), { width: "38mm", color: tcol(types[t]), label: types[t] + " 예상 코스" })}</div>`).join("")}</div>`;
+    const mrow = (nm, info, cols) => `<tr><td>${nm}</td><td>${esc(info.best)}</td>${cols.map(c => `<td>${info.models[info.best][c]}</td>`).join("")}</tr>`;
+    const t3 = tb(["예측", "선택된 모델", "검증", "시험"], mrow("다음 공 구종", meta.type, ["val", "test"]) + mrow("공이 갈 코스", meta.zone_model, ["val", "test"]) + mrow("헛스윙 확률", meta.whiff, ["val", "test"]));
+    out.push(sec("다음 공 예측", `${pv("카운트별 예상 구종(직전 공을 모를 때, 상위 3개)")}${t1}${pv("구종별 예상 헛스윙(스윙했을 때)과 예상 코스")}${t2}${pv("가장 많이 던지는 세 구종의 초구 예상 코스(우타자 상대, 포수 시점)")}${zfig}${pv("사용한 모델(시간 순 검증에서 가장 좋은 것, 로그손실 작을수록 좋음)")}${t3}<p class="rp-fine">구종 맞히기는 어느 모델이든 절반을 넘기기 어려워 확률로 보여 줍니다. 타자별 차이·포수 사인·상대 팀 전략은 반영하지 못했습니다. 상황을 바꿔 보는 예측은 화면에서 할 수 있습니다.</p>`));
+    return out;
+  }
+
   // 추가 분석(공 가치·매치업·공 연결·부하·타구 유형) — public/data/more.json
   function moreBlocks(x, rec) {
     const m = x && x.more; if (!m || rec.season !== 2026) return [];
@@ -366,8 +400,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
       }
       if (e.vaa) {
         const lv = m.meta.seq.lg_vaa;
-        b += pv("수직 접근각과 터널링") + tb(["구종", "투구", "접근각", "리그 같은 구종"], Object.entries(e.vaa).sort((x, y) => y[1][1] - x[1][1]).map(([t, [v, n]]) => `<tr><td>${esc(t)}</td><td>${n}</td><td>${fx(v, 2)}°</td><td>${lv[t] ? fx(lv[t][0], 2) + "°" : "-"}</td></tr>`).join(""));
-        if (e.tun && e.tun.rows.length) b += tb([`${e.tun.fb}과 비교`, "투구", "놓는 위치 차이(cm)", "0.2초 뒤 차이(인치)", "홈플레이트 차이(인치)"], e.tun.rows.map(r => `<tr><td>${esc(r[0])}</td><td>${r[1]}</td><td>${fx(r[2], 1)}</td><td>${fx(r[3], 1)}</td><td>${fx(r[4], 1)}</td></tr>`).join("")) + `<p class="rp-fine">접근각·터널링은 속도·가속도에서 계산한 근사치입니다.</p>`;
+        b += pv("수직 접근각") + tb(["구종", "투구", "접근각", "리그 같은 구종"], Object.entries(e.vaa).sort((x, y) => y[1][1] - x[1][1]).map(([t, [v, n]]) => `<tr><td>${esc(t)}</td><td>${n}</td><td>${fx(v, 2)}°</td><td>${lv[t] ? fx(lv[t][0], 2) + "°" : "-"}</td></tr>`).join(""));
       }
       if (e.work) {
         const lgw = m.meta.work.lg[isStarter(e.work) ? "sp" : "rel"], names = m.meta.work.rest;
@@ -405,7 +438,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
   // AI 해설과 예측은 내용이 길어 각각 한 쪽으로 만든다 (없는 쪽은 만들지 않는다)
   function extraPages(extra, rec) {
     if (!extra) return [];
-    return [aiBlock(extra.ai, rec), careerBlock(extra, rec), forecastBlock(extra.fc, extra.fc && extra.fc.players[String(rec.params.target)], rec, extra.fx), sprayBlock(extra.sp, rec), ...pitchlabBlock(extra, rec), ...moreBlocks(extra, rec)].filter(Boolean).map(b => `<div style="margin-top:9mm">${b}</div>`);
+    return [aiBlock(extra.ai, rec), careerBlock(extra, rec), forecastBlock(extra.fc, extra.fc && extra.fc.players[String(rec.params.target)], rec, extra.fx), sprayBlock(extra.sp, rec), ...pitchlabBlock(extra, rec), ...moreBlocks(extra, rec), ...flightBlocks(extra, rec)].filter(Boolean).map(b => `<div style="margin-top:9mm">${b}</div>`);
   }
 
   function playerPages(rec, d, extra) {
@@ -621,8 +654,8 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
     if (rec.result.kind === "compare") return null;
     try {
       if (rec.result.kind === "team") { const [tf, tc, sp, si, more] = await Promise.all([Api.teamForecast(), Api.teamCommentary(), Api.spray(), Api.situ(), Api.more()]); return { tf, tc, sp, si, more }; }
-      const [all, fc, career, fx, sp, pl, si, fo, more] = await Promise.all([Api.commentary(), Api.forecast(), Api.career(), Api.forecastExtra(), Api.spray(), Api.pitchlab(), Api.situ(), Api.form(), Api.more()]);
-      return { ai: (all || {})[`${rec.season}-${rec.params.target}`] || null, fc, career, fx, sp, pl, si, fo, more };
+      const [all, fc, career, fx, sp, pl, si, fo, more, flight, traj] = await Promise.all([Api.commentary(), Api.forecast(), Api.career(), Api.forecastExtra(), Api.spray(), Api.pitchlab(), Api.situ(), Api.form(), Api.more(), rec.type === "pitcher" ? Api.flight() : null, rec.type === "pitcher" ? Api.traj() : null]);
+      return { flight, traj, ai: (all || {})[`${rec.season}-${rec.params.target}`] || null, fc, career, fx, sp, pl, si, fo, more };
     } catch (e) { return null; }
   }
 
