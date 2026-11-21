@@ -75,3 +75,15 @@ test("finalConf caps confidence at 보통 when bone-length variation exceeds 0.1
   assert.equal(finalConf("보통", { ...base, boneCv: 0.12 }), "보통");
   assert.equal(finalConf("높음", { ...base }), "높음");          // 값이 없으면 제한하지 않음
 });
+
+import { findEvents } from "../src/lib/form.js";
+test("findEvents: a foot plant that would come after the release is not accepted (real low-angle clip gave plant 0.8 s after release)", () => {
+  const frames = Array.from({ length: 31 }, (_, i) => {
+    const ly = i < 20 ? 0.5 : 0.0, wx = i < 10 ? 0 : 1.5;                 // 앞발은 20프레임에 내려오고, 손목 속도 정점은 10프레임 부근
+    const P = (x, y) => ({ x, y, z: 0, v: 1 });
+    return { t: i / 30, j: { lsho: P(0, 1), rsho: P(0, 1), lhip: P(0, 0.5), rhip: P(0, 0.5), lelb: P(0, 0.8), relb: P(0, 0.8), lwri: P(0, 0.6), rwri: P(wx, 0.6), lkne: P(0, 0.3), rkne: P(0, 0.3), lank: P(0, ly), rank: P(0, 0) } };
+  });
+  const ev = findEvents(frames);
+  assert.ok(ev.br != null && ev.br < 20);
+  assert.equal(ev.fp, null);
+});

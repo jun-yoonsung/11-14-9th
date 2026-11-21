@@ -80,6 +80,7 @@ export function findEvents(frames) {
   let lift = 0; for (let i = 1; i <= br; i++) if (ly[i] > ly[lift]) lift = i;
   const lim = Math.min(...ly) + FP_HEIGHT * L;
   let fp = null; for (let i = lift + 1; i < t.length; i++) if (ly[i] <= lim) { fp = i; break; }
+  if (fp !== null && fp >= br) fp = null;   // 착지는 릴리스보다 먼저여야 한다(저각도 영상에서 착지가 릴리스 뒤로 잡힌 적 있음)
   return { lift: idx[lift], fp: fp === null ? null : idx[fp], br: idx[br] };
 }
 

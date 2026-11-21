@@ -334,3 +334,13 @@ def test_form_model_json_matches_best_and_predicts():
         x = np.array([[np.nan if ft[f] is None else ft[f] for f in mod[v]["features"]]])
         p = F.predict_export(mod[v], x)[0]
         assert 40 < p < 110, (v, p)
+
+
+def test_find_events_rejects_foot_plant_after_release():
+    T = 31; t = np.arange(T) / 30.0
+    z = np.zeros(T)
+    def P(x, y): return np.stack([np.full(T, x) if np.isscalar(x) else x, np.full(T, y) if np.isscalar(y) else y, z], axis=1)
+    J = {"lsho": P(0, 1.0), "rsho": P(0, 1.0), "lhip": P(0, 0.5), "rhip": P(0, 0.5), "lelb": P(0, 0.8), "relb": P(0, 0.8), "lwri": P(0, 0.6),
+         "rwri": P(np.where(np.arange(T) < 10, 0.0, 1.5), 0.6), "lkne": P(0, 0.3), "rkne": P(0, 0.3), "lank": P(0, np.where(np.arange(T) < 20, 0.5, 0.0)), "rank": P(0, 0.0)}
+    ev = F.find_events(J, t)
+    assert ev["br"] is not None and ev["br"] < 20 and ev["fp"] is None

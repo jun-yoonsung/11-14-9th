@@ -152,6 +152,8 @@ def find_events(J: dict, t: np.ndarray) -> dict:
     lift = int(np.argmax(S["lank"][: br + 1, 1]))
     low = S["lank"][:, 1] <= S["lank"][:, 1].min() + FP_HEIGHT * L
     fp = next((i for i in range(lift + 1, len(t)) if low[i]), None)
+    if fp is not None and fp >= br:
+        fp = None   # 착지는 릴리스보다 먼저여야 한다(저각도 영상에서 착지가 릴리스 뒤로 잡힌 적 있음)
     return {"lift": lift, "fp": fp, "br": br}
 
 
