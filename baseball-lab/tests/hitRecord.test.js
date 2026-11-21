@@ -67,3 +67,11 @@ test("lowReasons does not blame a missing foot plant for hitting", () => {
   const r = lowReasons({ conf: "낮음", sport: "hitting", bone: { ok: false, cv: 0.2 }, events: { fp: null, br: 5 } });
   assert.equal(r.length, 1); assert.doesNotMatch(r[0], /착지/);
 });
+
+test("finalConf caps confidence at 보통 when bone-length variation exceeds 0.10 (simulation: reliable features fall from 8 to 7 of 12 near 0.12 and collapse to 2 near 0.17)", () => {
+  const e = { fp: 3, br: 5 }, base = { sport: "pitching", events: e, wristMax: 9 };
+  assert.equal(finalConf("높음", { ...base, boneCv: 0.066 }), "높음");
+  assert.equal(finalConf("높음", { ...base, boneCv: 0.12 }), "보통");
+  assert.equal(finalConf("보통", { ...base, boneCv: 0.12 }), "보통");
+  assert.equal(finalConf("높음", { ...base }), "높음");          // 값이 없으면 제한하지 않음
+});

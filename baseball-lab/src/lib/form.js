@@ -129,11 +129,13 @@ export function confidence(frames /*, events */) {
 }
 
 const BONES = [["lsho", "lelb"], ["lelb", "lwri"], ["rsho", "relb"], ["relb", "rwri"], ["lhip", "lkne"], ["lkne", "lank"], ["rhip", "rkne"], ["rkne", "rank"]];
+export const BONE_CV_MAX = 0.15;   // 이 값을 넘으면 "낮음": 모의 실험에서 0.13→0.17 사이에 믿을 만한 지표가 12개 중 7개→2개로 무너짐
+export const BONE_CV_CAP = 0.10;   // 이 값을 넘으면 최대 "보통"
 /** 뼈 길이가 프레임마다 얼마나 흔들리는지(변동계수 평균). 0.15 넘으면 3D 추정이 불안정(ok:false) */
 export function boneCheck(frames) {
   const ok = frames.filter(f => f.j);
   if (ok.length < 3) return { ok: false, cv: Infinity };
   const cvs = BONES.map(([a, b]) => { const L = ok.map(f => Math.hypot(f.j[a].x - f.j[b].x, f.j[a].y - f.j[b].y, f.j[a].z - f.j[b].z)); const m = L.reduce((s, v) => s + v, 0) / L.length; return Math.sqrt(L.reduce((s, v) => s + (v - m) ** 2, 0) / L.length) / m; });
   const cv = cvs.reduce((s, v) => s + v, 0) / cvs.length;
-  return { ok: cv <= 0.15, cv };
+  return { ok: cv <= BONE_CV_MAX, cv };
 }
