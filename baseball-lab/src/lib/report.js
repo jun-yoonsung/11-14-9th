@@ -6,6 +6,7 @@ import { CAREER, careerPlot, careerSummary } from "./career.js";
 import { svgString } from "./chart.js";
 import { qualFor } from "./season.js";
 import { paginate } from "./paginate.js";
+import { themed, OVERRIDES, TOKENS } from "./reportTheme.js";
 import { ZONES, SIDE_NAMES, PGROUP_NAMES, cn, fieldSvg, pctOf, f1 as sf1, f3 as sf3, slash, DEF_POS, defense } from "./spray.js";
 import { zoneSvg, zoneStats, arsRow, rollSvg, rolling, sumGames, SIT_LABELS, SIT_SHOW, CG_NAMES } from "./pitchlab.js";
 import { trajSvg, tunnelStats, tunnelSvg, tcol, COUNTS, typeProbs, zoneProbs, whiffProb, evidence, zoneProbSvg } from "./flight.js";
@@ -108,7 +109,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
   .rp-cbar { margin: 2.2mm 0; } .rp-cbar > b { display: block; font-size: 9pt; margin-bottom: 0.6mm; }
   .rp-crow { display: grid; grid-template-columns: 1fr 8mm; gap: 2mm; align-items: center; font-size: 7.8pt; color: #5c667d; margin: 0.5mm 0; }
   .rp-ct { height: 2.6mm; background: #eceff5; border-radius: 1.3mm; } .rp-ct i { display: block; height: 100%; border-radius: 1.3mm; }
-  .rp-cmpt td small { color: #5c667d; margin-left: 1mm; font-size: 7pt; } .rp-cmpt td.ld { font-weight: 700; }
+  .rp-cmpt td small { color: #5c667d; margin-left: 1mm; font-size:7.5pt; } .rp-cmpt td.ld { font-weight: 700; }
   .rp-mn li { margin: 0.8mm 0 0.8mm 4mm; font-size: 9pt; } .rp-mn b { margin-right: 1.2mm; }
   `;
 
@@ -522,7 +523,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
     let p4 = "";
     if (d.trend) {
       p4 += `<div class="rp-sec" style="margin-top:9mm"><h2>월별 추이</h2><p class="rp-pv" style="margin-bottom:2mm">표본이 충분한 달(${isBat ? "50타석" : "10이닝"} 이상) 중 가장 좋은 달은 초록색, 가장 나쁜 달은 빨간색입니다.</p>
-        <table class="rp-sm"><thead><tr><th>지표</th>${d.trend.months.map(m => `<th>${m.label}<br><span style="font-size:7pt">${m.size}</span></th>`).join("")}</tr></thead><tbody>${d.trend.rows.map(r =>
+        <table class="rp-sm"><thead><tr><th>지표</th>${d.trend.months.map(m => `<th>${m.label}<br><span style="font-size:7.5pt">${m.size}</span></th>`).join("")}</tr></thead><tbody>${d.trend.rows.map(r =>
           `<tr><td>${esc(r.label)}</td>${r.cells.map(x => `<td class="${x.tone}">${esc(x.display)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
     }
     if (d.pitchMix) {
@@ -546,7 +547,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
     const bars = c.profile.map(g => `<div class="rp-cbar"><b>${esc(g.name)}</b>${g.scores.map((s, i) => `<div class="rp-crow"><div class="rp-ct"><i style="width:${s}%;background:${col[i]}"></i></div><span>${s}</span></div>`).join("")}</div>`).join("");
     const groups = [...new Set(c.items.map(i => i.group))];
     const trs = groups.map(g => `<tr class="gh"><td colspan="${n + 1}">${esc(g)}</td></tr>` + c.items.filter(i => i.group === g).map(it =>
-      `<tr><td>${esc(it.label)}${it.label !== it.en ? ` <span style="color:#5c667d;font-size:7pt">${esc(it.en)}</span>` : ""}</td>${it.vals.map((v, i) => `<td class="${it.lead === i ? "ld" : ""}" style="${it.lead === i ? `color:${col[i]}` : ""}">${esc(v.display)}${v.pct == null ? "" : `<small>상위 ${100 - v.pct}%</small>`}</td>`).join("")}</tr>`).join("")).join("");
+      `<tr><td>${esc(it.label)}${it.label !== it.en ? ` <span style="color:#5c667d;font-size:7.5pt">${esc(it.en)}</span>` : ""}</td>${it.vals.map((v, i) => `<td class="${it.lead === i ? "ld" : ""}" style="${it.lead === i ? `color:${col[i]}` : ""}">${esc(v.display)}${v.pct == null ? "" : `<small>상위 ${100 - v.pct}%</small>`}</td>`).join("")}</tr>`).join("")).join("");
     const p1 = `<h1 class="rp-title">${esc(rec.title)}</h1>
       <p class="rp-meta">${[...new Set(r.seasons || [rec.season])].join(", ")} 시즌, 같은 종류 선수 ${n}명을 각자 그 시즌 리그 안에서의 백분위로 비교했습니다.</p>
       <div class="rp-sec"><h2>한눈에 보기</h2><div class="rp-callout">${esc(c.summary)}</div></div>
@@ -626,7 +627,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
   function html(rec, d, extra) {
     d = d || rec.result.report;
     const parts = rec.result.kind === "compare" ? comparePages(rec) : rec.result.kind === "team" ? teamPages(rec, extra) : playerPages(rec, d, extra);
-    return `<div class="rp"><style>${CSS}</style>${parts.map((p, i) => pageWrap(p, i + 1, parts.length, rec)).join("")}</div>`;
+    return `<div class="rp"><style>${themed(CSS + OVERRIDES)}</style>${themed(parts.map((p, i) => pageWrap(p, i + 1, parts.length, rec)).join(""))}</div>`;
   }
 
   function fileName(rec) {
@@ -675,7 +676,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
       paginate(host);   // 한 쪽에 안 들어가는 블록은 다음 쪽으로
       const worker = html2pdf().set({
         margin: 0, filename: fileName(rec), image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", windowWidth: 794, scrollX: 0, scrollY: 0, x: 0, y: 0 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: TOKENS.paper, windowWidth: 794, scrollX: 0, scrollY: 0, x: 0, y: 0 },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         pagebreak: { mode: ["css"] },
       }).from(host.firstElementChild);

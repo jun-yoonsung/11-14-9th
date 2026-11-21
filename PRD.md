@@ -380,6 +380,12 @@ baseball-lab/
 - 한계: 한 시즌 표본이라 작은 차이는 우연일 수 있다. 접근각·터널링·변화량은 속도·가속도 기반 근사. 구원 투수의 승계 주자, 주루(도루 기록 없음), 심판·포수, 타구 속도·발사각(xwOBA)은 데이터에 없어 다루지 못했다. 라인업 시뮬레이션은 수비·주루·상대 투수를 반영하지 못한다.
 - 관련 파일: `ml/more.py`, `ml/more_models.json`, `public/data/more.json`, `src/components/MoreLab.jsx`·`TeamMore.jsx`, `src/lib/more.js`, `src/lib/report.js`. 환경 메모: 이 환경(Python 3.14)에서는 `pandas.to_datetime`이 비정상 종료해 날짜를 numpy로 처리했다.
 
+### v1.9.10 (2026-11-21) 보고서 디자인 기준 적용 (Impeccable)
+- 보고서(PDF)의 색을 OKLCH 토큰 한 곳(`src/lib/reportTheme.js`)에서 정의한다. 순검정·순백·순회색을 쓰지 않고 모든 중립색에 푸른 기운을 입힌다. PDF 변환기가 oklch를 읽지 못해 sRGB 값으로 바꿔 넣는다.
+- 글자 크기 최소 7.5pt, 본문 줄 길이 상한 152mm, 숫자는 같은 폭(tabular). 글자색 대비 4.5:1 이상(본문 7:1 이상).
+- PDF 쪽 나누기(`paginate.js`)는 앞 쪽 아래가 비고 다음 블록이 거기 들어가면 끌어올려 빈 쪽을 줄인다(투수 18→17쪽). 큰 그림이 안 들어가는 쪽의 빈 공간은 남는다.
+- `node tools/report-lint.mjs`가 위 규칙을 검사한다. 한계: 자동 검사는 소스·토큰 기준이며 눈으로 보는 균형은 PDF를 직접 열어 확인해야 한다.
+
 ### v1.9.9 (2026-11-21) 공의 움직임·구종 비교(터널링)·다음 공 예측 (투수)
 - 참고: jun-yoonsung/BallCombination 저장소의 `claude/dreamy-hawking-0kviu7` 브랜치(공의 움직임, 구종 비교, 볼배합 예측). 코드를 그대로 가져오지 않고 baseball-lab(React)과 이 프로젝트 데이터에 맞게 다시 구현했다.
 - 2026 시즌 투수의 자세하게 보기에 "공의 움직임·구종 비교·다음 공 예측" 구역(`FlightLab.jsx`), PDF에 "공의 움직임·구종 비교", "다음 공 예측" 쪽을 추가했다. 데이터는 `public/data/flight.json`(예측 표, 약 0.8MB)과 `traj.json`(궤적, 약 0.6MB), 두 파일은 투수 상세를 열 때만 불러온다. 만드는 곳은 `ml/flight.py`.

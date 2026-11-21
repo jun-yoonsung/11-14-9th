@@ -52,6 +52,19 @@ export function paginate(root) {
     }
     if (next && !bodyOf(next).length) { next.remove(); pages.splice(i + 1, 1); }
   }
+  // 빈 곳 메우기: 앞 쪽 아래가 크게 비고 다음 쪽의 첫 블록이 거기 들어가면 끌어올린다 (안 들어가면 되돌림).
+  // 블록 순서는 그대로이고, 비게 된 쪽은 지운다. 쪽마다 반쯤 빈 PDF를 막아 읽는 쪽수를 줄인다.
+  for (let i = 0; i < pages.length - 1; i++) {
+    let guard = 0;
+    while (i < pages.length - 1 && guard++ < 30) {
+      const nxt = pages[i + 1], first = bodyOf(nxt)[0];
+      if (!first || first.dataset.keep === "page") break;
+      const b = bodyOf(pages[i]), anchor = b.length ? b[b.length - 1] : pages[i].querySelector(".rp-top");
+      anchor.after(first);
+      if (over(pages[i])) { nxt.querySelector(".rp-top").after(first); break; }   // 안 들어감 → 원위치
+      if (!bodyOf(nxt).length) { nxt.remove(); pages.splice(i + 1, 1); }
+    }
+  }
   pages.forEach((p, i) => { const s = p.querySelectorAll(".rp-foot span"); if (s.length) s[s.length - 1].textContent = `${i + 1} / ${pages.length}`; });
   return pages.length;
 }
