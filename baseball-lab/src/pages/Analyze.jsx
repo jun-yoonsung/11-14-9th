@@ -131,8 +131,8 @@ export default function Analyze() {
           <h1>어떤 데이터를 분석할까요?</h1>
           <button className={"option" + (w.mode === "record" ? " sel" : "")} type="button" onClick={() => { update({ mode: "record" }); go(2); }}>
             <span className="ic">{icTable}</span><span><b>기록 데이터</b><small>타율, 홈런, 평균자책점 같은 숫자 기록을 분석합니다</small></span></button>
-          <button className="option off" type="button" aria-describedby="videoHint" onClick={() => { toast("영상 분석은 다음 버전에서 제공됩니다."); setErrors({ mode: "영상 분석은 다음 버전에서 제공됩니다. 기록 데이터를 선택해 주세요." }); }}>
-            <span className="ic">{icVideo}</span><span><b>영상 데이터 <span className="pill">준비 중</span></b><small id="videoHint">투구 폼, 타구 궤적 분석은 다음 버전에서 제공됩니다</small></span></button>
+          <button className="option" type="button" aria-describedby="videoHint" onClick={() => navigate("/video")}>
+            <span className="ic">{icVideo}</span><span><b>영상 데이터 <span className="pill blue">투구 폼·타격 자세</span></b><small id="videoHint">투구나 스윙 영상을 올리면 관절을 3D로 추정해 몸 쓰는 방식과 조정해 볼 방향을 알려 드려요</small></span></button>
           <div className="err-msg" role="alert">{errors.mode}</div>
           <div className="actions"><button className="btn pri grow" type="button" onClick={() => (w.mode === "record" ? go(2) : setErrors({ mode: "분석 방식을 선택해 주세요." }))}>다음</button></div>
         </div>

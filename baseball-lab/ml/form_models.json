@@ -1,0 +1,192 @@
+{
+ "models": {
+  "side": {
+   "ridge": {
+    "rmse": 4.487365315039341,
+    "mae": 3.60259102112657
+   },
+   "extratrees": {
+    "rmse": 4.729090860697917,
+    "mae": 3.7998729103913713
+   },
+   "xgboost": {
+    "rmse": 4.785785381363006,
+    "mae": 3.81353567870574
+   },
+   "catboost": {
+    "rmse": 5.021604774417659,
+    "mae": 3.9737033858092192
+   },
+   "mlp": {
+    "rmse": 5.796880993118053,
+    "mae": 4.569757584163364
+   }
+  },
+  "front": {
+   "ridge": {
+    "rmse": 4.523011909583723,
+    "mae": 3.6234321305707202
+   },
+   "extratrees": {
+    "rmse": 4.696542053924993,
+    "mae": 3.78545959428443
+   },
+   "xgboost": {
+    "rmse": 4.810578959163537,
+    "mae": 3.8496779755084183
+   },
+   "catboost": {
+    "rmse": 5.0262322883317685,
+    "mae": 3.9829062322064357
+   },
+   "mlp": {
+    "rmse": 5.748454193441439,
+    "mae": 4.500268263512299
+   }
+  },
+  "back": {
+   "ridge": {
+    "rmse": 4.566524648302194,
+    "mae": 3.648113928825409
+   },
+   "extratrees": {
+    "rmse": 4.7945869599446125,
+    "mae": 3.8196625276653084
+   },
+   "xgboost": {
+    "rmse": 4.875454798638469,
+    "mae": 3.8502174683730974
+   },
+   "catboost": {
+    "rmse": 5.263281879388186,
+    "mae": 4.12708601893679
+   },
+   "mlp": {
+    "rmse": 5.6762251929647904,
+    "mae": 4.373654041106705
+   }
+  },
+  "broadcast": {
+   "ridge": {
+    "rmse": 4.5220765313857925,
+    "mae": 3.6017060447915226
+   },
+   "extratrees": {
+    "rmse": 4.7095723723018015,
+    "mae": 3.7893559825211938
+   },
+   "xgboost": {
+    "rmse": 4.816412276590892,
+    "mae": 3.8554289908304695
+   },
+   "catboost": {
+    "rmse": 4.933631126777385,
+    "mae": 3.911195848291444
+   },
+   "mlp": {
+    "rmse": 6.005939146408477,
+    "mae": 4.725544522563776
+   }
+  }
+ },
+ "best": {
+  "side": "ridge",
+  "front": "ridge",
+  "back": "ridge",
+  "broadcast": "ridge"
+ },
+ "clean_rmse": {
+  "side": 4.59840066141989,
+  "front": 4.59840066141989,
+  "back": 4.59840066141989,
+  "broadcast": 4.59840066141989
+ },
+ "reliability": {
+  "stride_torso": {
+   "side": "높음",
+   "front": "높음",
+   "back": "높음",
+   "broadcast": "높음"
+  },
+  "trunk_lean_deg": {
+   "side": "보통",
+   "front": "보통",
+   "back": "보통",
+   "broadcast": "보통"
+  },
+  "knee_fp_deg": {
+   "side": "보통",
+   "front": "보통",
+   "back": "보통",
+   "broadcast": "보통"
+  },
+  "knee_br_deg": {
+   "side": "높음",
+   "front": "높음",
+   "back": "높음",
+   "broadcast": "높음"
+  },
+  "arm_angle_deg": {
+   "side": "보통",
+   "front": "보통",
+   "back": "보통",
+   "broadcast": "보통"
+  },
+  "elbow_h_fp": {
+   "side": "높음",
+   "front": "높음",
+   "back": "높음",
+   "broadcast": "높음"
+  },
+  "release_h_torso": {
+   "side": "보통",
+   "front": "보통",
+   "back": "보통",
+   "broadcast": "보통"
+  },
+  "hip_shoulder_sep_deg": {
+   "side": "보통",
+   "front": "보통",
+   "back": "보통",
+   "broadcast": "보통"
+  },
+  "trunk_rot_lag_ms": {
+   "side": "낮음",
+   "front": "낮음",
+   "back": "낮음",
+   "broadcast": "낮음"
+  },
+  "pelvis_trunk_gap_ms": {
+   "side": "낮음",
+   "front": "낮음",
+   "back": "낮음",
+   "broadcast": "낮음"
+  },
+  "trunk_arm_gap_ms": {
+   "side": "낮음",
+   "front": "낮음",
+   "back": "낮음",
+   "broadcast": "낮음"
+  },
+  "fp_to_br_ms": {
+   "side": "낮음",
+   "front": "낮음",
+   "back": "낮음",
+   "broadcast": "낮음"
+  }
+ },
+ "importance": {
+  "stride_torso": 0.0698,
+  "trunk_lean_deg": 0.0185,
+  "knee_fp_deg": 0.095,
+  "knee_br_deg": 0.1999,
+  "arm_angle_deg": 0.0845,
+  "elbow_h_fp": 0.0009,
+  "release_h_torso": 0.0682,
+  "hip_shoulder_sep_deg": 0.1181,
+  "trunk_rot_lag_ms": 0.004,
+  "pelvis_trunk_gap_ms": 0.009,
+  "trunk_arm_gap_ms": 0.1878,
+  "fp_to_br_ms": 0.1443
+ }
+}

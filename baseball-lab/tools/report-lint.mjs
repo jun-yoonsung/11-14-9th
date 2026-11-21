@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { TOKENS, SCALE, LEGACY } from "../src/lib/reportTheme.js";
 
-const src = readFileSync(new URL("../src/lib/report.js", import.meta.url), "utf8");
+const src = ["report.js", "reportForm.js"].map(f => readFileSync(new URL(`../src/lib/${f}`, import.meta.url), "utf8")).join("\n");
 const bad = [];
 
 // 1) 중립색: R=G=B 인 16진수는 순회색. LEGACY 표가 토큰으로 바꿔 주므로 "표에 없는" 것만 오류.

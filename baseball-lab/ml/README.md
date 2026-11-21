@@ -113,3 +113,67 @@
 - 궤적: 선수·구종 평균 9-파라미터와 개별 투구 표본을 저장한다. 그리기와 터널링 계산(홈 도착 전 같은 시간에 맞춘 거리, 판단 시점 0.167초)은 화면(`src/lib/flight.js`)이 한다.
 - 예측: 구종(투수·카운트 12·타자 좌우·직전 구종), 코스 13칸, 헛스윙 확률을 각각 여러 모델(평균 → 계층형 빈도/로지스틱 → CatBoost)로 비교한다. 학습 8월 이전, 검증 8월, 시험 9~10월. 검증에서 가장 좋은 모델로 전체 기록을 다시 학습해 (투수 × 카운트 × 좌우 × 직전 구종) 격자를 미리 계산한다. 결과(세 가지 모두 CatBoost가 선택됨)는 PRD v1.9.9에 있다.
 - 참고 코드: BallCombination 저장소의 `kbo_crawler/physics.py`, `predict.py`, `web/index.html`의 터널링.
+
+## 투구 폼 3D 학습 (form_ref.py, form_tune.py)
+- 입력: OpenBiomechanics `baseball_pitching`(ml/raw/obp, CC BY-NC-SA 4.0, 수업 과제용) 411투구·100선수. 선수 수준은 대학 314·독립 42·고교 32·마이너 23이 섞여 있다. `full_sig/landmarks.zip`의 관절 중심 12개를 쓴다.
+- 실행: 튜닝 `python3 -u ml/form_tune.py run --view side --budget-min 72 --nj 1 --tag s2`(시점마다 하나씩 4개 동시, 타격 튜닝과 함께 8개를 8코어로) → `python3 -u ml/form_tune.py assemble --tag s2`(/tmp/x/tune/s2에 form_ref.json·form_model.json 생성) → 시험 통과 시 `public/data/`로 복사. 튜닝 없이는 `python3 -u ml/form_ref.py`(약 2분). 시험 `python3 -m pytest ml/test_form_ref.py`.
+- 영상 추정 모사: 360Hz→30fps로 줄이고 시점(옆·정면·뒤·중계)마다 잡음을 더한다(화면 방향 0.012m, 깊이 방향 0.02m, 손목·발목 빠른 프레임 ×2). **크기는 실제 MediaPipe 프레임 간 떨림을 잰 값**(발표 영상 181프레임, 관절별 중앙 절대편차 0.006~0.024m)에 맞췄다. 떨림만 잰 하한이고 시스템 오차·빠른 동작 번짐은 못 쟀다(×2는 가정). 이전에는 화면 0.03m·깊이 0.08m·×1.5(가정)를 썼고, 그때 결과는 교차검증 RMSE 4.66~4.77 mph였다. 투구마다 잡음을 8번 다르게 입힌다. 위치는 0.10초 창으로 평균.
+- 구속 예측 모델: Ridge·ExtraTrees·XGBoost·CatBoost·작은 MLP. 모델마다 **무작위 하이퍼파라미터 탐색**(첫 후보는 기본 설정) 후 **중첩 교차검증**(바깥 선수 단위 5분할 평가, 안쪽 3분할 탐색). 바깥 RMSE가 가장 낮은 모델을 **무조건** 채택하고 전체 자료로 다시 탐색·학습해 내보낸다. 튜닝에 약 55분(8프로세스 동시).
+
+| 시점 | Ridge | ExtraTrees | XGBoost | CatBoost | MLP | 선택 | 깨끗한 입력 RMSE |
+|---|---|---|---|---|---|---|---|
+| side | 4.49 | 4.73 | 4.79 | 5.02 | 5.80 | **ridge** | 4.60 |
+| front | 4.52 | 4.70 | 4.81 | 5.03 | 5.75 | **ridge** | 4.60 |
+| back | 4.57 | 4.79 | 4.88 | 5.26 | 5.68 | **ridge** | 4.60 |
+| broadcast | 4.52 | 4.71 | 4.82 | 4.93 | 6.01 | **ridge** | 4.60 |
+
+(중첩 교차검증 RMSE, 단위 mph. 구속 표준편차 대비 개선이 크지 않아 구속 예측은 참고용이다.)
+
+| 특징 | 옆 | 정면 | 뒤 | 중계 | 중요도 |
+|---|---|---|---|---|---|
+| stride_torso | 높음 | 높음 | 높음 | 높음 | 0.070 |
+| trunk_lean_deg | 보통 | 보통 | 보통 | 보통 | 0.018 |
+| knee_fp_deg | 보통 | 보통 | 보통 | 보통 | 0.095 |
+| knee_br_deg | 높음 | 높음 | 높음 | 높음 | 0.200 |
+| arm_angle_deg | 보통 | 보통 | 보통 | 보통 | 0.085 |
+| elbow_h_fp | 높음 | 높음 | 높음 | 높음 | 0.001 |
+| release_h_torso | 보통 | 보통 | 보통 | 보통 | 0.068 |
+| hip_shoulder_sep_deg | 보통 | 보통 | 보통 | 보통 | 0.118 |
+| trunk_rot_lag_ms | 낮음 | 낮음 | 낮음 | 낮음 | 0.004 |
+| pelvis_trunk_gap_ms | 낮음 | 낮음 | 낮음 | 낮음 | 0.009 |
+| trunk_arm_gap_ms | 낮음 | 낮음 | 낮음 | 낮음 | 0.188 |
+| fp_to_br_ms | 낮음 | 낮음 | 낮음 | 낮음 | 0.144 |
+
+- 신뢰도 = 잡음 입힌 특징과 깨끗한 특징의 평균 절대 차이 ÷ 참조 IQR (<0.25 높음, <0.5 보통, 그 이상 낮음). 조정 방향 카드는 신뢰도가 "낮음"이 아닌 특징에서만 나온다.
+- KBO 릴리스: 2026 투수별 평균 궤적에서 y=54.5ft 위치(`pitchers.csv`의 hand로 우투·좌투 구분).
+
+## 타격 자세 3D 학습 (hit_ref.py, hit_tune.py)
+- 입력: OpenBiomechanics `baseball_hitting`의 `full_sig/hitting_landmarks.zip`(릴리스 dataset-v1, 체크섬 확인) 관절 중심 12개, 677스윙·98명. 목표 = 배트 최고 속도(bat_speed_mph_max_x, 표준편차 4.86). 투구용 `form_ref.py`의 좌표 맞추기·잡음 모사·모델·내보내기를 그대로 쓴다(`hit_ref.py`가 가져다 씀).
+- 실행: 튜닝 `python3 -u ml/hit_tune.py run --view side --budget-min 72 --nj 1 --tag h2`(시점마다 하나씩 4개 동시) → `python3 -u ml/hit_tune.py assemble --tag h2`(/tmp/x/tune_hit/h2에 hit_ref.json·hit_model.json 생성) → `public/data/`로 복사. 튜닝 없이는 `python3 -u ml/hit_ref.py`. 시험 `python3 -m pytest ml/test_hit_ref.py`.
+- 타격 순간 = 양 손 평균 위치 속도 정점 + 0.067초(OBP 정답 접촉 시각과 비교해 정한 보정, 중앙 오차 0초·75%가 0.011초 이내). 앞발 착지 = 앞발목 높이 규칙(중앙 −0.033초).
+- 모델 비교(중첩 교차검증, 선수 단위): 바깥 평가 입력에는 시점별 잡음(측정한 떨림 기준)을 입혔다. RMSE(mph): ridge 4.90, extratrees 4.89, xgboost 4.89, catboost 4.87, mlp 5.27 (옆 시점). 아래 표 전체.
+
+| 시점 | ridge | extratrees | xgboost | catboost | mlp | 선택 | 깨끗한 입력 |
+|---|---|---|---|---|---|---|---|
+| side | 4.90 | 4.89 | 4.89 | 4.87 | 5.27 | **catboost** | 4.81 |
+| front | 4.87 | 4.87 | 4.90 | 4.90 | 5.24 | **ridge** | 4.88 |
+| back | 4.85 | 4.87 | 4.88 | 4.86 | 5.20 | **ridge** | 4.88 |
+| broadcast | 4.90 | 4.87 | 4.86 | 4.89 | 5.18 | **xgboost** | 4.83 |
+
+- **이 12개 지표로는 배트 속도를 거의 맞히지 못한다**(RMSE ≈ 표준편차 4.86, 깨끗한 입력도 같음). 튜닝으로도 좋아지지 않았다. 그래서 화면은 배트 속도 범위를 보여 주지 않는다(교차검증 오차가 표준편차의 95% 아래일 때만 보임: sideX, frontX, backX, broadcastX).
+- 신뢰도(잡음 입힌 값과 깨끗한 값의 평균 절대 차이 ÷ 참조 IQR: <0.25 높음, <0.5 보통):
+
+| 지표 | 옆 | 정면 | 뒤 | 중계 |
+|---|---|---|---|---|
+| stride_torso | 높음 | 높음 | 높음 | 높음 |
+| trunk_lean_deg | 높음 | 높음 | 높음 | 높음 |
+| knee_fp_deg | 보통 | 낮음 | 보통 | 낮음 |
+| knee_ct_deg | 높음 | 높음 | 높음 | 높음 |
+| hip_shoulder_sep_deg | 낮음 | 낮음 | 낮음 | 낮음 |
+| pelvis_rot_deg | 낮음 | 낮음 | 낮음 | 낮음 |
+| trunk_rot_deg | 낮음 | 낮음 | 낮음 | 낮음 |
+| trunk_rot_lag_ms | 낮음 | 낮음 | 낮음 | 낮음 |
+| pelvis_trunk_gap_ms | 낮음 | 낮음 | 낮음 | 낮음 |
+| trunk_hands_gap_ms | 낮음 | 낮음 | 낮음 | 낮음 |
+| fp_to_ct_ms | 낮음 | 낮음 | 낮음 | 낮음 |
+| hands_reach_torso | 낮음 | 낮음 | 낮음 | 낮음 |

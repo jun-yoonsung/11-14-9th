@@ -8,8 +8,9 @@ import { Store, Auth } from "../lib/storage.js";
 import { dateKo } from "../lib/format.js";
 import { TYPES } from "../lib/stats.js";
 
-const TAG = { batter: "bat", pitcher: "pit", team: "team", compare: "cmp" };
+const TAG = { batter: "bat", pitcher: "pit", team: "team", compare: "cmp", pitching: "vid", hitting: "vid" };
 const metricLabels = rec => {
+  if (rec.result.kind === "form") return `영상 · ${{ side: "옆", front: "정면", back: "뒤", broadcast: "중계" }[rec.params.view]} 시점, 3D 관절 분석`;
   if (rec.result.kind === "compare") return `${rec.result.names.length}명 비교, 리그 백분위 기준`;
   const list = (rec.result.kind === "team" ? rec.result.metrics : rec.result.lines).map(x => x.label);
   return list.length > 8 ? `${list.slice(0, 6).join(", ")} 외 ${list.length - 6}개 (총 ${list.length}개 지표)` : list.join(", ");
@@ -63,7 +64,7 @@ export default function History() {
                 <button className="linkbtn quiet" type="button" aria-label={`${rec.title} 삭제`} onClick={() => setConfirmId(rec.id)}>삭제</button>
               )}
             </div>
-            <div className="meta"><span className={"tag " + TAG[rec.type]}>{rec.type === "compare" ? "비교" : TYPES[rec.type].short}</span>{dateKo(rec.createdAt)}, {metricLabels(rec)}{rec.visibility === "public" && <span className="pubtag">공개</span>}</div>
+            <div className="meta"><span className={"tag " + TAG[rec.type]}>{rec.type === "compare" ? "비교" : rec.type === "pitching" ? "영상·투구 폼" : rec.type === "hitting" ? "영상·타격 자세" : TYPES[rec.type].short}</span>{dateKo(rec.createdAt)}, {metricLabels(rec)}{rec.visibility === "public" && <span className="pubtag">공개</span>}</div>
           </li>
         ))}
       </ul>

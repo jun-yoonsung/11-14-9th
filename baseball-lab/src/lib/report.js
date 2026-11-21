@@ -7,6 +7,7 @@ import { svgString } from "./chart.js";
 import { qualFor } from "./season.js";
 import { paginate } from "./paginate.js";
 import { themed, OVERRIDES, TOKENS } from "./reportTheme.js";
+import { formPages, FORM_CSS, formFileName } from "./reportForm.js";
 import { ZONES, SIDE_NAMES, PGROUP_NAMES, cn, fieldSvg, pctOf, f1 as sf1, f3 as sf3, slash, DEF_POS, defense } from "./spray.js";
 import { zoneSvg, zoneStats, arsRow, rollSvg, rolling, sumGames, SIT_LABELS, SIT_SHOW, CG_NAMES } from "./pitchlab.js";
 import { trajSvg, tunnelStats, tunnelSvg, tcol, COUNTS, typeProbs, zoneProbs, whiffProb, evidence, zoneProbSvg } from "./flight.js";
@@ -118,7 +119,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
   const pageWrap = (inner, n, total, rec) => `<section class="rp-page">
     <div class="rp-top"><b>야구 분석 랩</b><span>분석 보고서, ${esc(dateKo(rec.createdAt))}</span></div>
     ${inner}
-    <div class="rp-foot"><span>화면과 보고서의 선수와 팀 기록은 KBO ${rec.season} 정규시즌 기록입니다.</span><span>${n} / ${total}</span></div></section>`;
+    <div class="rp-foot"><span>${rec.result.kind === "form" ? `영상 3D 추정은 참고용입니다. 참조: OpenBiomechanics(CC BY-NC-SA 4.0)${rec.result.sport === "hitting" ? "." : ", KBO 2026."}` : `화면과 보고서의 선수와 팀 기록은 KBO ${rec.season} 정규시즌 기록입니다.`}</span><span>${n} / ${total}</span></div></section>`;
 
   const METHOD = { ml: "머신러닝 모델", marcel: "최근 3시즌 가중 평균", league: "리그 평균" };
   const f3 = v => Number(v).toFixed(3);
@@ -626,11 +627,12 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
 
   function html(rec, d, extra) {
     d = d || rec.result.report;
-    const parts = rec.result.kind === "compare" ? comparePages(rec) : rec.result.kind === "team" ? teamPages(rec, extra) : playerPages(rec, d, extra);
-    return `<div class="rp"><style>${themed(CSS + OVERRIDES)}</style>${themed(parts.map((p, i) => pageWrap(p, i + 1, parts.length, rec)).join(""))}</div>`;
+    const parts = rec.result.kind === "form" ? formPages(rec) : rec.result.kind === "compare" ? comparePages(rec) : rec.result.kind === "team" ? teamPages(rec, extra) : playerPages(rec, d, extra);
+    return `<div class="rp"><style>${themed(CSS + FORM_CSS + OVERRIDES)}</style>${themed(parts.map((p, i) => pageWrap(p, i + 1, parts.length, rec)).join(""))}</div>`;
   }
 
   function fileName(rec) {
+    if (rec.result.kind === "form") return formFileName(rec, dateIso);
     if (rec.result.kind === "compare") return `선수비교_${rec.result.names.join("_")}_${dateIso(rec.createdAt)}.pdf`.replace(/[\\/:*?"<>|\s]+/g, "_");
     const ty = T()[rec.type];
     const who = rec.result.kind === "team" ? `${rec.result.teams.length}개팀` : rec.result.subject.name;
@@ -639,7 +641,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
 
   // 상세 보고서가 저장돼 있지 않은 예전 기록이면 지금 만든다
   async function reportFor(rec) {
-    if (rec.result.kind === "team" || rec.result.kind === "compare") return null;
+    if (rec.result.kind === "team" || rec.result.kind === "compare" || rec.result.kind === "form") return null;
     if (rec.result.report) return rec.result.report;
     try {
       const meta = await Api.meta();
@@ -652,7 +654,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
 
   // PDF에 넣을 AI 해설·예측 (파일이 없거나 해당 선수 항목이 없으면 그 부분만 빠진다)
   async function extraFor(rec) {
-    if (rec.result.kind === "compare") return null;
+    if (rec.result.kind === "compare" || rec.result.kind === "form") return null;
     try {
       if (rec.result.kind === "team") { const [tf, tc, sp, si, more] = await Promise.all([Api.teamForecast(), Api.teamCommentary(), Api.spray(), Api.situ(), Api.more()]); return { tf, tc, sp, si, more }; }
       const [all, fc, career, fx, sp, pl, si, fo, more, flight, traj] = await Promise.all([Api.commentary(), Api.forecast(), Api.career(), Api.forecastExtra(), Api.spray(), Api.pitchlab(), Api.situ(), Api.form(), Api.more(), rec.type === "pitcher" ? Api.flight() : null, rec.type === "pitcher" ? Api.traj() : null]);

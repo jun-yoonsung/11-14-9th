@@ -8,6 +8,7 @@ import { useScene } from "../context/SceneContext.jsx";
 const LINEUP = [
   { to: "/analyze?type=batter", pos: "타", cls: "bat", nm: "타자 분석", ds: "타율, OPS, 홈런 같은 타격 지표를 리그와 비교합니다.", go: "분석하기" },
   { to: "/analyze?type=pitcher", pos: "투", cls: "pit", nm: "투수 분석", ds: "평균자책점, WHIP, 9이닝당 삼진을 리그와 비교합니다.", go: "분석하기" },
+  { to: "/video", pos: "영", cls: "vid", nm: "영상 분석 (투구 폼·타격 자세)", ds: "투구·스윙 영상에서 관절을 3D로 추정해 몸 쓰는 방식과 조정해 볼 방향을 봅니다.", go: "영상 올리기" },
   { to: "/analyze?type=team", pos: "팀", cls: "team", nm: "팀 비교", ds: "2~4개 팀의 승률과 득점, 실점을 나란히 봅니다.", go: "비교하기" },
 ];
 
@@ -56,7 +57,6 @@ export default function Home() {
             {LINEUP.map(x => (
               <li key={x.to}><Link to={x.to}><span className={"pos " + x.cls}>{x.pos}</span><span className="nm">{x.nm}</span><span className="ds">{x.ds}</span><span className="go">{x.go}</span></Link></li>
             ))}
-            <li className="off"><div className="row"><span className="pos off">영</span><span className="nm">영상 분석 <span className="pill">준비 중</span></span><span className="ds">투구 폼과 타구 궤적 분석은 다음 버전에서 제공됩니다.</span><span /></div></li>
           </ul>
         </section>
       </div>

@@ -52,6 +52,11 @@ export const Api = {
   form() { if (!cache.form) cache.form = file("form", "json").catch(() => null); return cache.form; },
   flight() { if (!cache.flight) cache.flight = file("flight", "json").catch(() => null); return cache.flight; },
   traj() { if (!cache.traj) cache.traj = file("traj", "json").catch(() => null); return cache.traj; },
+  // 투구 폼 영상 분석: 참조 범위·신뢰도·KBO 릴리스(작은 파일)와 시점별 구속 모델(영상 화면에서만 불러옴, ml/form_ref.py)
+  formRef() { if (!cache.formRef) cache.formRef = file("form_ref", "json").catch(() => null); return cache.formRef; },
+  hitRef() { if (!cache.hitRef) cache.hitRef = file("hit_ref", "json").catch(() => null); return cache.hitRef; },
+  hitModel() { if (!cache.hitModel) cache.hitModel = file("hit_model", "json").catch(() => null); return cache.hitModel; },
+  formModel() { if (!cache.formModel) cache.formModel = file("form_model", "json").catch(() => null); return cache.formModel; },
   more() { if (!cache.more) cache.more = file("more", "json").catch(() => null); return cache.more; },
   forecastExtra() { if (!cache.forecastExtra) cache.forecastExtra = file("forecast_extra", "json").catch(() => null); return cache.forecastExtra; },
 };

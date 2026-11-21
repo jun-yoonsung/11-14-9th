@@ -7,6 +7,7 @@ import { useRecord, useReport } from "../lib/useRecord.js";
 import PctBlock from "../components/PctBlock.jsx";
 import AiCommentary from "../components/AiCommentary.jsx";
 import ShareCard from "../components/ShareCard.jsx";
+import FormSummary from "../components/FormSummary.jsx";
 import { ListCard } from "../components/DetailReport.jsx";
 import { useScene } from "../context/SceneContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
@@ -97,7 +98,7 @@ function ResultInner({ shared }) {
   }
   if (rec.result.kind === "compare") return <Navigate to={rec.result.path} replace />;
   const r = rec.result;
-  const sub = r.kind === "team" ? `${rec.season} 시즌, ${r.teams.map(t => t.name).join(", ")}` : `${rec.season} 시즌, ${r.teamName || r.subject.team} 소속, ${r.subject.pos} 포지션`;
+  const sub = r.kind === "form" ? `영상 분석, ${{ side: "옆에서", front: "정면", back: "뒤에서", broadcast: "중계 화면" }[rec.params.view]} 시점, ${rec.type === "hitting" ? (rec.params.hand === "L" ? "좌타자" : "우타자") : (rec.params.hand === "L" ? "왼손 투수" : "오른손 투수")}` : r.kind === "team" ? `${rec.season} 시즌, ${r.teams.map(t => t.name).join(", ")}` : `${rec.season} 시즌, ${r.teamName || r.subject.team} 소속, ${r.subject.pos} 포지션`;
 
   const savePdf = async () => {
     setBusy(true);
@@ -106,14 +107,15 @@ function ResultInner({ shared }) {
     finally { setBusy(false); }
   };
   const again = () => {
+    if (rec.type === "pitching" || rec.type === "hitting") { navigate(`/video?sport=${rec.type}`); return; }
     Store.saveWizard({ mode: "record", source: "site", type: rec.type, season: rec.season, target: rec.params.target, teams: rec.params.teams, metrics: rec.params.metrics });
     navigate("/analyze#3");
   };
 
   return (
     <div className="wrap">
-      <div className="result-head">{shared && <p className="shared-banner">{owner}님이 공유한 분석입니다. 읽기만 할 수 있어요.</p>}<h1>{rec.title}</h1><p className="sub">{sub}. {dateKo(rec.createdAt)} 분석, KBO {rec.season} 정규시즌 실제 기록</p></div>
-      {r.kind === "team" ? <TeamSummary rec={rec} r={r} base={base} /> : <PlayerSummary rec={rec} r={r} base={base} />}
+      <div className="result-head">{shared && <p className="shared-banner">{owner}님이 공유한 분석입니다. 읽기만 할 수 있어요.</p>}<h1>{rec.title}</h1><p className="sub">{sub}. {dateKo(rec.createdAt)} 분석{r.kind === "form" ? "" : `, KBO ${rec.season} 정규시즌 실제 기록`}</p></div>
+      {r.kind === "form" ? <FormSummary rec={rec} /> : r.kind === "team" ? <TeamSummary rec={rec} r={r} base={base} /> : <PlayerSummary rec={rec} r={r} base={base} />}
       {!shared && <ShareCard rec={rec} onChange={setLocal} />}
       <div className="act-row">
         <button className="btn pri" type="button" disabled={busy} aria-busy={busy} onClick={savePdf}>{busy ? "보고서를 만드는 중" : "PDF로 저장"}</button>

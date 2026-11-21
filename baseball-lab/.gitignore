@@ -14,3 +14,7 @@ tools/.env
 ml/raw/*.csv
 __pycache__/
 *.pyc
+ml/raw/obp/
+
+# MediaPipe wasm은 설치 때 node_modules에서 복사한다
+public/wasm/

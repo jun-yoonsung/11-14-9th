@@ -57,7 +57,13 @@ python3 tools/upload_firestore.py ~/keys/service-account.json
 ```
 5. Authentication 설정의 "승인된 도메인"에 사이트 주소(jun-yoonsung.github.io)를 추가합니다.
 
+## 영상 분석 (투구 폼·타격 자세, 3D)
+- 화면 `#/video`(투구 폼) · `#/video?sport=hitting`(타격 자세, v1.11)(`src/pages/VideoLab.jsx`). 영상은 이 브라우저 안에서만 처리하고 서버로 올리지 않는다. 관절 추적은 `@mediapipe/tasks-vision`(wasm은 `npm run dev/build` 전에 `tools/copy-mediapipe.mjs`가 `public/wasm/`으로 복사, 모델은 `public/models/`).
+- 계산 라이브러리 `src/lib/`: `pose.js`(영상 열기·프레임 훑기), `segment.js`(사람 따라가기·투구 구간 제안), `form.js`(3D 정렬·순간·12개 지표), `formUse.js`(관절 사용·몸 쓰는 순서), `cards.js`(조정 방향 카드), `formModel.js`(구속 모델), `formRecord.js`(분석 기록), `skel.js`(3D 스켈레톤 투영), `reportForm.js`(PDF 쪽), 타격은 `hit.js`(순간·12지표)·`hitCards.js`(카드)·`formLabels.js`(종목별 문구).
+- 시험: `npm run test:lib`(자바스크립트), `python3 -m pytest ml/test_form_ref.py ml/test_hit_ref.py`(파이썬). 파이썬과 자바스크립트 계산 일치는 `tests/fixtures/*.json`으로 확인한다.
+- 학습: `python3 -u ml/form_ref.py`(약 2분, 투구) · `python3 -u ml/hit_ref.py`(타격). 타격 원자료는 OBP 릴리스의 `hitting_landmarks.zip`(65MB)을 `ml/raw/obp/repo/baseball_hitting/data/full_sig/`에 둔다. OpenBiomechanics 원자료는 `ml/raw/obp/`(저장소에 올리지 않음). 자세한 내용은 `ml/README.md`.
+
 ## 첫 버전 범위 (이후 버전에서 늘어난 내용은 PRD.md 참고)
 - 로그인은 버튼만 누르면 되는 체험 로그인, 회원가입은 화면만 있음
-- 영상 분석과 데이터 업로드는 "다음 버전" 안내만 표시
+- 영상 분석(투구 폼, 3D)은 v1.10에서 추가됨(아래 참고). 데이터 업로드는 "다음 버전" 안내만 표시
 - 분석 기록은 이 브라우저(localStorage)에만 저장

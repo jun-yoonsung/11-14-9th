@@ -15,6 +15,7 @@ import Records from "./pages/Records.jsx";
 import Compare from "./pages/Compare.jsx";
 import Rank from "./pages/Rank.jsx";
 import Guide from "./pages/Guide.jsx";
+import VideoLab from "./pages/VideoLab.jsx";
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="compare" element={<Compare />} />
           <Route path="guide" element={<Guide />} />
           <Route path="analyze" element={<Protected><Analyze /></Protected>} />
+          <Route path="video" element={<Protected><VideoLab /></Protected>} />
           <Route path="result/:id" element={<Protected><Result /></Protected>} />
           <Route path="result/:id/detail" element={<Protected><ResultDetail /></Protected>} />
           <Route path="s/:id" element={<Result shared />} />
