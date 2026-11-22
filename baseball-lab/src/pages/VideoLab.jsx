@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Api } from "../lib/api.js";
 import { Store } from "../lib/storage.js";
 import { loadLandmarker, openVideo, scan, detectFps, fineFps, needsTrim, MAX_UNTRIMMED_SEC } from "../lib/pose.js";
-import { pickPerson, soleSeed, follow, detectHand, suggestWindow, detectSide, suggestSwingWindow, center, cropRect } from "../lib/segment.js";
+import { pickPerson, soleSeed, follow, detectHand, suggestWindow, detectSide, suggestSwingWindow, center, cropRect, adjustClip } from "../lib/segment.js";
 import { T } from "../lib/formLabels.js";
 import { buildResult, buildRecord } from "../lib/formRecord.js";
 import { useScene } from "../context/SceneContext.jsx";
@@ -53,7 +53,7 @@ export default function VideoLab() {
   const ensureLm = async () => { if (!S.current.lm) { setNote("관절 인식 모델을 불러오는 중이에요 (처음 한 번, 약 30MB)"); S.current.lm = await loadLandmarker(); setNote(""); } return S.current.lm; };
 
   const toPerson = async () => {
-    const span = range.end - range.start;
+    const span = Math.round((range.end - range.start) * 100) / 100;
     if (span < MIN_CLIP_S) return setErr("분석할 범위가 너무 짧아요. 시작과 끝을 조정해 주세요.");
     if (span > MAX_UNTRIMMED_SEC + 0.01) return setErr(`한 번에 ${MAX_UNTRIMMED_SEC / 60}분까지만 훑을 수 있어요. 범위를 줄여 주세요.`);
     setErr(null); setStage("loading");
@@ -95,10 +95,13 @@ export default function VideoLab() {
     } catch (e) { fail(e); }
   };
 
-  const setClip = (k, v) => { setM(x => ({ ...x, [k]: v })); const vv = S.current.vid?.video; if (vv) vv.currentTime = v; };   // 막대를 움직이면 그 장면을 미리 보여 준다
+  const setClip = (k, v) => {
+    const nm = adjustClip(m, k, v, range, { min: MIN_CLIP_S, max: MAX_CLIP_S }); setM(nm); setErr(null);
+    const vv = S.current.vid?.video; if (vv) vv.currentTime = nm[k];
+  };   // 막대를 움직이면 그 장면을 미리 보여 준다
 
   const runFinal = async () => {
-    const len = m.end - m.start;
+    const len = Math.round((m.end - m.start) * 100) / 100;   // 4.8-4.0이 0.7999…로 계산돼 0.8초 구간이 "너무 짧다"고 막히지 않게 반올림
     if (len < MIN_CLIP_S) return setErr("구간이 너무 짧아요 (0.8초 이상).");
     if (len > MAX_CLIP_S) return setErr(`구간이 너무 길어요 (${MAX_CLIP_S}초 이하). ${hit ? "스윙" : "투구"} 한 번만 남겨 주세요.`);
     setErr(null); setStage("final"); setProgress(0);
@@ -128,7 +131,7 @@ export default function VideoLab() {
       <p className="sub">영상은 이 브라우저에만 있고 서버로 올라가지 않습니다. 영상에서 관절을 3D로 추정해 몸을 쓰는 방식을 보여 주고, 조정해 볼 방향을 알려 줍니다.</p>
       {err === "UNPLAYABLE" ? (
         <div className="err-box" role="alert"><b>이 브라우저가 재생하지 못하는 영상이에요.</b><br />아이폰·카메라가 HEVC(H.265)로 저장한 영상일 수 있어요. 휴대폰 설정에서 카메라 형식을 "호환성 우선"으로 바꿔 다시 찍거나, 영상을 MP4(H.264)로 내보내 다시 올려 주세요. 사파리에서는 HEVC가 열리는 경우가 있습니다.</div>
-      ) : err && <div className="err-box" role="alert">{err}</div>}
+      ) : err && stage !== "window" && <div className="err-box" role="alert">{err}</div>}
       {note && <p className="note" role="status">{note}</p>}
 
       <div className="vl-stage" hidden={!info}><div ref={host} className="vl-host">
@@ -178,6 +181,8 @@ export default function VideoLab() {
           <fieldset className="seg2" role="group" aria-label={hit ? "타석" : "던지는 손"}><legend className="sr">{hit ? "타석" : "던지는 손"}</legend>
             <button type="button" aria-pressed={hand === "R"} onClick={() => setHand("R")}>{tx.hand("R")}</button><button type="button" aria-pressed={hand === "L"} onClick={() => setHand("L")}>{tx.hand("L")}</button></fieldset>
           <p className="note">{hit ? "타석(어느 쪽 타자인지)은 앞발이 더 크게 드는 쪽으로 추정했어요." : "던지는 손은 영상에서 자동으로 추정했어요."} 다르면 바꿔 주세요.</p>
+          {err && err !== "UNPLAYABLE" && <div className="err-box" role="alert">{err}</div>}
+          <p className="hint">구간은 {MIN_CLIP_S}초 이상 {MAX_CLIP_S}초 이하로 골라요. 지금 {(m.end - m.start).toFixed(1)}초입니다.</p>
           <div className="actions"><button className="btn" type="button" onClick={() => setStage("setup")}>이전</button><button className="btn pri grow" type="button" onClick={runFinal}>3D 분석 시작</button></div>
         </div>
       )}

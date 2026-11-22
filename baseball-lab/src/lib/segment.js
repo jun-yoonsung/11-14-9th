@@ -127,3 +127,13 @@ export function suggestSwingWindow(frames /*, fps */) {
   const valid = frames.filter(f => f.j).length / frames.length, ratio = med > 0 ? sp[pk] / med : Infinity;
   return { start, end, release: hit, confidence: valid >= 0.9 && ratio > 6 ? "높음" : valid >= 0.7 && ratio > 3 ? "보통" : "낮음" };
 }
+
+/** 구간 막대를 움직일 때 길이를 최소~최대 안에 둔다: 시작은 끝-최소 이하, 끝은 시작+최소 이상, 길이는 최대 이하, 범위 안.
+ *  (끝 너머로 끌어도 분석이 막히지 않게, 막대가 그 자리에서 멈추도록 한다) */
+export function adjustClip(m, key, v, range, { min, max }) {
+  const r1 = x => Math.round(x * 100) / 100;
+  let { start, end } = m;
+  if (key === "start") start = Math.min(Math.max(v, range.start, end - max), end - min);
+  else end = Math.max(Math.min(v, range.end, start + max), start + min);
+  return { start: r1(start), end: r1(end) };
+}

@@ -118,3 +118,19 @@ test("uncrop maps crop-relative screen coordinates back to the full frame", () =
   assert.ok(Math.abs(r.lsho.x - 0.3) < 1e-9 && Math.abs(r.lsho.y - 0.5) < 1e-9 && r.lsho.v === 1);
   assert.equal(uncrop(null, { x: 0, y: 0, w: 1, h: 1 }), null);
 });
+
+import { adjustClip } from "../src/lib/segment.js";
+test("adjustClip keeps the clip between min and max length and inside the range when a handle moves", () => {
+  const R = { start: 0, end: 10 }, lim = { min: 0.8, max: 6 };
+  // 시작을 끝 너머로 끌면 끝을 밀지 않고 시작이 끝-최소에서 멈춘다
+  assert.deepEqual(adjustClip({ start: 3, end: 4.8 }, "start", 9, R, lim), { start: 4, end: 4.8 });
+  // 끝을 시작보다 앞으로 끌면 시작+최소에서 멈춘다
+  assert.deepEqual(adjustClip({ start: 3, end: 4.8 }, "end", 1, R, lim), { start: 3, end: 3.8 });
+  // 6초를 넘기게 끝을 늘리면 끝이 시작+6에서 멈춘다
+  assert.deepEqual(adjustClip({ start: 1, end: 4 }, "end", 9, R, lim), { start: 1, end: 7 });
+  // 6초를 넘기게 시작을 앞으로 당기면 시작이 끝-6에서 멈춘다
+  assert.deepEqual(adjustClip({ start: 4, end: 9 }, "start", 0, R, lim), { start: 3, end: 9 });
+  // 정상 이동은 그대로, 범위 밖은 범위 안으로
+  assert.deepEqual(adjustClip({ start: 3, end: 5 }, "start", 2.5, R, lim), { start: 2.5, end: 5 });
+  assert.deepEqual(adjustClip({ start: 3, end: 5 }, "end", 99, R, lim), { start: 3, end: 9 });
+});
