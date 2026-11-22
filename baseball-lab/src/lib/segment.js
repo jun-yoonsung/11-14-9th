@@ -137,3 +137,9 @@ export function adjustClip(m, key, v, range, { min, max }) {
   else end = Math.max(Math.min(v, range.end, start + max), start + min);
   return { start: r1(start), end: r1(end) };
 }
+
+/** 사람을 찾을 장면 시각들: 범위 시작에서 끝까지 n개를 고르게(시작 장면에 사람이 없어도 뒤쪽에서 찾도록). 범위가 한 점이면 그 시각 하나 */
+export function sampleTimes(from, to, n) {
+  if (!(to > from) || n < 2) return [from];
+  return Array.from({ length: n }, (_, i) => Math.round((from + ((to - from) * i) / (n - 1)) * 100) / 100);
+}

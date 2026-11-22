@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Api } from "../lib/api.js";
 import { Store } from "../lib/storage.js";
 import { loadLandmarker, openVideo, scan, detectFps, fineFps, needsTrim, MAX_UNTRIMMED_SEC } from "../lib/pose.js";
-import { pickPerson, soleSeed, follow, detectHand, suggestWindow, detectSide, suggestSwingWindow, center, cropRect, adjustClip } from "../lib/segment.js";
+import { pickPerson, soleSeed, follow, detectHand, suggestWindow, detectSide, suggestSwingWindow, center, cropRect, adjustClip, sampleTimes } from "../lib/segment.js";
 import { T } from "../lib/formLabels.js";
 import { buildResult, buildRecord } from "../lib/formRecord.js";
 import { useScene } from "../context/SceneContext.jsx";
@@ -58,9 +58,12 @@ export default function VideoLab() {
     if (span > MAX_UNTRIMMED_SEC + 0.01) return setErr(`한 번에 ${MAX_UNTRIMMED_SEC / 60}분까지만 훑을 수 있어요. 범위를 줄여 주세요.`);
     setErr(null); setStage("loading");
     try {
-      const lm = await ensureLm(), fr = await scan(lm, S.current.vid.video, { from: range.start, to: range.start, fps: 1 });
-      const all = fr[0]?.all || [];
-      if (!all.length) { setErr("이 장면에서 사람을 찾지 못했어요. 시작 시간을 사람이 보이는 곳으로 옮겨 보세요."); setStage("setup"); return; }
+      const lm = await ensureLm(); let all = [];
+      for (const t of sampleTimes(range.start, range.end, 6)) {   // 시작 장면에 사람이 없어도(광고·컷) 범위 안 다른 장면에서 찾는다
+        const fr = await scan(lm, S.current.vid.video, { from: t, to: t, fps: 1 }); all = fr[0]?.all || [];
+        if (all.length) break;
+      }
+      if (!all.length) { setErr("이 범위에서 사람을 찾지 못했어요. 사람이 보이는 장면이 들어가도록 시작·끝을 옮겨 보세요."); setStage("setup"); return; }
       setPersons(all.map(p => p.img));
       const sole = soleSeed(all);
       if (sole) { S.current.seed = sole; runCoarse(); } else setStage("person");
@@ -131,7 +134,7 @@ export default function VideoLab() {
       <p className="sub">영상은 이 브라우저에만 있고 서버로 올라가지 않습니다. 영상에서 관절을 3D로 추정해 몸을 쓰는 방식을 보여 주고, 조정해 볼 방향을 알려 줍니다.</p>
       {err === "UNPLAYABLE" ? (
         <div className="err-box" role="alert"><b>이 브라우저가 재생하지 못하는 영상이에요.</b><br />아이폰·카메라가 HEVC(H.265)로 저장한 영상일 수 있어요. 휴대폰 설정에서 카메라 형식을 "호환성 우선"으로 바꿔 다시 찍거나, 영상을 MP4(H.264)로 내보내 다시 올려 주세요. 사파리에서는 HEVC가 열리는 경우가 있습니다.</div>
-      ) : err && stage !== "window" && <div className="err-box" role="alert">{err}</div>}
+      ) : err && stage !== "window" && stage !== "setup" && <div className="err-box" role="alert">{err}</div>}
       {note && <p className="note" role="status">{note}</p>}
 
       <div className="vl-stage" hidden={!info}><div ref={host} className="vl-host">
@@ -157,10 +160,12 @@ export default function VideoLab() {
             <p className="note">잘 모르겠으면 "중계 화면"을 고르세요. 시점마다 믿을 수 있는 지표가 달라서 고른 시점에 맞춰 판단합니다.</p></fieldset>
           <label className="field">키(cm, 선택)<input type="number" inputMode="numeric" min="120" max="230" value={height} onChange={e => setHeight(e.target.value)} placeholder="예: 180" />
             <small>{hit ? "지금은 타격 분석에 쓰이지 않아요. 비워 두어도 됩니다." : "입력하면 릴리스 높이를 KBO 투수와 비교하는 카드가 추가돼요. 비워 두어도 됩니다."}</small></label>
-          <div className="vl-range"><label>분석 시작(초)<input type="number" min="0" max={info.duration} step="0.5" value={range.start} onChange={e => setRange(r => ({ ...r, start: Math.max(0, +e.target.value) }))} /></label>
-            <label>분석 끝(초)<input type="number" min="0" max={info.duration} step="0.5" value={range.end} onChange={e => setRange(r => ({ ...r, end: Math.min(info.duration, +e.target.value) }))} /></label></div>
+          <div className="vl-range"><label>분석 시작(초)<input type="number" min="0" max={info.duration} step="0.5" value={range.start} onChange={e => { setErr(null); setRange(r => ({ ...r, start: Math.max(0, +e.target.value) })); }} /></label>
+            <label>분석 끝(초)<input type="number" min="0" max={info.duration} step="0.5" value={range.end} onChange={e => { setErr(null); setRange(r => ({ ...r, end: Math.min(info.duration, +e.target.value) })); }} /></label></div>
+          {range.end - range.start < MIN_CLIP_S - 0.001 && <p className="note warn" role="status">분석 끝이 분석 시작보다 {MIN_CLIP_S}초 이상 뒤여야 해요.</p>}
           {needsTrim(info.duration) && <p className="note warn">영상이 10분을 넘어요. 10분 이내로 범위를 정해 주세요. 사람이 보이는 장면에서 시작하면 좋아요.</p>}
           <p className="note">먼저 이 범위를 1초에 {COARSE_FPS}장씩 훑어 투구 구간을 찾습니다(약 {Math.max(1, Math.round((range.end - range.start) * COARSE_FPS * 0.15 / 60))}분 이상 걸릴 수 있어요).</p>
+          {err && err !== "UNPLAYABLE" && <div className="err-box" role="alert">{err}</div>}
           <div className="actions"><button className="btn pri grow" type="button" onClick={toPerson}>다음: 분석할 사람 고르기</button></div>
         </div>
       )}

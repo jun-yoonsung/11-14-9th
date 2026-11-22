@@ -134,3 +134,10 @@ test("adjustClip keeps the clip between min and max length and inside the range 
   assert.deepEqual(adjustClip({ start: 3, end: 5 }, "start", 2.5, R, lim), { start: 2.5, end: 5 });
   assert.deepEqual(adjustClip({ start: 3, end: 5 }, "end", 99, R, lim), { start: 3, end: 9 });
 });
+
+import { sampleTimes } from "../src/lib/segment.js";
+test("sampleTimes spreads person-search times over the range, starting at its beginning", () => {
+  assert.deepEqual(sampleTimes(0, 6, 4), [0, 2, 4, 6]);
+  assert.deepEqual(sampleTimes(2, 2.8, 5), [2, 2.2, 2.4, 2.6, 2.8]);
+  assert.deepEqual(sampleTimes(3, 3, 5), [3]);
+});
