@@ -113,7 +113,7 @@ function ResultInner({ shared }) {
   };
 
   return (
-    <div className="wrap">
+    <div className="wrap result-page">
       <div className="result-head">{shared && <p className="shared-banner">{owner}님이 공유한 분석입니다. 읽기만 할 수 있어요.</p>}<h1>{rec.title}</h1><p className="sub">{sub}. {dateKo(rec.createdAt)} 분석{r.kind === "form" ? "" : `, KBO ${rec.season} 정규시즌 실제 기록`}</p></div>
       {r.kind === "form" ? <FormSummary rec={rec} /> : r.kind === "team" ? <TeamSummary rec={rec} r={r} base={base} /> : <PlayerSummary rec={rec} r={r} base={base} />}
       {!shared && <ShareCard rec={rec} onChange={setLocal} />}

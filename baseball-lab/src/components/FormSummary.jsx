@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import Skeleton3D from "./Skeleton3D.jsx";
 import SkeletonSvg from "./SkeletonSvg.jsx";
 import FormCards from "./FormCards.jsx";
+import KpiStrip from "./KpiStrip.jsx";
 import { CAMS, boundsOf } from "../lib/skel.js";
 import { JOINTS } from "../lib/form.js";
 import { labelsOf, T, lowReasons } from "../lib/formLabels.js";
@@ -14,7 +15,8 @@ export default function FormSummary({ rec }) {
   const sp = r.speed, m = r.refMeta, hit = r.sport === "hitting", tx = T(r.sport);
   return (
     <>
-      <section className="sec" style={{ marginTop: 0 }}>
+      <KpiStrip r={r} />
+      <section className="sec" style={{ marginTop: 28 }}>
         <h2>3D 스켈레톤 돌려 보기</h2>
         <p className="sub">영상에서 추정한 관절 12개를 3D로 옮긴 것입니다. 영상 화면은 저장하지 않아요. 분석 신뢰도 <b>{r.conf}</b>{r.bone.ok ? "" : " (관절 길이가 흔들려 3D 추정이 불안정해요)"}.</p>
         {lowReasons(r).length > 0 && <div className="note warn" role="note"><b>신뢰도가 낮은 이유</b><ul>{lowReasons(r).map(x => <li key={x}>{x}</li>)}</ul></div>}
