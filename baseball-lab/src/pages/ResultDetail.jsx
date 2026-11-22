@@ -1,4 +1,5 @@
 import { Link, Navigate, useParams } from "react-router-dom";
+import { MetricName } from "../components/MetricChip.jsx";
 import { useEffect, useState } from "react";
 import { TYPES } from "../lib/stats.js";
 import { generate, fileName, ipText } from "../lib/report.js";
@@ -31,10 +32,10 @@ function Explain({ r, rec }) {
     <section className="sec rep" id="r-explain"><h2>선택한 지표 해설</h2>
       <p className="sub">고른 지표를 하나씩 문장으로 풀었어요.</p>
       <ul className="plain explain">{r.lines.map(l => {
-        if (l.value == null) return <li key={l.key}><b>{l.label}</b>: 이 시즌 기록이 없어 계산하지 못했습니다.</li>;
+        if (l.value == null) return <li key={l.key}><b><MetricName type={rec.type} k={l.key}>{l.label}</MetricName></b>: 이 시즌 기록이 없어 계산하지 못했습니다.</li>;
         const rel = l.tone === "even" ? "리그 평균과 같고" : `리그 평균(${l.leagueDisplay})보다 ${l.diffDisplay}이고`;
         const pos = l.pct == null ? "규정 미달이라 순위는 매기지 않았습니다." : `규정을 채운 ${unit} 중 ${topText(l)}${l.rank ? `, ${l.rank}위` : ""}입니다.`;
-        return <li key={l.key}><b>{l.label} {l.display}</b>: {rel} {pos}</li>;
+        return <li key={l.key}><b><MetricName type={rec.type} k={l.key}>{l.label}</MetricName> {l.display}</b>: {rel} {pos}</li>;
       })}</ul></section>
   );
 }
@@ -72,7 +73,7 @@ function TeamDetail({ rec, r }) {
           const max = Math.max(...m.items.map(i => Math.abs(i.value)).concat([Math.abs(m.league)]), 1);
           return (
             <div className="team-metric" key={m.key}>
-              <h3>{m.label}{m.better === "low" ? " (낮을수록 좋음)" : ""}, 리그 평균 {m.leagueDisplay}</h3>
+              <h3><MetricName type="team" k={m.key}>{m.label}</MetricName>{m.better === "low" ? " (낮을수록 좋음)" : ""}, 리그 평균 {m.leagueDisplay}</h3>
               {m.items.map(it => {
                 const wd = m.diverge ? (Math.abs(it.value) / max) * 50 : (it.value / max) * 100;
                 const style = m.diverge ? (it.value >= 0 ? { left: "50%", width: wd + "%" } : { left: 50 - wd + "%", width: wd + "%" }) : { width: wd + "%" };

@@ -14,7 +14,8 @@ const LINEUP = [
 
 export default function Home() {
   useScene("stadium");
-  const [preview, setPreview] = useState(undefined);   // undefined: 불러오는 중, null: 실패
+  const [preview, setPreview] = useState(undefined);
+  const [facts, setFacts] = useState(null);   // undefined: 불러오는 중, null: 실패
 
   // 예시 결과 한 장: 규정타석을 채운 타자 중 OPS 1위
   useEffect(() => {
@@ -26,6 +27,7 @@ export default function Home() {
         const ops = s => (s.h + s.bb + s.hbp) / (s.ab + s.bb + s.hbp + s.sf) + (s.h + s.d2 + 2 * s.d3 + 3 * s.hr) / s.ab;
         const star = rows.filter(s => s.pa >= q.batterPa).sort((a, b) => ops(b) - ops(a))[0];
         const r = analyzePlayer("batter", rows, star.pid, ["AVG", "OPS", "HR"], q);
+        if (!dead) setFacts({ season, batters: rows.length });
         if (!dead) setPreview({ title: `${r.subject.name} ${season} 타자 분석`, lines: r.lines });
       } catch (e) { if (!dead) setPreview(null); }
     })();
@@ -47,15 +49,24 @@ export default function Home() {
         {preview !== null && (
           <section className="board" aria-live="polite">
             <div className="board-top"><h2>{preview ? preview.title : "예시 결과를 불러오는 중"}</h2><span className="pill">예시</span></div>
-            {preview && <PctBlock lines={preview.lines} />}
+            {preview && <PctBlock lines={preview.lines} type="batter" />}
             <p className="sample-note" style={{ marginTop: 18 }}>구슬 안 숫자가 클수록 리그에서 좋은 기록입니다. 선수와 기록은 KBO 2026 정규시즌 실제 기록이에요.</p>
           </section>
         )}
+        {facts && (
+          <ul className="home-facts" aria-label="사이트 데이터 요약">
+            <li><b>{facts.batters}<i>명</i></b><span>{facts.season} 시즌 타자 기록</span></li>
+            <li><b>12<i>개</i></b><span>영상에서 읽는 관절 · 3D 추정</span></li>
+            <li><b>0<i>건</i></b><span>서버로 올라가는 영상</span></li>
+          </ul>
+        )}
         <section className="lineup">
           <h2>어떤 분석을 할 수 있나요</h2>
-          <ul className="lineup-list">
-            {LINEUP.map(x => (
-              <li key={x.to}><Link to={x.to}><span className={"pos " + x.cls}>{x.pos}</span><span className="nm">{x.nm}</span><span className="ds">{x.ds}</span><span className="go">{x.go}</span></Link></li>
+          <ul className="tiles">
+            {LINEUP.map((x, i) => (
+              <li key={x.to} className={i === 2 ? "wide" : ""}>
+                <Link to={x.to}><span className={"pos " + x.cls}>{x.pos}</span><span className="nm">{x.nm}</span><span className="ds">{x.ds}</span><span className="go">{x.go}</span></Link>
+              </li>
             ))}
           </ul>
         </section>

@@ -2,20 +2,20 @@
 
 /* 야구 분석 랩 디자인 토큰 (Tailwind v4 테마). bg-ink, text-muted, border-line 같은 유틸리티로도 쓴다 */
 @theme {
-  --color-ink: #101216;
-  --color-ink-2: #1c1f26;
-  --color-paper: #f6f7f9;
-  --color-line: #e1e4ea;
+  --color-ink: #1b2a4e;
+  --color-ink-2: #3a4766;
+  --color-paper: #fcf8f1;
+  --color-line: #e8d9c4;
   --color-muted: #5b6270;
-  --color-blue: #5e6ad2;
-  --color-blue-soft: #eceefb;
+  --color-blue: #2f4a8a;
+  --color-blue-soft: #e9edf7;
   --color-red: #d0312d;
   --color-red-soft: #fdecea;
   --color-green: #17734f;
   --color-green-soft: #e3f3ec;
   --color-chalk: #eef0f4;
   --color-board-muted: #a4acbb;
-  --color-line-soft: #eceef2;
+  --color-line-soft: #f1e8da;
   --color-track: #8e96a6;
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -93,8 +93,8 @@ h3 { font-size: 1.2rem; }
 }
 .btn:hover { background: var(--paper); border-color: #c9ced8; }
 .btn:active { transform: translateY(1px); }
-.btn.pri { background: var(--blue); border-color: var(--blue); color: var(--white); }
-.btn.pri:hover { background: #4f5ac0; border-color: #4f5ac0; color: var(--white); }
+.btn.pri { background: #c8302a; border-color: #c8302a; color: var(--white); }
+.btn.pri:hover { background: #a82620; border-color: #a82620; color: var(--white); }
 .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
 .btn.ghost:hover { background: var(--line-soft); border-color: transparent; color: var(--ink); }
 .btn.danger { border-color: #efc4c2; color: var(--red); }
@@ -500,7 +500,7 @@ ul.plain li { margin: 6px 0; }
 body.has-scene { background: transparent; }
 body.has-scene main { padding-top: 30vh; padding-bottom: 0; }
 body.has-scene main > .wrap:not(.hero-wrap) { position: relative; isolation: isolate; padding-top: 40px; padding-bottom: 112px; }   /* 아래 56px는 패널 안쪽 여백, 나머지 56px는 footer와의 간격 */
-body.has-scene main > .wrap:not(.hero-wrap)::before { content: ""; position: absolute; inset: 0 0 56px 0; z-index: -1; background: rgba(246, 247, 249, .94); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: var(--r-xl); box-shadow: 0 18px 50px rgba(5, 10, 30, .35); }
+body.has-scene main > .wrap:not(.hero-wrap)::before { content: ""; position: absolute; inset: 0 0 56px 0; z-index: -1; background: #fcf8f1; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: var(--r-xl); box-shadow: 0 18px 50px rgba(5, 10, 30, .35); }
 body.has-scene.home main { padding-top: 0; }
 .hero-wrap { min-height: 62vh; display: flex; align-items: flex-end; padding-bottom: 36px; }
 .hero-wrap .hero { padding: 0; }
@@ -529,7 +529,7 @@ body.has-scene main { transition: padding-top .7s ease; }
 .metric-group-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: var(--t-md); margin-bottom: 6px; }
 .metric-group-head .linkbtn { font-weight: 500; font-size: var(--t-sm); }
 /* 분석 설정: 이전/분석하기 버튼을 화면 아래에 붙여 두어 스크롤 없이 누를 수 있게 한다 */
-.panel .actions { position: sticky; bottom: 0; z-index: 6; margin: 0 -20px; padding: 12px 20px; background: rgba(246, 247, 249, .96); border-top: 1px solid var(--line); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-radius: 0 0 var(--r-md) var(--r-md); }
+.panel .actions { position: sticky; bottom: 0; z-index: 6; margin: 0 -20px; padding: 12px 20px; background: #fcf8f1; border-top: 1px solid var(--line); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-radius: 0 0 var(--r-md) var(--r-md); }
 .steps > button { font: inherit; text-align: left; cursor: pointer; }
 .steps > button:hover { background: var(--blue-soft); }
 /* 선수 스타일 지도(PCA)와 비슷한 선수 표 */
@@ -702,8 +702,8 @@ fieldset.seg2 { border: 0; margin: 0; padding: 0; }
 .sk3d-view { user-select: none; }
 
 /* ---------- 결과 화면: 흰 바탕 + 실밥 구분선 (결과 화면에만 적용) ---------- */
-body.has-scene main > .wrap.result-page::before { background: #fffdfb; backdrop-filter: none; -webkit-backdrop-filter: none; }   /* 결과 화면 패널: 반투명 회색 → 불투명한 흰색 */
-.result-page { --paper: #fffdfb; }
+body.has-scene main > .wrap.result-page::before { background: #fcf8f1; backdrop-filter: none; -webkit-backdrop-filter: none; }   /* 결과 화면 패널: 반투명 회색 → 불투명한 흰색 */
+.result-page { --paper: #fcf8f1; }
 .result-page .result-head, .result-page .rep-head { position: relative; border-top: 0; }
 .result-page .rep-head { padding-top: 34px; }
 .result-page .result-head::before, .result-page .rep-head::before {   /* 야구공 박음질: 가운데 선 + 번갈아 벌어지는 V자 실밥 */
@@ -711,7 +711,7 @@ body.has-scene main > .wrap.result-page::before { background: #fffdfb; backdrop-
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='14' viewBox='0 0 22 14'%3E%3Cpath d='M0 7H22' stroke='%23d9a39f' stroke-width='1'/%3E%3Cpath d='M5 1.5L11 7L5 12.5' fill='none' stroke='%23c8302a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") repeat-x left center;
 }
 .result-page .result-head { padding-top: 22px; }
-.result-page .rep-nav { background: #fffdfb; }
+.result-page .rep-nav { background: #fcf8f1; }
 @media (prefers-reduced-motion: no-preference) { .result-page .result-head::before { transition: opacity .2s; } }
 
 /* 결과 화면: 주제(섹션)마다 가는 V자 실밥. 첫 섹션은 위 제목 실밥이 있으니 빼고, 상세 보고서 첫머리 실밥(.rep-head)과 겹치지 않게 한다 */
@@ -730,3 +730,88 @@ body.has-scene main > .wrap.result-page::before { background: #fffdfb; backdrop-
 .fkpi-conf > div { display: flex; flex-direction: column; }
 .fkpi-conf b { font-size: 1.6rem; }
 .fkpi-ring { flex: none; }
+
+/* ---------- 메인 화면 리디자인: 숫자 띠 + 큰 카드 ---------- */
+.home-facts { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 22px 0 0; padding: 0; }
+.home-facts li { background: #fff; border: 1px solid #eadfdb; border-radius: 16px; padding: 14px 18px; display: flex; flex-direction: column; gap: 2px; }
+.home-facts b { font-size: 2.3rem; line-height: 1.1; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.home-facts b i { font-style: normal; font-size: 1rem; font-weight: 600; color: var(--ink-2); margin-left: 3px; letter-spacing: 0; }
+.home-facts span { font-size: var(--t-sm); color: var(--ink-2); }
+.tiles { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0 0; padding: 0; }
+.tiles li.wide { grid-column: 1 / -1; order: -1; }
+.tiles a { position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-areas: "pos nm" "pos ds" "pos go"; column-gap: 16px; align-items: center; height: 100%; text-decoration: none; color: inherit;
+  background: #fff; border: 1px solid #eadfdb; border-radius: 20px; padding: 22px 24px; transition: border-color .15s, transform .15s; }
+.tiles a:hover { border-color: #c8302a; transform: translateY(-2px); }
+.tiles .pos { grid-area: pos; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 1.25rem; color: #fff; background: var(--ink); }
+.tiles .nm { grid-area: nm; font-size: 1.25rem; font-weight: 800; letter-spacing: -.01em; }
+.tiles .ds { grid-area: ds; font-size: var(--t-sm); color: var(--ink-2); line-height: 1.55; margin: 2px 0 8px; }
+.tiles .go { grid-area: go; font-size: var(--t-sm); font-weight: 700; color: #c8302a; }
+.tiles .go::after { content: " ›"; }
+.tiles li.wide a { padding: 28px 30px; background: #fff7f5; border-color: #f0cfca; }
+.tiles li.wide .pos { width: 64px; height: 64px; background: #c8302a; }
+.tiles li.wide .nm { font-size: 1.5rem; }
+@media (max-width: 640px) { .tiles { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .tiles a { transition: none; } .tiles a:hover { transform: none; } }
+.tiles { grid-template-columns: repeat(3, 1fr); }
+.tiles a { grid-template-columns: 1fr; grid-template-areas: "pos" "nm" "ds" "go"; row-gap: 4px; align-items: start; justify-items: start; }
+.tiles li.wide a { grid-template-columns: auto 1fr; grid-template-areas: "pos nm" "pos ds" "pos go"; column-gap: 20px; align-items: center; }
+.tiles .pos { margin-bottom: 10px; }
+.tiles li.wide .pos { margin-bottom: 0; }
+body.has-scene.home main > .wrap:not(.hero-wrap)::before { background: #fcf8f1; backdrop-filter: none; -webkit-backdrop-filter: none; }
+@media (max-width: 860px) { .tiles { grid-template-columns: 1fr; } }
+
+/* ---------- 메인 색 조합: 붉은 실밥(강조) + 내야 흙 황토(면·선) + 모자 남색(글자·제목) ---------- */
+body.home {
+  --h-navy: #1b2a4e; --h-navy2: #3a4766; --h-red: #c8302a; --h-clay: #b98a5b; --h-clay-line: #e4d0b6; --h-clay-bg: #f8efe2; --h-cream: #fcf8f1;
+}
+body.has-scene.home main > .wrap:not(.hero-wrap)::before { background: var(--h-cream); }
+body.home main { color: var(--h-navy); --ink: var(--h-navy); --ink-2: var(--h-navy2); }
+body.home .btn.pri { background: var(--h-red); border-color: var(--h-red); color: #fff; }
+body.home .btn.pri:hover { background: #a82620; border-color: #a82620; }
+body.home .board { background: #14203f; }
+body.home .home-facts li { background: var(--h-clay-bg); border-color: var(--h-clay-line); }
+body.home .home-facts b { color: var(--h-navy); }
+body.home .tiles a { background: #fff; border-color: var(--h-clay-line); }
+body.home .tiles a:hover { border-color: var(--h-red); }
+body.home .tiles .pos { background: var(--h-navy); }
+body.home .tiles .go { color: var(--h-red); }
+body.home .tiles li.wide a { background: var(--h-clay-bg); border-color: var(--h-clay); }
+body.home .tiles li.wide .pos { background: var(--h-red); }
+body.home .lineup > h2::after { content: ""; display: block; width: 44px; height: 3px; margin-top: 8px; background: var(--h-clay); border-radius: 2px; }
+/* 아이콘 색: 타자 = 배트 나무색(황토 갈색), 투수 = 야구공(흰 바탕에 붉은 실밥색) */
+body.home .tiles .pos.bat { background: #a8743f; color: #fff; }
+body.home .tiles .pos.pit { background: #fff; color: var(--h-red); box-shadow: inset 0 0 0 3px var(--h-red); }
+
+/* 내 데이터 업로드 */
+.drop.up { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border: 1.5px dashed var(--h-clay, #b98a5b); border-radius: 14px; background: #fff; }
+.drop.up.on { border-color: #c8302a; background: #fff7f5; }
+.drop.up .fname { font-size: var(--t-sm); color: var(--ink-2); overflow-wrap: anywhere; }
+.ok-line { font-weight: 700; margin: 14px 0 4px; }
+.up-note { margin: 10px 0 0; }
+
+/* 지표 말풍선: 올리거나 포커스(키보드)하면 바로 뜬다. 터치 기기는 탭하면 포커스되어 뜬다. */
+.mchip { position: relative; display: inline-block; }
+.mtip { position: fixed; left: 0; top: 0; z-index: 30; width: min(280px, 80vw); padding: 12px 14px; border-radius: 12px; background: var(--h-navy, #1a2b55); color: #fff; font-size: var(--t-sm, 14px); line-height: 1.5; text-align: left; box-shadow: 0 10px 28px rgba(18,26,43,.28); opacity: 0; visibility: hidden; transform: translateY(-3px); transition: opacity .12s, transform .12s, visibility .12s; pointer-events: none; }
+.mtip::before { content: ""; position: absolute; left: calc(var(--sx, 18px) - 5px); top: -5px; width: 10px; height: 10px; background: inherit; transform: rotate(45deg); }
+.mtip b { display: block; font-size: 15px; margin-bottom: 4px; }
+.mtip b i { font-style: normal; font-weight: 500; opacity: .75; }
+.mtip .m, .mtip .h, .mtip .d { display: block; }
+.mtip .h { margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,.3); font-size: 13px; opacity: .85; }
+.mtip .d { margin-top: 6px; font-weight: 700; color: #ffd9a8; }
+.mchip:hover .mtip, .mchip:focus-within .mtip { opacity: 1; visibility: visible; transform: none; }
+.mchip:hover, .mchip:focus-within { z-index: 31; }
+@media (prefers-reduced-motion: reduce) { .mtip { transition: none; } }
+/* 숨어 있는 말풍선이 화면 오른쪽 밖으로 삐져나가 가로 스크롤이 생기지 않게 */
+html, body { overflow-x: clip; }
+
+/* 데이터 분석(설정을 고르는 화면)은 위 야구장 여백을 줄여, 아래 지표 선택이 바로 보이게 */
+body.has-scene main:has(.steps) { padding-top: 56px; }
+@media (max-width: 640px) { body.has-scene main:has(.steps) { padding-top: 24px; } }
+.mtip.up::before { top: auto; bottom: -5px; }
+.mname { position: relative; display: inline; }
+.mname-t { cursor: help; text-decoration: underline dotted rgba(26,43,85,.45); text-underline-offset: 3px; outline-offset: 2px; }
+.mname:hover .mtip, .mname:focus-within .mtip { opacity: 1; visibility: visible; transform: none; }
+.mname .mtip { white-space: normal; font-weight: 400; text-decoration: none; }
+.mname .mtip b { font-weight: 700; }
+.mtip { text-transform: none; letter-spacing: 0; }
+.mtip { border: 1px solid rgba(255,255,255,.28); }

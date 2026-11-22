@@ -1,3 +1,4 @@
+import { speedModelText } from "../lib/modelName.js";
 import { useMemo } from "react";
 import Skeleton3D from "./Skeleton3D.jsx";
 import SkeletonSvg from "./SkeletonSvg.jsx";
@@ -47,7 +48,7 @@ export default function FormSummary({ rec }) {
       {sp && (
         <section className="sec"><h2>참고용 {hit ? "배트 속도" : "구속"} 범위</h2>
           <p className="headline">약 {Math.round(sp.mph - sp.rmse)}~{Math.round(sp.mph + sp.rmse)} mph ({Math.round((sp.mph - sp.rmse) * 1.609)}~{Math.round((sp.mph + sp.rmse) * 1.609)} km/h)</p>
-          <p className="note">몸 움직임에서 {hit ? "배트 속도" : "구속"}를 거꾸로 맞춰 본 값이라 오차가 큽니다(교차검증 평균 오차 약 {sp.rmse} mph). 실제 {hit ? "배트 속도" : "구속"}는 이보다 훨씬 다를 수 있으니 참고만 하세요.</p></section>
+          <p className="note">몸 움직임에서 {hit ? "배트 속도" : "구속"}를 거꾸로 맞춰 본 값이라 오차가 큽니다{speedModelText(sp.model) && ` (예측 모델: ${speedModelText(sp.model)})`}(교차검증 평균 오차 약 {sp.rmse} mph). 실제 {hit ? "배트 속도" : "구속"}는 이보다 훨씬 다를 수 있으니 참고만 하세요.</p></section>
       )}
       <section className="sec"><h2>꼭 알아 둘 점</h2>
         <ul className="limits">

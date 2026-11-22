@@ -20,7 +20,7 @@ export function useRecord(id, shared = false) {
 
 /** 상세 보고서: 저장된 것이 있으면 그대로, 이전에 만든 기록이면 지금 만든다 */
 export function useReport(rec) {
-  const player = rec && (rec.type === "batter" || rec.type === "pitcher") && rec.result.kind !== "team" && rec.result.kind !== "compare";
+  const player = rec && (rec.type === "batter" || rec.type === "pitcher") && rec.result.kind !== "team" && rec.result.kind !== "compare" && rec.source !== "upload";   // 내가 올린 기록은 사이트 선수 자료가 없어 상세 보고서를 만들지 않는다
   const [rep, setRep] = useState(rec && rec.result.report ? rec.result.report : null);
   useEffect(() => {
     if (rep || !player) return;

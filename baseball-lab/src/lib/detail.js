@@ -179,7 +179,7 @@ import { usableDefs, teamLabel } from "./season.js";
           const best = okv.length > 1 ? (def.better === "high" ? Math.max(...okv) : Math.min(...okv)) : null;
           const worst = okv.length > 1 ? (def.better === "high" ? Math.min(...okv) : Math.max(...okv)) : null;
           return {
-            label: def.label,
+            key: k, label: def.label,
             cells: vals.map((v, i) => ({ display: fmtV(def, v), tone: !enough(ms[i]) || v == null ? "" : v === best ? "good" : v === worst ? "bad" : "" })),
           };
         }),

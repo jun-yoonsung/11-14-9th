@@ -43,5 +43,5 @@ export const predictRaw = (m, rows) => rows.map(r => predictOne(m, r));
 export function predictSpeed(models, view, features) {
   const m = models?.[view];
   if (!m) return null;
-  return { mph: predictOne(m, m.features.map(k => features?.[k] ?? null)), rmse: m.rmse ?? null };
+  return { mph: predictOne(m, m.features.map(k => features?.[k] ?? null)), rmse: m.rmse ?? null, model: m.name ?? null };
 }

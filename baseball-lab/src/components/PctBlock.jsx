@@ -1,7 +1,8 @@
 import { topText } from "../lib/format.js";
+import { MetricName } from "./MetricChip.jsx";
 
-function PctRow({ l }) {
-  const head = <b>{l.label}{l.label !== l.en && <small>{l.en}</small>}</b>;
+function PctRow({ l, type }) {
+  const head = <b><MetricName type={type} k={l.key}>{l.label}</MetricName>{l.label !== l.en && <small>{l.en}</small>}</b>;
   if (l.pct == null) {
     return <div className="pct">{head}<div className="sub">기록이 없어 위치를 표시하지 않습니다.</div><div className="pct-val"><b>-</b></div></div>;
   }
@@ -18,10 +19,10 @@ function PctRow({ l }) {
 }
 
 /** 리그 안에서의 위치: 파랑(하위)에서 빨강(상위)으로 이어지는 막대 위에 구슬로 표시 */
-export default function PctBlock({ lines }) {
+export default function PctBlock({ lines, type }) {
   return (
     <div className="pcts">
-      {lines.map(l => <PctRow key={l.key} l={l} />)}
+      {lines.map(l => <PctRow key={l.key} l={l} type={type} />)}
       {lines.some(l => l.pct != null) && (
         <div className="pct-scale" aria-hidden="true"><div /><div><span>하위</span><span>평균</span><span>상위</span></div><div /></div>
       )}

@@ -6,6 +6,8 @@ import { TYPES, analyzePlayer, analyzeTeams } from "../lib/stats.js";
 import { build } from "../lib/detail.js";
 import { qualFor, isHist, teamLabel, usableDefs } from "../lib/season.js";
 import PlayerCombo from "../components/PlayerCombo.jsx";
+import UploadStep from "../components/UploadStep.jsx";
+import MetricChip from "../components/MetricChip.jsx";
 import { useScene } from "../context/SceneContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 
@@ -49,7 +51,7 @@ export default function Analyze() {
 
   let step = Number((loc.hash || "#1").slice(1)) || 1;
   if (step > 1 && w.mode !== "record") step = 1;
-  if (step > 2 && w.source !== "site") step = 2;
+  if (step > 2 && w.source !== "site" && w.source !== "upload") step = 2;
   const go = n => { setErrors({}); navigate({ pathname: "/analyze", hash: "#" + n }, { replace: true }); window.scrollTo(0, 0); };
 
   useScene(step === 3 && (w.type === "batter" || w.type === "pitcher") ? w.type : "stadium");   // 타자·투수를 고르면 그 장면으로
@@ -61,7 +63,7 @@ export default function Analyze() {
 
   useEffect(() => { Api.meta().then(setMeta).catch(() => setFail(true)); }, []);
   useEffect(() => {
-    if (step !== 3 || !meta) return;
+    if (step !== 3 || !meta || w.source === "upload") return;
     let dead = false;
     (w.type === "batter" ? Api.batters(w.season) : w.type === "pitcher" ? Api.pitchers(w.season) : Api.teams(w.season)).then(r => { if (!dead) setRows(r); });
     return () => { dead = true; };
@@ -147,14 +149,22 @@ export default function Analyze() {
           <h1>어떤 데이터로 분석할까요?</h1>
           <button className={"option" + (w.source === "site" ? " sel" : "")} type="button" onClick={() => { update({ source: "site" }); go(3); }}>
             <span className="ic">{icData}</span><span><b>사이트 데이터</b><small>{meta.league} {meta.seasons.slice().sort().join("·")} 정규시즌 {meta.teams.length}개 팀의 타자·투수·팀 기록 ({meta.range[0]} ~ {meta.range[1]})</small></span></button>
-          <button className="option off" type="button" disabled aria-describedby="upHint">
-            <span className="ic">{icUpload}</span><span><b>내 데이터 업로드 <span className="pill">다음 버전</span></b><small id="upHint">가지고 있는 기록 파일로 분석하는 기능은 다음 버전에서 제공됩니다</small></span></button>
+          <button className={"option" + (w.source === "upload" ? " sel" : "")} type="button" aria-describedby="upHint" onClick={() => { update({ source: "upload", type: w.type === "pitcher" ? "pitcher" : "batter" }); go(3); }}>
+            <span className="ic">{icUpload}</span><span><b>내 데이터 업로드 <span className="pill blue">CSV</span></b><small id="upHint">가지고 있는 타자·투수 기록 파일을 올려 KBO 기록과 비교합니다 (파일은 이 브라우저 안에서만 읽어요)</small></span></button>
           <div className="err-msg" role="alert">{errors.source}</div>
           <div className="actions">
             <button className="btn ghost" type="button" onClick={() => go(1)}>이전</button>
-            <button className="btn pri grow" type="button" onClick={() => (w.source === "site" ? go(3) : setErrors({ source: "데이터 출처를 선택해 주세요." }))}>다음</button>
+            <button className="btn pri grow" type="button" onClick={() => (w.source === "site" || w.source === "upload" ? go(3) : setErrors({ source: "데이터 출처를 선택해 주세요." }))}>다음</button>
           </div>
         </div>
+      </div>
+    );
+  }
+  if (w.source === "upload") {
+    return (
+      <div className="wrap">
+        <Steps n={3} onGo={go} />
+        <UploadStep w={w} update={update} meta={meta} go={go} navigate={navigate} />
       </div>
     );
   }
@@ -202,13 +212,13 @@ export default function Analyze() {
               <div className="metric-group" key={g} role="group" aria-label={g}>
                 <div className="metric-group-head"><span>{g}</span><button className="linkbtn quiet" type="button" onClick={() => toggleGroup(keys, on)}>{on ? "이 묶음 해제" : "이 묶음 전체 선택"}</button></div>
                 <div className="chips">
-                  {list.map(d => <button key={d.key} className="chip" type="button" aria-pressed={w.metrics.includes(d.key)} title={d.how} onClick={() => toggleMetric(d.key)}>{d.label}{d.label !== d.en ? " " + d.en : ""}</button>)}
+                  {list.map(d => <MetricChip key={d.key} def={d} type={w.type} pressed={w.metrics.includes(d.key)} onToggle={() => toggleMetric(d.key)} />)}
                 </div>
               </div>
             );
           })}
           <div className="err-msg" role="alert">{errors.metric}</div>
-          <p className="hint">지표 이름에 마우스를 올리면 계산 방법이 보여요.</p>
+          <p className="hint">지표 이름에 마우스를 올리거나(휴대폰은 길게 누르지 않고 탭) 키보드로 이동하면 뜻과 계산 방법이 바로 보여요.</p>
         </div>
         <div className="actions">
           <button className="btn ghost" type="button" onClick={() => go(2)}>이전</button>

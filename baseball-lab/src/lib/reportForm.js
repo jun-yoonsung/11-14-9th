@@ -1,4 +1,5 @@
 /* 투구 폼(영상) 분석의 PDF 쪽 구성 — report.js의 pageWrap·themed 흐름에 끼워 쓴다. 3D 스켈레톤은 옆·정면·위에서 본 정지 그림(SVG). */
+import { speedModelText } from "./modelName.js";
 import { esc } from "./format.js";
 import { TOKENS } from "./reportTheme.js";
 import { CAMS, boundsOf, skeletonSvg } from "./skel.js";
@@ -45,7 +46,7 @@ export function formPages(rec) {
   const cards = `<div class="rp-sec"><h2>조정 방향 카드</h2>${r.cards.length ? r.cards.map(c => `<div class="rp-fc"><h3>${esc(c.title)}<em>${esc(c.source === "kbo" ? "KBO 참조" : "모션캡처 참조")}</em></h3>
       <p>${esc(c.mine)}</p><p>${esc(c.target)}</p><p class="dir">${esc(c.direction)}</p><p class="fine">${esc(c.evidence)} 참조 출처: ${esc(c.sourceLabel)}. 이 지표의 영상 신뢰도: ${esc(c.confidence)}.</p><p class="fine">${esc(c.caution)}</p></div>`).join("") : `<div class="rp-callout">${esc(r.conf === "낮음" ? "이 영상은 3D 추정의 신뢰도가 낮아 카드를 만들지 않았습니다." : r.message || "만들어진 카드가 없습니다.")}</div>`}</div>`;
   const sp = r.speed, spd = sp ? `<div class="rp-sec"><h2>참고용 ${hit ? "배트 속도" : "구속"} 범위</h2><div class="rp-callout"><b>약 ${Math.round(sp.mph - sp.rmse)}~${Math.round(sp.mph + sp.rmse)} mph (${Math.round((sp.mph - sp.rmse) * 1.609)}~${Math.round((sp.mph + sp.rmse) * 1.609)} km/h)</b></div>
-    <p class="rp-fine">몸 움직임에서 ${hit ? "배트 속도" : "구속"}를 거꾸로 맞춰 본 값이라 오차가 큽니다(교차검증 평균 오차 약 ${sp.rmse} mph). 실제 ${hit ? "배트 속도" : "구속"}는 이보다 훨씬 다를 수 있으니 참고만 하세요.</p></div>` : "";
+    <p class="rp-fine">몸 움직임에서 ${hit ? "배트 속도" : "구속"}를 거꾸로 맞춰 본 값이라 오차가 큽니다${speedModelText(sp.model) ? ` (예측 모델: ${speedModelText(sp.model)})` : ""}(교차검증 평균 오차 약 ${sp.rmse} mph). 실제 ${hit ? "배트 속도" : "구속"}는 이보다 훨씬 다를 수 있으니 참고만 하세요.</p></div>` : "";
   const lv = m.playing_levels, lim = `<div class="rp-sec"><h2>꼭 알아 둘 점</h2><ul>
     <li>영상 한 대로 추정한 3D라 모션캡처만큼 정확하지 않고 깊이 방향이 특히 부정확합니다.</li>
     <li>참조 범위는 OpenBiomechanics 모션캡처 ${m.n_trials}${hit ? "스윙" : "투구"}·${m.n_athletes}명(대학 ${lv.college}·독립 ${lv.independent}·고교 ${lv.high_school}·마이너 ${lv.milb})에서 ${hit ? "배트 속도" : "구속"} 상위 1/3의 가운데 절반 범위이며 프로 선수 기준이 아닙니다.</li>

@@ -44,7 +44,7 @@ export function buildResult(rawFrames, { view, hand, heightCm = null, ref, model
     features: Object.fromEntries(Object.entries(features).map(([k, v]) => [k, v == null ? null : r3(v)])), conf, bone: { ok: bone.ok, cv: r3(bone.cv) },
     use: use.map(x => ({ ...x, min: r1(x.min), max: r1(x.max), range: r1(x.range), peakDps: Math.round(x.peakDps), peakMs: Math.round(x.peakMs) })), sequence: { ...seq, steps: seq.steps.map(x => ({ ...x, ms: Math.round(x.ms) })) },
     series: { t: s.t.map(r3), elbow: s.elbow.map(r1), kneeL: s.kneeL.map(r1), kneeR: s.kneeR.map(r1), shoulderYaw: s.shoulderYaw.map(r1), pelvisYaw: s.pelvisYaw.map(r1), lean: s.lean.map(r1) },
-    keyframes, frames3d: valid.map(joints), cards, message, speed: speed ? { mph: r1(speed.mph), rmse: speed.rmse } : null,
+    keyframes, frames3d: valid.map(joints), cards, message, speed: speed ? { mph: r1(speed.mph), rmse: speed.rmse, model: speed.model ?? null } : null,
     refMeta: { n_trials: ref.meta.n_trials ?? ref.meta.n_swings, n_athletes: ref.meta.n_athletes, license: ref.meta.license, source: ref.meta.source, playing_levels: ref.meta.playing_levels, best_model: ref.meta.best[view], rmse: ref.meta.degrade?.[view] ?? ref.meta.models?.[view]?.[ref.meta.best[view]]?.rmse, top_tercile_cut_mph: ref.meta.top_tercile_cut_mph },
   };
 }

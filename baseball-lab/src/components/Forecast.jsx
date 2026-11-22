@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Api } from "../lib/api.js";
 import { plot } from "../lib/chart.js";
+import { ensembleText, mlLabel } from "../lib/modelName.js";
 
 const PCT = ["K", "BBr", "HRr"];   // 비율 지표는 %로 보여 준다
 const fx = (k, v, d) => (PCT.includes(k) ? `${(v * 100).toFixed(1)}%` : v.toFixed(d));
@@ -27,7 +28,7 @@ function ExtraStats({ pid, type, base }) {
       </svg><figcaption>올해 {fx(cur.key, e.now, cur.digits)}에서 이어지는 예측입니다. 옅은 띠는 80% 범위예요.</figcaption></figure>
       <div className="table-wrap"><table className="tf-t"><thead><tr><th>시즌</th><th>예상 {cur.label}</th><th>80% 범위</th></tr></thead><tbody>
         {e.pred.map(q => <tr key={q.h}><td>{base + q.h}</td><td>{fx(cur.key, q.mid, cur.digits)}</td><td>{fx(cur.key, q.lo, cur.digits)} ~ {fx(cur.key, q.hi, cur.digits)}</td></tr>)}</tbody></table></div>
-      <p className="note">시험 구간(2024~{base})에서 1년 뒤 평균 오차는 {fx(cur.key, m[1].mae_chosen, cur.digits + (PCT.includes(cur.key) ? 0 : 0))}로, 작년 기록을 그대로 쓰는 방법({fx(cur.key, m[1].mae_last, cur.digits)})보다 {m[1].mae_chosen < m[1].mae_last ? "작았" : "크거나 같았"}고 80% 범위 적중률은 {Math.round(m[1].coverage80 * 100)}%였어요. 이 지표는 {cur.model ? cur.model.join("+") : "여러 모델"} 구성이 검증 구간에서 가장 정확해 골랐어요(지표마다 따로 비교). 참고용으로 봐 주세요.</p>
+      <p className="note">시험 구간(2024~{base})에서 1년 뒤 평균 오차는 {fx(cur.key, m[1].mae_chosen, cur.digits + (PCT.includes(cur.key) ? 0 : 0))}로, 작년 기록을 그대로 쓰는 방법({fx(cur.key, m[1].mae_last, cur.digits)})보다 {m[1].mae_chosen < m[1].mae_last ? "작았" : "크거나 같았"}고 80% 범위 적중률은 {Math.round(m[1].coverage80 * 100)}%였어요. 예측 모델은 {cur.model ? ensembleText(cur.model) : "여러 모델"}이에요. 검증 구간에서 가장 정확한 구성을 골랐어요(지표마다 따로 비교). 참고용으로 봐 주세요.</p>
     </div>
   );
 }
@@ -61,7 +62,7 @@ export default function Forecast({ rec }) {
   return (
     <section className="sec fc-box" aria-label="앞으로 5년 예측">
       <h2>앞으로 5년 예측 <small className="tag">실험적 기능</small></h2>
-      <p className="sub">과거 KBO 선수들의 시즌 기록(1990~2026)으로 학습한 모델이 {p.name} 선수의 향후 {name}과 현역으로 남아 있을 확률을 예측했어요. 한 시즌의 우연한 변동은 평균 쪽으로 되돌아가는 경향이 있어서, 올해 기록이 아주 좋거나 나빴다면 예측은 그보다 평균에 가깝게 나옵니다.</p>
+      <p className="sub">과거 KBO 선수들의 시즌 기록(1990~2026)으로 학습한 머신러닝 모델({ensembleText(m.model)})이 {p.name} 선수의 향후 {name}과 현역으로 남아 있을 확률을 예측했어요. 한 시즌의 우연한 변동은 평균 쪽으로 되돌아가는 경향이 있어서, 올해 기록이 아주 좋거나 나빴다면 예측은 그보다 평균에 가깝게 나옵니다.</p>
       <figure className="fc-chart">
         <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${p.name} ${name} 예측 그래프`}>
           {ticks.map(t => <g key={t}><line x1={L} x2={W - R} y1={Y(t)} y2={Y(t)} className="fc-grid" /><text x={L - 6} y={Y(t) + 4} textAnchor="end" className="fc-tick">{isBat ? t.toFixed(2) : t.toFixed(1)}</text></g>)}
@@ -74,7 +75,7 @@ export default function Forecast({ rec }) {
         <thead><tr><th>시즌</th><th>나이</th><th>예상 {isBat ? "OPS" : "ERA"}</th><th>80% 범위</th><th>현역일 확률</th><th>예측 방법</th></tr></thead>
         <tbody>
           <tr className="me"><td>{base.year} (올해)</td><td>{p.age}세</td><td>{f3(p.now)}</td><td>-</td><td>-</td><td>실제 기록</td></tr>
-          {p.pred.map(x => <tr key={x.h}><td>{x.year}</td><td>{x.age}세</td><td>{f3(x.mid)}</td><td>{f3(x.lo)} ~ {f3(x.hi)}</td><td>{Math.round(x.active * 100)}%</td><td>{METHOD[x.method]}</td></tr>)}
+          {p.pred.map(x => <tr key={x.h}><td>{x.year}</td><td>{x.age}세</td><td>{f3(x.mid)}</td><td>{f3(x.lo)} ~ {f3(x.hi)}</td><td>{Math.round(x.active * 100)}%</td><td>{x.method === "ml" ? mlLabel(m.model) : METHOD[x.method]}</td></tr>)}
         </tbody>
       </table></div>
       <p className="note"><b>은퇴 시기</b>: {retire} 현역 확률은 그 해에 KBO 1군 기록이 남아 있을 확률이며, 부상·군 복무·해외 진출도 "기록 없음"으로 잡힙니다.</p>
@@ -84,7 +85,7 @@ export default function Forecast({ rec }) {
           <li>2024~{fc.meta.base_season} 시즌은 학습에 쓰지 않고 따로 떼어 두었다가 맞혀 봤어요. 1년 뒤 {isBat ? "OPS" : "ERA"} 평균 오차는 약 {f3(e1.mae_chosen)}로, 작년 기록을 그대로 쓰는 방법({f3(e1.mae_last)})보다 작았습니다.</li>
           <li>"80% 범위"에 실제 값이 들어온 비율은 1년 뒤 기준 {Math.round(e1.coverage80 * 100)}%였습니다. 범위를 벗어나는 경우도 그만큼 있다는 뜻이에요.</li>
           <li>현역 여부는 1년 뒤 기준 {Math.round(a1.auc * 100)}점(100점 만점, 50점이 동전 던지기 수준)으로 구분했어요.</li>
-          {weak.length > 0 && <li>{weak.map(x => `${x.year}`).join(", ")} 시즌 예측은 시험에서 머신러닝 모델이 {isBat ? "다른 방법" : "리그 평균"}보다 낫지 않아 <b>{METHOD[weak[0].method]}</b> 방식으로 대신했어요. 투수의 먼 미래 성적은 특히 맞히기 어렵습니다.</li>}
+          {weak.length > 0 && <li>{weak.map(x => `${x.year}`).join(", ")} 시즌 예측은 시험에서 머신러닝 모델({ensembleText(m.model)})이 {isBat ? "다른 방법" : "리그 평균"}보다 낫지 않아 <b>{METHOD[weak[0].method]}</b> 방식으로 대신했어요. 투수의 먼 미래 성적은 특히 맞히기 어렵습니다.</li>}
           <li>예측은 "그 선수가 그 해에 충분히 뛴다"는 가정(타자 100타석, 투수 30이닝 이상)에서 계산한 값입니다. 부상이나 보직 변경은 반영하지 못합니다.</li>
         </ul>
       </details>

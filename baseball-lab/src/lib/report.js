@@ -4,6 +4,7 @@ import { Api } from "./api.js";
 import { esc, dateKo, dateIso, beadColor, topText, metricNote } from "./format.js";
 import { CAREER, careerPlot, careerSummary } from "./career.js";
 import { svgString } from "./chart.js";
+import { ensembleText, mlLabel } from "./modelName.js";
 import { qualFor } from "./season.js";
 import { paginate } from "./paginate.js";
 import { themed, OVERRIDES, TOKENS } from "./reportTheme.js";
@@ -172,7 +173,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
     const e = ex && ex.players[String(rec.params.target)], list = ex && ex.meta.stats[rec.type];
     if (!e || !list) return "";
     const b = fc.meta.base_season, rows = list.filter(s => e[s.key]).map(s => `<tr><td>${esc(s.label)}</td><td>${fxv(s.key, e[s.key].now, s.digits)}</td>${e[s.key].pred.map(q => `<td>${fxv(s.key, q.mid, s.digits)}</td>`).join("")}</tr>`).join("");
-    return `<p class="rp-pv" style="margin-top:2.5mm"><b>다른 지표 예측</b> (예상값, OPS·ERA보다 단순한 모델이라 참고용)</p><table class="rp-sm"><thead><tr><th>지표</th><th>${b} (올해)</th>${[1, 2, 3, 4, 5].map(h => `<th>${b + h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>`;
+    return `<p class="rp-pv" style="margin-top:2.5mm"><b>다른 지표 예측</b> (예상값, OPS·ERA보다 단순한 모델이라 참고용)</p><table class="rp-sm"><thead><tr><th>지표</th><th>${b} (올해)</th>${[1, 2, 3, 4, 5].map(h => `<th>${b + h}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table><p class="rp-fine">지표별 예측 모델: ${list.filter(s => e[s.key]).map(s => `${esc(s.label)} ${esc(ensembleText(s.model))}`).join(" / ")}</p>`;
   }
 
   // 앞으로 5년 예측 (ml/train_forecast.py). 그래프는 도형만 그리고 글자는 HTML로 둔다(PDF 변환에서 글꼴이 깨지지 않게)
@@ -187,11 +188,11 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
     const line = pts.map((x, i) => `${i ? "L" : "M"}${X(i)},${Y(x.mid)}`).join(" ");
     const svg = `<svg viewBox="0 0 ${W} ${H}"><rect x="0" y="0" width="${W}" height="${H}" fill="#fff" stroke="#e4e8f0"/><path d="${band}" fill="#e3e8f9"/><path d="${line}" fill="none" stroke="#1d3fbb" stroke-width="2.2"/>${pts.map((x, i) => `<circle cx="${X(i)}" cy="${Y(x.mid)}" r="${i ? 4 : 5}" fill="${i ? "#1d3fbb" : "#111"}" stroke="#fff" stroke-width="1.5"/>`).join("")}</svg>`;
     const xl = `<div class="rp-fcx">${pts.map((x, i) => `<span style="left:${(X(i) / W) * 100}%">${x.year}${i ? "" : " (올해)"}</span>`).join("")}</div>`;
-    const rows = p.pred.map(x => `<tr><td>${x.year}</td><td>${x.age}세</td><td>${f3(x.mid)}</td><td>${f3(x.lo)} ~ ${f3(x.hi)}</td><td>${Math.round(x.active * 100)}%</td><td>${METHOD[x.method]}</td></tr>`).join("");
+    const rows = p.pred.map(x => `<tr><td>${x.year}</td><td>${x.age}세</td><td>${f3(x.mid)}</td><td>${f3(x.lo)} ~ ${f3(x.hi)}</td><td>${Math.round(x.active * 100)}%</td><td>${x.method === "ml" ? esc(mlLabel(m.model)) : METHOD[x.method]}</td></tr>`).join("");
     const retire = p.retire_by ? `현역 확률이 50% 아래로 내려가는 첫 나이는 ${p.retire_by}세로 예측됩니다.` : "향후 5년 안에는 현역 확률이 50% 아래로 내려가지 않는 것으로 예측됩니다.";
     const weak = p.pred.filter(x => x.method !== "ml");
     return `<div class="rp-sec"><h2>앞으로 5년 예측 (실험적 기능)</h2>
-      <p class="rp-pv" style="margin-bottom:2mm">과거 KBO 선수들의 시즌 기록(1990~${fc.meta.base_season})으로 학습한 모델이 향후 ${name}과 현역으로 남아 있을 확률을 예측했습니다. 한 시즌의 우연한 변동은 평균 쪽으로 되돌아가는 경향이 있어, 올해 기록이 매우 좋거나 나빴다면 예측은 평균에 가깝게 나옵니다.</p>
+      <p class="rp-pv" style="margin-bottom:2mm">과거 KBO 선수들의 시즌 기록(1990~${fc.meta.base_season})으로 학습한 머신러닝 모델(${esc(ensembleText(m.model))})이 향후 ${name}과 현역으로 남아 있을 확률을 예측했습니다. 한 시즌의 우연한 변동은 평균 쪽으로 되돌아가는 경향이 있어, 올해 기록이 매우 좋거나 나빴다면 예측은 평균에 가깝게 나옵니다.</p>
       <div class="rp-fcbox">${svg}${xl}</div><p class="rp-fine">선은 예측값, 옅은 띠는 실제 값이 들어올 가능성이 80%인 범위입니다. 먼 미래일수록 띠가 넓습니다.</p>
       <table class="rp-sm" style="margin-top:2mm"><thead><tr><th>시즌</th><th>나이</th><th>예상 ${isBat ? "OPS" : "ERA"}</th><th>80% 범위</th><th>현역일 확률</th><th>예측 방법</th></tr></thead><tbody>
         <tr><td>${fc.meta.base_season} (올해)</td><td>${p.age}세</td><td>${f3(p.now)}</td><td>-</td><td>-</td><td>실제 기록</td></tr>${rows}</tbody></table>
@@ -200,7 +201,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
       <ul class="rp-note" style="margin-top:1.5mm">
         <li>${fc.meta.base_season - 2}~${fc.meta.base_season} 시즌은 학습에 쓰지 않고 따로 떼어 맞혀 봤습니다. 1년 뒤 ${isBat ? "OPS" : "ERA"} 평균 오차는 약 ${f3(e1.mae_chosen)}로 작년 기록을 그대로 쓰는 방법(${f3(e1.mae_last)})보다 작았고, 80% 범위 적중률은 ${Math.round(e1.coverage80 * 100)}%였습니다.</li>
         <li>현역 여부는 1년 뒤 기준 ${Math.round(a1.auc * 100)}점(100점 만점, 50점이 동전 던지기 수준)으로 구분했습니다.</li>
-        ${weak.length ? `<li>${weak.map(x => x.year).join(", ")} 시즌 예측은 시험에서 머신러닝 모델이 더 낫지 않아 ${METHOD[weak[0].method]} 방식으로 대신했습니다.</li>` : ""}
+        ${weak.length ? `<li>${weak.map(x => x.year).join(", ")} 시즌 예측은 시험에서 머신러닝 모델(${esc(ensembleText(m.model))})이 더 낫지 않아 ${METHOD[weak[0].method]} 방식으로 대신했습니다.</li>` : ""}
         <li>그 선수가 그 해에 충분히 뛴다는 가정(타자 100타석, 투수 30이닝 이상)의 값이며 부상·보직 변경은 반영하지 못합니다.</li></ul>
       <p class="rp-fine">학습 데이터: Kaggle KBO Player Stats 1982–2026 (netsong, KBO 공식 기록 기반, CC BY-NC-SA 4.0). 학습용·비영리 프로젝트에서만 사용합니다.</p></div>`;
   }
@@ -298,8 +299,8 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
     let form = "";
     if (isBat && x.fo && x.fo.b[id] && x.fo.b[id].length >= 10) {
       const games = x.fo.b[id], all = slash(sumGames(games)), rc = slash(sumGames(games.slice(-15))), est = x.fo.est[id];
-      form = `<p class="rp-pv" style="margin-top:3mm"><b>최근 폼</b></p>${rollSvg(games.map(g => g[0]), rolling(games, 15), all.ops, { width: "150mm", label: "최근 15경기 OPS 추이" })}
-        <p class="rp-fine">파란 선은 최근 15경기 OPS, 점선은 시즌 OPS(${sf3(all.ops)}). 최근 15경기 OPS ${rc ? sf3(rc.ops) : "-"}.${est ? ` 앞으로 기대는 타석당 출루 ${est[0].toFixed(3)}, 루타 ${est[3].toFixed(3)}이며, 시험에서 최근 폼을 섞은 모델이 시즌 누적보다 나아지지 않아 반영하지 않았습니다.` : ""}</p>`;
+      form = `<p class="rp-pv" style="margin-top:3mm"><b>최근 폼</b></p>${rollSvg(games.map(g => g[0]), rolling(games, 15), all.ops, { width: "150mm", label: "15경기 이동 OPS 추이" })}
+        <p class="rp-fine">가로축은 시즌 전체 날짜이고, 파란 선의 점 하나는 그 경기까지 최근 15경기를 합친 OPS(한 경기씩 밀어 가며 계산, 8경기째부터 표시)입니다. 점선은 시즌 OPS(${sf3(all.ops)}). 시즌 마지막 15경기 OPS ${rc ? sf3(rc.ops) : "-"}.${est ? ` 앞으로 기대는 타석당 출루 ${est[0].toFixed(3)}, 루타 ${est[3].toFixed(3)}이며, 시험에서 최근 폼을 섞은 모델이 시즌 누적보다 나아지지 않아 반영하지 않았습니다.` : ""}</p>`;
     }
     const w = x.si.meta.wp_models, wb = x.si.meta.wp_best;
     const T = isBat ? "투구 존·볼카운트·상황별 성적" : "투구 분석·볼카운트·상황별 허용 성적";
@@ -643,6 +644,7 @@ import { TEAM_COLORS, TEAM_METHOD, teamPlot, teamSummary, wpText } from "./teamv
   async function reportFor(rec) {
     if (rec.result.kind === "team" || rec.result.kind === "compare" || rec.result.kind === "form") return null;
     if (rec.result.report) return rec.result.report;
+    if (rec.source === "upload") return null;
     try {
       const meta = await Api.meta();
       const rows = await (rec.type === "batter" ? Api.batters(rec.season) : Api.pitchers(rec.season));

@@ -3,7 +3,7 @@
 import { plot } from "./chart.js";
 
 export const TEAM_COLORS = ["#5e6ad2", "#d0312d", "#17734f", "#c9892b"];
-export const TEAM_METHOD = { ExtraTrees: "머신러닝 모델", Ridge: "선형 모델", league: "리그 평균(.500)", last: "작년 승률", pyth: "득실 기반 기대 승률", avg3: "최근 3시즌 평균", shrunk: "최근 3시즌 가중 평균을 .500 쪽으로 당긴 값" };
+export { TEAM_MODEL_NAME as TEAM_METHOD } from "./modelName.js";
 export const wpText = v => (v == null ? "-" : v.toFixed(3).replace(/^0/, ""));
 
 /** 팀 역대 요약: 통산 승패·승률, 최고/최저 시즌, 승률 1위 횟수와 5위 이내 횟수 (history 행: [시즌, 승, 패, 득점, 실점, 승률, 순위, 팀 수]) */

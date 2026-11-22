@@ -130,8 +130,8 @@ function Form({ id, games, fo, all }) {
   return (
     <>
       <h3>최근 폼</h3>
-      <div className="spray-svg" style={{ maxWidth: 560 }} dangerouslySetInnerHTML={{ __html: rollSvg(xs, ys, all.ops, { label: "최근 15경기 OPS 추이" }) }} />
-      <p className="legend">파란 선은 최근 15경기 OPS, 점선은 시즌 OPS({f3(all.ops)})입니다.</p>
+      <div className="spray-svg" style={{ maxWidth: 560 }} dangerouslySetInnerHTML={{ __html: rollSvg(xs, ys, all.ops, { label: "15경기 이동 OPS 추이" }) }} />
+      <p className="legend">가로축은 시즌 전체 날짜예요. 파란 선의 점 하나는 "그 경기까지 최근 15경기"를 합쳐 계산한 OPS이고, 한 경기씩 밀어 가며 이어 그렸습니다(8경기째부터 표시). 점선은 시즌 전체 OPS({f3(all.ops)})입니다. 아래 표의 "최근 15경기"는 시즌 마지막 15경기만의 기록이에요.</p>
       <div className="table-wrap"><table>
         <thead><tr><th></th><th>타석</th><th>OPS</th><th>출루율</th><th>장타율</th></tr></thead>
         <tbody>

@@ -1,3 +1,4 @@
+import { MetricName } from "./MetricChip.jsx";
 import { Fragment } from "react";
 import { top } from "../lib/detail.js";
 
@@ -40,11 +41,11 @@ function Per9({ c }) {
   </>;
 }
 
-export function ListCard({ title, cls, list }) {
+export function ListCard({ title, cls, list, type }) {
   return (
     <div className={"card2 " + cls}><h3>{title}</h3>
       {list.length ? <ul>{list.map(i => (
-        <li key={i.key}><b>{i.label}</b> {i.display} <span className="muted">(리그 평균 {i.leagueDisplay}, {top(i.pct)})</span><br /><small>{i.desc}</small></li>
+        <li key={i.key}><b><MetricName type={type} k={i.key}>{i.label}</MetricName></b> {i.display} <span className="muted">(리그 평균 {i.leagueDisplay}, {top(i.pct)})</span><br /><small>{i.desc}</small></li>
       ))}</ul> : <p className="muted">백분위를 계산할 수 있는 지표가 없습니다.</p>}
     </div>
   );
@@ -63,7 +64,7 @@ export default function DetailReport({ rep }) {
 
       <section className="sec rep" id="r-sum"><h2>종합 평가</h2>
         <p className="headline" dangerouslySetInnerHTML={{ __html: rep.headline }} />
-        <div className="two-cards"><ListCard title="강점" cls="pos" list={rep.strengths} /><ListCard title="보완할 점" cls="neg" list={rep.weaknesses} /></div></section>
+        <div className="two-cards"><ListCard title="강점" cls="pos" list={rep.strengths} type={rep.type} /><ListCard title="보완할 점" cls="neg" list={rep.weaknesses} type={rep.type} /></div></section>
 
       <section className="sec rep" id="r-prof"><h2>능력 프로필</h2>
         <p className="sub">{isBat ? "타격" : "투구"} 능력을 영역으로 나눠, 영역별 지표의 리그 백분위 평균을 보여 줍니다. 높을수록 리그에서 앞선 영역입니다.</p>
@@ -85,14 +86,14 @@ export default function DetailReport({ rep }) {
             <Fragment key={g}>
               <tr className="gh"><td colSpan={6}>{g}</td></tr>
               {rep.items.filter(i => i.group === g).map(i => (
-                <tr key={i.key}><td>{i.label} <small className="muted">{i.en}</small></td><td>{i.display}</td><td>{i.leagueDisplay}</td>
+                <tr key={i.key}><td><MetricName type={rep.type} k={i.key}>{i.label}</MetricName> <small className="muted">{i.en}</small></td><td>{i.display}</td><td>{i.leagueDisplay}</td>
                   <td className={tone(i.tone)}>{i.value == null ? "-" : i.diffDisplay}</td><td className="mpc"><MiniPct p={i.pct} /></td><td>{i.rank ? i.rank + "위" : "-"}</td></tr>
               ))}
             </Fragment>
           ))}</tbody></table></div>
         <details className="gloss"><summary>지표 설명과 계산식 보기</summary>
           <div className="table-wrap"><table><thead><tr><th>지표</th><th>계산식</th><th>뜻</th></tr></thead>
-            <tbody>{rep.items.map(i => <tr key={i.key}><td>{i.label} <small className="muted">{i.en}</small></td><td className="l">{i.how}</td><td className="l">{i.desc}</td></tr>)}</tbody></table></div>
+            <tbody>{rep.items.map(i => <tr key={i.key}><td><MetricName type={rep.type} k={i.key}>{i.label}</MetricName> <small className="muted">{i.en}</small></td><td className="l">{i.how}</td><td className="l">{i.desc}</td></tr>)}</tbody></table></div>
         </details></section>
 
       <section className="sec rep" id="r-comp"><h2>{rep.composition.title}</h2><p className="sub">{rep.composition.note}</p>
@@ -103,7 +104,7 @@ export default function DetailReport({ rep }) {
           <p className="sub">시즌 중 컨디션이 어떻게 변했는지 월별로 다시 계산했습니다. 표본이 충분한 달({isBat ? "50타석" : "10이닝"} 이상)만 가장 좋은 달은 초록색, 가장 나쁜 달은 빨간색으로 표시합니다.</p>
           <div className="table-wrap"><table>
             <thead><tr><th>지표</th>{rep.trend.months.map(m => <th key={m.label}>{m.label}<br /><small className="muted">{m.size}</small></th>)}</tr></thead>
-            <tbody>{rep.trend.rows.map(r => <tr key={r.label}><td>{r.label}</td>{r.cells.map((c, i) => <td key={i} className={tone(c.tone)}>{c.display}</td>)}</tr>)}</tbody></table></div></section>
+            <tbody>{rep.trend.rows.map(r => <tr key={r.label}><td><MetricName type={rep.type} k={r.key}>{r.label}</MetricName></td>{r.cells.map((c, i) => <td key={i} className={tone(c.tone)}>{c.display}</td>)}</tr>)}</tbody></table></div></section>
       )}
 
       {rep.pitchMix && (
