@@ -189,7 +189,7 @@ export default function VideoLab() {
           <p className="note">{hit ? "타석(어느 쪽 타자인지)은 앞발이 더 크게 드는 쪽으로 추정했어요." : "던지는 손은 영상에서 자동으로 추정했어요."} 다르면 바꿔 주세요.</p>
           {err && err !== "UNPLAYABLE" && <div className="err-box" role="alert">{err}</div>}
           <div className="metric-tools"><button className="btn small ghost" type="button" onClick={() => { const w = wholeClip(range, MAX_CLIP_S); setM({ start: w.start, end: w.end }); setErr(w.capped ? `브라우저가 감당할 수 있는 ${MAX_CLIP_S}초까지만 잡았어요. 필요한 곳으로 막대를 옮겨 주세요.` : null); const vv = S.current.vid?.video; if (vv) vv.currentTime = w.start; }}>처음부터 끝까지</button></div>
-          <p className="hint">지금 {(m.end - m.start).toFixed(1)}초입니다. 끝은 원하는 곳까지 옮겨도 돼요({MIN_CLIP_S}초 이상 {MAX_CLIP_S}초 이하).{m.end - m.start > SOFT_CLIP_S && ` 길수록 분석이 오래 걸리고, ${hit ? "스윙" : "투구"}가 여러 번 섞이면 결과가 흐려질 수 있어요.`}</p>
+          <p className="hint">지금 {(m.end - m.start).toFixed(1)}초입니다. 끝은 원하는 곳까지 옮겨도 돼요({MIN_CLIP_S}초 이상 {MAX_CLIP_S}초 이하).{m.end - m.start > SOFT_CLIP_S && ` 길수록 분석이 오래 걸리고, ${hit ? "스윙이" : "투구가"} 여러 번 섞이면 결과가 흐려질 수 있어요.`}</p>
           <div className="actions"><button className="btn" type="button" onClick={() => setStage("setup")}>이전</button><button className="btn pri grow" type="button" onClick={runFinal}>3D 분석 시작</button></div>
         </div>
       )}
