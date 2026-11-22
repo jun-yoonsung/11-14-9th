@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Api } from "../lib/api.js";
 import { Store } from "../lib/storage.js";
 import { loadLandmarker, openVideo, scan, detectFps, fineFps, needsTrim, MAX_UNTRIMMED_SEC } from "../lib/pose.js";
-import { pickPerson, soleSeed, follow, detectHand, suggestWindow, detectSide, suggestSwingWindow, center, cropRect, adjustClip, sampleTimes } from "../lib/segment.js";
+import { pickPerson, soleSeed, follow, detectHand, suggestWindow, detectSide, suggestSwingWindow, center, cropRect, adjustClip, sampleTimes, wholeClip } from "../lib/segment.js";
 import { T } from "../lib/formLabels.js";
 import { buildResult, buildRecord } from "../lib/formRecord.js";
 import { useScene } from "../context/SceneContext.jsx";
@@ -13,7 +13,7 @@ const VIEWS = {
   pitching: [["side", "옆에서", "투수의 옆모습(1루나 3루 쪽)"], ["front", "정면", "투수가 나를 향해 던짐(타자 쪽 시점)"], ["back", "뒤에서", "투수 뒤(포수 뒤쪽 반대, 외야 쪽)"], ["broadcast", "중계 화면", "중계처럼 뒤쪽 높은 곳에서 비스듬히"]],
   hitting: [["side", "옆에서", "타자의 옆모습(타석 옆, 1루나 3루 쪽)"], ["front", "정면", "타자가 나를 향함(투수 쪽에서 본 시점)"], ["back", "뒤에서", "타자 뒤(포수 쪽에서 본 시점)"], ["broadcast", "중계 화면", "중계처럼 뒤쪽 높은 곳에서 비스듬히"]],
 };
-const COARSE_FPS = 5, MAX_CLIP_S = 6, MIN_CLIP_S = 0.8;
+const COARSE_FPS = 5, MAX_CLIP_S = 60, SOFT_CLIP_S = 8, MIN_CLIP_S = 0.8;   // 끝 구간은 사용자가 정한다. 60초는 브라우저가 멈추지 않게 하는 안전 상한이고, 8초부터는 오래 걸린다고 알려 준다
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 /** 영상 분석 (투구 폼): 올리기 → 시점·키 → 사람 고르기 → 구간 고르기 → 3D 분석 → 결과. 영상은 이 브라우저 안에서만 처리한다. */
@@ -106,7 +106,7 @@ export default function VideoLab() {
   const runFinal = async () => {
     const len = Math.round((m.end - m.start) * 100) / 100;   // 4.8-4.0이 0.7999…로 계산돼 0.8초 구간이 "너무 짧다"고 막히지 않게 반올림
     if (len < MIN_CLIP_S) return setErr("구간이 너무 짧아요 (0.8초 이상).");
-    if (len > MAX_CLIP_S) return setErr(`구간이 너무 길어요 (${MAX_CLIP_S}초 이하). ${hit ? "스윙" : "투구"} 한 번만 남겨 주세요.`);
+    if (len > MAX_CLIP_S) return setErr(`구간이 너무 길어요 (${MAX_CLIP_S}초 이하). 브라우저가 감당할 수 있는 길이까지만 분석해요.`);
     setErr(null); setStage("final"); setProgress(0);
     const ab = new AbortController(); S.current.abort = ab;
     try {
@@ -161,7 +161,8 @@ export default function VideoLab() {
           <label className="field">키(cm, 선택)<input type="number" inputMode="numeric" min="120" max="230" value={height} onChange={e => setHeight(e.target.value)} placeholder="예: 180" />
             <small>{hit ? "지금은 타격 분석에 쓰이지 않아요. 비워 두어도 됩니다." : "입력하면 릴리스 높이를 KBO 투수와 비교하는 카드가 추가돼요. 비워 두어도 됩니다."}</small></label>
           <div className="vl-range"><label>분석 시작(초)<input type="number" min="0" max={info.duration} step="0.5" value={range.start} onChange={e => { setErr(null); setRange(r => ({ ...r, start: Math.max(0, +e.target.value) })); }} /></label>
-            <label>분석 끝(초)<input type="number" min="0" max={info.duration} step="0.5" value={range.end} onChange={e => { setErr(null); setRange(r => ({ ...r, end: Math.min(info.duration, +e.target.value) })); }} /></label></div>
+            <label>분석 끝(초)<input type="number" min="0" max={info.duration} step="0.5" value={range.end} placeholder="비우면 끝까지" onChange={e => { setErr(null); setRange(r => ({ ...r, end: e.target.value === "" ? info.duration : Math.min(info.duration, +e.target.value) })); }} /></label>
+            <button className="btn small ghost" type="button" onClick={() => { setErr(null); setRange({ start: 0, end: info.duration }); }}>처음부터 끝까지</button></div>
           {range.end - range.start < MIN_CLIP_S - 0.001 && <p className="note warn" role="status">분석 끝이 분석 시작보다 {MIN_CLIP_S}초 이상 뒤여야 해요.</p>}
           {needsTrim(info.duration) && <p className="note warn">영상이 10분을 넘어요. 10분 이내로 범위를 정해 주세요. 사람이 보이는 장면에서 시작하면 좋아요.</p>}
           <p className="note">먼저 이 범위를 1초에 {COARSE_FPS}장씩 훑어 투구 구간을 찾습니다(약 {Math.max(1, Math.round((range.end - range.start) * COARSE_FPS * 0.15 / 60))}분 이상 걸릴 수 있어요).</p>
@@ -187,7 +188,8 @@ export default function VideoLab() {
             <button type="button" aria-pressed={hand === "R"} onClick={() => setHand("R")}>{tx.hand("R")}</button><button type="button" aria-pressed={hand === "L"} onClick={() => setHand("L")}>{tx.hand("L")}</button></fieldset>
           <p className="note">{hit ? "타석(어느 쪽 타자인지)은 앞발이 더 크게 드는 쪽으로 추정했어요." : "던지는 손은 영상에서 자동으로 추정했어요."} 다르면 바꿔 주세요.</p>
           {err && err !== "UNPLAYABLE" && <div className="err-box" role="alert">{err}</div>}
-          <p className="hint">구간은 {MIN_CLIP_S}초 이상 {MAX_CLIP_S}초 이하로 골라요. 지금 {(m.end - m.start).toFixed(1)}초입니다.</p>
+          <div className="metric-tools"><button className="btn small ghost" type="button" onClick={() => { const w = wholeClip(range, MAX_CLIP_S); setM({ start: w.start, end: w.end }); setErr(w.capped ? `브라우저가 감당할 수 있는 ${MAX_CLIP_S}초까지만 잡았어요. 필요한 곳으로 막대를 옮겨 주세요.` : null); const vv = S.current.vid?.video; if (vv) vv.currentTime = w.start; }}>처음부터 끝까지</button></div>
+          <p className="hint">지금 {(m.end - m.start).toFixed(1)}초입니다. 끝은 원하는 곳까지 옮겨도 돼요({MIN_CLIP_S}초 이상 {MAX_CLIP_S}초 이하).{m.end - m.start > SOFT_CLIP_S && ` 길수록 분석이 오래 걸리고, ${hit ? "스윙" : "투구"}가 여러 번 섞이면 결과가 흐려질 수 있어요.`}</p>
           <div className="actions"><button className="btn" type="button" onClick={() => setStage("setup")}>이전</button><button className="btn pri grow" type="button" onClick={runFinal}>3D 분석 시작</button></div>
         </div>
       )}

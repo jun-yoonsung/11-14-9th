@@ -143,3 +143,9 @@ export function sampleTimes(from, to, n) {
   if (!(to > from) || n < 2) return [from];
   return Array.from({ length: n }, (_, i) => Math.round((from + ((to - from) * i) / (n - 1)) * 100) / 100);
 }
+
+/** "처음부터 끝까지": 범위 전체를 구간으로. 정밀 분석은 길이 상한(max초)이 있어 넘으면 시작부터 max초까지로 줄이고 capped를 true로 알린다 */
+export function wholeClip(range, max) {
+  const len = range.end - range.start, end = len > max ? range.start + max : range.end;
+  return { start: range.start, end: Math.round(end * 100) / 100, capped: len > max };
+}

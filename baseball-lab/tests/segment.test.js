@@ -141,3 +141,10 @@ test("sampleTimes spreads person-search times over the range, starting at its be
   assert.deepEqual(sampleTimes(2, 2.8, 5), [2, 2.2, 2.4, 2.6, 2.8]);
   assert.deepEqual(sampleTimes(3, 3, 5), [3]);
 });
+
+import { wholeClip } from "../src/lib/segment.js";
+test("wholeClip takes the range from its start to its end, capped at the max clip length", () => {
+  assert.deepEqual(wholeClip({ start: 0, end: 5 }, 6), { start: 0, end: 5, capped: false });
+  assert.deepEqual(wholeClip({ start: 2, end: 30 }, 6), { start: 2, end: 8, capped: true });
+  assert.deepEqual(wholeClip({ start: 0, end: 6 }, 6), { start: 0, end: 6, capped: false });
+});

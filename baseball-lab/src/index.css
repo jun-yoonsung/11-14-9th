@@ -815,3 +815,4 @@ body.has-scene main:has(.steps) { padding-top: 56px; }
 .mname .mtip b { font-weight: 700; }
 .mtip { text-transform: none; letter-spacing: 0; }
 .mtip { border: 1px solid rgba(255,255,255,.28); }
+.vl-range .btn { grid-column: 1 / -1; justify-self: start; }
